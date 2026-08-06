@@ -1,0 +1,96 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { UserButton } from "@clerk/nextjs";
+import { AppIcon } from "@/components/app-icon";
+import { APP_NAME, FAMILY_NAV } from "@/lib/constants";
+
+export function FamilyShell({
+  children,
+  personName,
+}: {
+  children: React.ReactNode;
+  personName: string;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <div className="app-shell family-mode">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-mark">PT</span>
+          <span>
+            <strong>{APP_NAME}</strong>
+            <small>Family Portal</small>
+          </span>
+        </div>
+        <nav aria-label="Family navigation">
+          <div className="nav-label">Family</div>
+          {FAMILY_NAV.map((item) => {
+            const active =
+              item.href === "/family"
+                ? pathname === "/family"
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={active ? "active" : undefined}
+                style={{
+                  minHeight: 38,
+                  border: 0,
+                  background: active ? "#355247" : "transparent",
+                  color: active ? "#fff" : "#b8c4d1",
+                  borderRadius: 4,
+                  display: "grid",
+                  gridTemplateColumns: "23px 1fr auto",
+                  alignItems: "center",
+                  textAlign: "left",
+                  padding: "0 10px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  boxShadow: active ? "inset 3px 0 0 var(--coral)" : undefined,
+                }}
+              >
+                <span style={{ color: active ? "var(--coral)" : "#8ea3b9", display: "grid", placeItems: "center" }}>
+                  <AppIcon name={item.icon} />
+                </span>
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="sidebar-footer">
+          <div className="demo-person">
+            <UserButton />
+            <span>
+              <strong>{personName}</strong>
+              <small>Family account</small>
+            </span>
+          </div>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <div>
+            <strong style={{ font: "700 14px Georgia, serif" }}>Family Portal</strong>
+            <small style={{ display: "block", color: "var(--muted)", fontSize: 10 }}>
+              Parent owns the Family account · Students are children under it
+            </small>
+          </div>
+          <div className="top-actions">
+            <button type="button" aria-label="Search">
+              <AppIcon name="search" />
+            </button>
+            <button type="button" aria-label="Notifications">
+              <AppIcon name="bell" />
+            </button>
+          </div>
+        </header>
+        <main className="content">{children}</main>
+      </div>
+    </div>
+  );
+}
