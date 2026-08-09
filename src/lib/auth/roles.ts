@@ -1,21 +1,15 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
+import { resolveAppRoleSafe, safeCurrentUser } from "@/lib/auth/clerk";
 import { requireDb } from "@/lib/db";
 import { guardians, households, staffProfiles } from "@/lib/db/schema";
 
 export type AppRole = "staff" | "family";
 
-type ClerkPublicMetadata = {
-  role?: string;
-};
-
 /** Role comes from Clerk metadata first — never wait on the database for login routing. */
 export async function resolveAppRole(_clerkUserId?: string): Promise<AppRole> {
   void _clerkUserId;
-  const user = await currentUser();
-  const metadataRole = (user?.publicMetadata as ClerkPublicMetadata | undefined)?.role;
-  if (metadataRole === "staff") return "staff";
-  return "family";
+  return resolveAppRoleSafe();
 }
 
 export async function requireSignedIn() {
@@ -27,7 +21,7 @@ export async function requireSignedIn() {
 }
 
 export async function ensureFamilyGuardian() {
-  const user = await currentUser();
+  const user = await safeCurrentUser();
   if (!user) return null;
 
   const database = requireDb();
@@ -77,7 +71,7 @@ export async function ensureFamilyGuardian() {
 }
 
 export async function ensureStaffProfile() {
-  const user = await currentUser();
+  const user = await safeCurrentUser();
   if (!user) return null;
 
   const database = requireDb();

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
-import { currentUser } from "@clerk/nextjs/server";
+import { safeCurrentUser } from "@/lib/auth/clerk";
 import { db } from "@/lib/db";
 import {
   availabilitySlots,
@@ -153,7 +153,7 @@ async function loadDashboardData() {
 }
 
 export default async function StaffDashboardPage() {
-  const user = await currentUser();
+  const user = await safeCurrentUser();
   const firstName = user?.firstName || "there";
   const data = await loadDashboardData();
 
