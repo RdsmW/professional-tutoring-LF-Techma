@@ -6,10 +6,14 @@ const isPublicRoute = createRouteMatcher([
   "/api/health(.*)",
 ]);
 
+/** Bootstrap authenticates inside the route so unauth clients get JSON 401, not a Clerk rewrite. */
+const isBootstrapRoute = createRouteMatcher(["/api/bootstrap(.*)"]);
+
 export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+  if (isPublicRoute(request) || isBootstrapRoute(request)) {
+    return;
   }
+  await auth.protect();
 });
 
 export const config = {

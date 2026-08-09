@@ -10,7 +10,8 @@ type ClerkPublicMetadata = {
 };
 
 /** Role comes from Clerk metadata first — never wait on the database for login routing. */
-export async function resolveAppRole(_clerkUserId: string): Promise<AppRole> {
+export async function resolveAppRole(_clerkUserId?: string): Promise<AppRole> {
+  void _clerkUserId;
   const user = await currentUser();
   const metadataRole = (user?.publicMetadata as ClerkPublicMetadata | undefined)?.role;
   if (metadataRole === "staff") return "staff";
