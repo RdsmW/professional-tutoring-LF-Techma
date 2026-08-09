@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { AppIcon } from "@/components/app-icon";
+import { BootstrapSession } from "@/components/bootstrap-session";
 import { APP_NAME, STAFF_NAV } from "@/lib/constants";
 
 export function StaffShell({
@@ -14,9 +16,15 @@ export function StaffShell({
   personName: string;
 }) {
   const pathname = usePathname();
+  const [label, setLabel] = useState(personName);
 
   return (
     <div className="app-shell">
+      <BootstrapSession
+        onComplete={(result) => {
+          if (result.displayName) setLabel(result.displayName);
+        }}
+      />
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">PT</span>
@@ -66,7 +74,7 @@ export function StaffShell({
           <div className="demo-person">
             <UserButton />
             <span>
-              <strong>{personName}</strong>
+              <strong>{label}</strong>
               <small>Staff account</small>
             </span>
           </div>

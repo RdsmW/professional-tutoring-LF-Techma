@@ -11,7 +11,11 @@ if (!connectionString) {
 }
 
 const client = connectionString
-  ? postgres(connectionString, { prepare: false, max: 10 })
+  ? postgres(connectionString, {
+      prepare: false,
+      max: 10,
+      connect_timeout: 5,
+    })
   : null;
 
 export const db = client ? drizzle(client, { schema }) : null;

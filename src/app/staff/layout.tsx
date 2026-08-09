@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { StaffShell } from "@/components/staff-shell";
-import { ensureStaffProfile, resolveAppRole } from "@/lib/auth/roles";
+import { resolveAppRole } from "@/lib/auth/roles";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -10,12 +10,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   const role = await resolveAppRole(session.userId);
   if (role !== "staff") redirect("/family");
 
-  try {
-    await ensureStaffProfile();
-  } catch {
-    // Allow shell to render when DATABASE_URL is not yet configured.
-  }
-
+  // Profile upsert runs after first paint via API later; do not block login on DB.
   const user = await currentUser();
   const personName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||

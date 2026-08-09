@@ -9,24 +9,11 @@ type ClerkPublicMetadata = {
   role?: string;
 };
 
-export async function resolveAppRole(clerkUserId: string): Promise<AppRole> {
+/** Role comes from Clerk metadata first — never wait on the database for login routing. */
+export async function resolveAppRole(_clerkUserId: string): Promise<AppRole> {
   const user = await currentUser();
   const metadataRole = (user?.publicMetadata as ClerkPublicMetadata | undefined)?.role;
   if (metadataRole === "staff") return "staff";
-  if (metadataRole === "family") return "family";
-
-  try {
-    const database = requireDb();
-    const [staff] = await database
-      .select({ id: staffProfiles.id })
-      .from(staffProfiles)
-      .where(eq(staffProfiles.clerkUserId, clerkUserId))
-      .limit(1);
-    if (staff) return "staff";
-  } catch {
-    // DB may be unset during local UI-only setup.
-  }
-
   return "family";
 }
 

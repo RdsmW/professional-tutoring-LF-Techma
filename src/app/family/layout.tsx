@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { FamilyShell } from "@/components/family-shell";
-import { ensureFamilyGuardian, resolveAppRole } from "@/lib/auth/roles";
+import { resolveAppRole } from "@/lib/auth/roles";
 
 export default async function FamilyLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -10,12 +10,7 @@ export default async function FamilyLayout({ children }: { children: React.React
   const role = await resolveAppRole(session.userId);
   if (role !== "family") redirect("/staff");
 
-  try {
-    await ensureFamilyGuardian();
-  } catch {
-    // Allow shell to render when DATABASE_URL is not yet configured.
-  }
-
+  // Guardian upsert runs after first paint via API later; do not block login on DB.
   const user = await currentUser();
   const personName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||

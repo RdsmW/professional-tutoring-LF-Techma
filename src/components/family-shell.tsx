@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { AppIcon } from "@/components/app-icon";
+import { BootstrapSession } from "@/components/bootstrap-session";
 import { APP_NAME, FAMILY_NAV } from "@/lib/constants";
 
 export function FamilyShell({
@@ -14,9 +16,18 @@ export function FamilyShell({
   personName: string;
 }) {
   const pathname = usePathname();
+  const [label, setLabel] = useState(personName);
+  const [householdStatus, setHouseholdStatus] = useState<string | null>(null);
 
   return (
     <div className="app-shell family-mode">
+      <BootstrapSession
+        onComplete={(result) => {
+          if (result.displayName) setLabel(result.displayName);
+          else if (result.householdName) setLabel(result.householdName);
+          if (result.householdStatus) setHouseholdStatus(result.householdStatus);
+        }}
+      />
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">PT</span>
@@ -61,12 +72,27 @@ export function FamilyShell({
               </Link>
             );
           })}
+          {householdStatus === "pending" ? (
+            <Link
+              href="/family/onboarding"
+              style={{
+                marginTop: 8,
+                padding: "8px 10px",
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#ffb4a9",
+                textDecoration: "none",
+              }}
+            >
+              Complete onboarding →
+            </Link>
+          ) : null}
         </nav>
         <div className="sidebar-footer">
           <div className="demo-person">
             <UserButton />
             <span>
-              <strong>{personName}</strong>
+              <strong>{label}</strong>
               <small>Family account</small>
             </span>
           </div>

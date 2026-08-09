@@ -137,3 +137,76 @@ export const courseOfferings = pgTable("course_offerings", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const bookingStatusEnum = pgEnum("booking_status", [
+  "draft",
+  "held",
+  "pending_payment",
+  "pending_staff_review",
+  "confirmed",
+  "cancelled",
+  "failed",
+]);
+
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "unpaid",
+  "pending",
+  "paid",
+  "partial",
+  "refunded",
+  "failed",
+  "waived",
+]);
+
+export const availabilitySlots = pgTable("availability_slots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tutorId: uuid("tutor_id").notNull(),
+  dayOfWeek: integer("day_of_week").notNull(),
+  startTimeLocal: varchar("start_time_local", { length: 16 }).notNull(),
+  endTimeLocal: varchar("end_time_local", { length: 16 }).notNull(),
+  capacitySeats: integer("capacity_seats").notNull().default(1),
+  heldSeats: integer("held_seats").notNull().default(0),
+  bookedSeats: integer("booked_seats").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  label: text("label"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const bookings = pgTable("bookings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tutoringRequestId: uuid("tutoring_request_id"),
+  householdId: uuid("household_id").notNull(),
+  studentId: uuid("student_id").notNull(),
+  subjectId: uuid("subject_id"),
+  tutorId: uuid("tutor_id"),
+  slotId: uuid("slot_id"),
+  status: bookingStatusEnum("status").notNull().default("draft"),
+  seatsClaimed: integer("seats_claimed").notNull().default(1),
+  priceSnapshotId: uuid("price_snapshot_id"),
+  policyVersionId: uuid("policy_version_id"),
+  confirmedByStaffId: uuid("confirmed_by_staff_id"),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
+  cancellationReason: text("cancellation_reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const paymentRecords = pgTable("payment_records", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  householdId: uuid("household_id").notNull(),
+  relatedEntityType: text("related_entity_type"),
+  relatedEntityId: uuid("related_entity_id"),
+  status: paymentStatusEnum("status").notNull().default("unpaid"),
+  amountCents: integer("amount_cents").notNull().default(0),
+  currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+  methodLabel: text("method_label"),
+  recordedByStaffId: uuid("recorded_by_staff_id"),
+  notes: text("notes"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeCustomerId: text("stripe_customer_id"),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

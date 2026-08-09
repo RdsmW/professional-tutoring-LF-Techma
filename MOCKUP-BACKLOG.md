@@ -12,6 +12,10 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Sessions Sessions/Exceptions nested mode
 - [x] Map existing Supabase tables in Drizzle
 - [x] Docs: README, Replit notes, this backlog
+- [x] Non-blocking first-login bootstrap (`POST /api/bootstrap` + `BootstrapSession`)
+- [x] Postgres `connect_timeout` so login never hangs on DB
+- [x] Staff Dashboard mockup layout with live metrics where data exists
+- [x] Family portal polish (family-mode theme, sidebar naming, pending onboarding cue)
 
 ## Stage 2 — Family journeys (next)
 
