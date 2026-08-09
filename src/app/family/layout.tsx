@@ -1,17 +1,12 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { FamilyShell } from "@/components/family-shell";
-import { resolveAppRoleSafe, resolveDisplayName } from "@/lib/auth/clerk";
+import { resolveFamilyPortalGate } from "@/lib/auth/clerk";
 
 export default async function FamilyLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session.userId) redirect("/sign-in");
+  // JWT/auth only — avoids Clerk Backend latency on every Family navigation.
+  const identity = await resolveFamilyPortalGate("Family");
+  if (!identity.userId) redirect("/sign-in");
+  if (identity.role !== "family") redirect("/staff");
 
-  const role = await resolveAppRoleSafe();
-  if (role !== "family") redirect("/staff");
-
-  // Never await a throwing Clerk Backend call here — shell must paint.
-  const personName = await resolveDisplayName("Family");
-
-  return <FamilyShell personName={personName}>{children}</FamilyShell>;
+  return <FamilyShell personName={identity.displayName}>{children}</FamilyShell>;
 }
