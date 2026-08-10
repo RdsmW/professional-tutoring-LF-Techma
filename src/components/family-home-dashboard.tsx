@@ -23,9 +23,18 @@ type HomeBooking = {
   timeLabel: string;
 };
 
+type HomeEnrollment = {
+  id: string;
+  status: string;
+  studentName: string;
+  courseName: string;
+  scheduleLabel: string;
+};
+
 type HomeData = {
   students: HomeStudent[];
   bookings: HomeBooking[];
+  enrollments: HomeEnrollment[];
   household: {
     displayName: string;
     status: string;
@@ -52,6 +61,7 @@ export function FamilyHomeDashboard() {
           setData({
             students: payload.students ?? [],
             bookings: payload.bookings ?? [],
+            enrollments: payload.enrollments ?? [],
             household: payload.household,
           });
         }
@@ -61,7 +71,9 @@ export function FamilyHomeDashboard() {
 
   const students = data?.students ?? [];
   const bookings = data?.bookings ?? [];
+  const enrollments = data?.enrollments ?? [];
   const latestBooking = bookings[0] ?? null;
+  const latestEnrollment = enrollments[0] ?? null;
   const billingLabel = data?.household.cardLast4
     ? `${(data.household.cardBrand || "Card").toUpperCase()} ···· ${data.household.cardLast4}`
     : "No card on file";
@@ -70,22 +82,43 @@ export function FamilyHomeDashboard() {
     <>
       <FamilyHomeHero />
 
-      {latestBooking ? (
-        <section className="completion-strip" style={{ gridTemplateColumns: "1fr" }}>
-          <Link href="/family/calendar">
-            <span>✓</span>
-            <div>
-              <strong>Tutoring request saved</strong>
-              <small>
-                {latestBooking.studentName}
-                {latestBooking.subjectName ? ` · ${latestBooking.subjectName}` : ""}
-                {latestBooking.tutorName ? ` · ${latestBooking.tutorName}` : ""}
-                {` · ${latestBooking.timeLabel}`}
-                {` · ${latestBooking.status.replace(/_/g, " ")}`}
-              </small>
-            </div>
-            <b>View calendar →</b>
-          </Link>
+      {latestBooking || latestEnrollment ? (
+        <section
+          className="completion-strip"
+          style={{
+            gridTemplateColumns:
+              latestBooking && latestEnrollment ? "1fr 1fr" : "1fr",
+          }}
+        >
+          {latestBooking ? (
+            <Link href="/family/calendar">
+              <span>✓</span>
+              <div>
+                <strong>Tutoring request saved</strong>
+                <small>
+                  {latestBooking.studentName}
+                  {latestBooking.subjectName ? ` · ${latestBooking.subjectName}` : ""}
+                  {latestBooking.tutorName ? ` · ${latestBooking.tutorName}` : ""}
+                  {` · ${latestBooking.timeLabel}`}
+                  {` · ${latestBooking.status.replace(/_/g, " ")}`}
+                </small>
+              </div>
+              <b>View calendar →</b>
+            </Link>
+          ) : null}
+          {latestEnrollment ? (
+            <Link href="/family/enroll-courses">
+              <span>✓</span>
+              <div>
+                <strong>{latestEnrollment.courseName} enrollment submitted</strong>
+                <small>
+                  {latestEnrollment.studentName} · {latestEnrollment.scheduleLabel} ·{" "}
+                  {latestEnrollment.status.replace(/_/g, " ")}
+                </small>
+              </div>
+              <b>View courses →</b>
+            </Link>
+          ) : null}
         </section>
       ) : null}
 
@@ -194,13 +227,13 @@ export function FamilyHomeDashboard() {
               View calendar
             </Link>
           </div>
-          {bookings.length === 0 ? (
+          {bookings.length === 0 && enrollments.length === 0 ? (
             <div className="compact-empty">
-              <p>No tutoring requests yet. Confirmed bookings will appear here and on Calendar.</p>
+              <p>No tutoring or course requests yet. Bookings and enrollments will appear here.</p>
             </div>
           ) : (
             <div className="schedule-list">
-              {bookings.slice(0, 3).map((booking) => (
+              {bookings.slice(0, 2).map((booking) => (
                 <div
                   key={booking.id}
                   style={{
@@ -222,6 +255,30 @@ export function FamilyHomeDashboard() {
                     </small>
                   </span>
                   <b style={{ fontSize: 8, color: "var(--blue)" }}>{booking.timeLabel}</b>
+                </div>
+              ))}
+              {enrollments.slice(0, 2).map((enrollment) => (
+                <div
+                  key={enrollment.id}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "52px 1fr auto",
+                    gap: 12,
+                    alignItems: "center",
+                    borderTop: "1px solid var(--line)",
+                    padding: "12px 0",
+                  }}
+                >
+                  <span className="date-block">CR</span>
+                  <span>
+                    <strong style={{ display: "block", fontSize: 9 }}>
+                      {enrollment.courseName} · {enrollment.studentName}
+                    </strong>
+                    <small style={{ color: "var(--muted)", fontSize: 8 }}>
+                      {enrollment.scheduleLabel} · {enrollment.status.replace(/_/g, " ")}
+                    </small>
+                  </span>
+                  <b style={{ fontSize: 8, color: "var(--blue)" }}>Course</b>
                 </div>
               ))}
             </div>

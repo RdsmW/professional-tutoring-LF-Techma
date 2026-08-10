@@ -172,6 +172,31 @@ export const courseOfferings = pgTable("course_offerings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const enrollmentStatusEnum = pgEnum("enrollment_status", [
+  "draft",
+  "submitted",
+  "waitlisted",
+  "confirmed",
+  "cancelled",
+]);
+
+export const courseEnrollments = pgTable("course_enrollments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  courseOfferingId: uuid("course_offering_id")
+    .notNull()
+    .references(() => courseOfferings.id),
+  householdId: uuid("household_id").notNull(),
+  studentId: uuid("student_id").notNull(),
+  requestedByGuardianId: uuid("requested_by_guardian_id"),
+  status: enrollmentStatusEnum("status").notNull().default("submitted"),
+  requestedSlotPreference: text("requested_slot_preference"),
+  priceSnapshotId: uuid("price_snapshot_id"),
+  policyVersionId: uuid("policy_version_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const bookingStatusEnum = pgEnum("booking_status", [
   "draft",
   "held",

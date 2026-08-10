@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { getFamilyContext, listHouseholdStudents } from "@/lib/family/session";
 import { requireDb } from "@/lib/db";
-import { availabilitySlots, bookings, subjects, tutors } from "@/lib/db/schema";
+import {
+  availabilitySlots,
+  bookings,
+  courseEnrollments,
+  courseOfferings,
+  subjects,
+  tutors,
+} from "@/lib/db/schema";
 
 export async function GET() {
   try {
@@ -33,6 +40,23 @@ export async function GET() {
       .leftJoin(availabilitySlots, eq(bookings.slotId, availabilitySlots.id))
       .where(eq(bookings.householdId, context.household.id))
       .orderBy(desc(bookings.createdAt))
+      .limit(5);
+
+    const enrollmentRows = await database
+      .select({
+        id: courseEnrollments.id,
+        status: courseEnrollments.status,
+        studentId: courseEnrollments.studentId,
+        createdAt: courseEnrollments.createdAt,
+        courseName: courseOfferings.name,
+        scheduleSummary: courseOfferings.scheduleSummary,
+        requestedSlotPreference: courseEnrollments.requestedSlotPreference,
+        notes: courseEnrollments.notes,
+      })
+      .from(courseEnrollments)
+      .leftJoin(courseOfferings, eq(courseEnrollments.courseOfferingId, courseOfferings.id))
+      .where(eq(courseEnrollments.householdId, context.household.id))
+      .orderBy(desc(courseEnrollments.createdAt))
       .limit(5);
 
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -68,6 +92,25 @@ export async function GET() {
           tutorName: row.tutorName,
           subjectName: row.subjectName,
           timeLabel: time || "Schedule pending",
+        };
+      }),
+      enrollments: enrollmentRows.map((row) => {
+        const student = studentRows.find((item) => item.id === row.studentId);
+        let scheduleLabel = row.scheduleSummary || "Schedule pending";
+        if (row.notes) {
+          try {
+            const parsed = JSON.parse(row.notes) as { scheduleLabel?: string };
+            if (parsed.scheduleLabel) scheduleLabel = parsed.scheduleLabel;
+          } catch {
+            // keep schedule summary
+          }
+        }
+        return {
+          id: row.id,
+          status: row.status,
+          studentName: student?.displayName ?? "Student",
+          courseName: row.courseName ?? "Course",
+          scheduleLabel,
         };
       }),
     });
