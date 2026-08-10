@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
-import { resolvePortalIdentity } from "@/lib/auth/clerk";
+import { auth } from "@clerk/nextjs/server";
 
+/** Unauthenticated → sign-in. Authenticated soft hits → post-login hard nav. */
 export default async function HomePage() {
-  const identity = await resolvePortalIdentity("User");
-  if (!identity.userId) redirect("/sign-in");
-  redirect(identity.role === "staff" ? "/staff" : "/family");
+  const session = await auth();
+  if (!session.userId) redirect("/sign-in");
+  redirect("/post-login");
 }

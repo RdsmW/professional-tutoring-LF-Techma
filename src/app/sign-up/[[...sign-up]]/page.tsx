@@ -11,7 +11,13 @@ export default function SignUpPage() {
         padding: 24,
       }}
     >
-      <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" />
+      <SignUp
+        routing="path"
+        path="/sign-up"
+        signInUrl="/sign-in"
+        fallbackRedirectUrl="/post-login"
+        forceRedirectUrl="/post-login"
+      />
     </main>
   );
 }

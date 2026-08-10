@@ -25,8 +25,8 @@ export default function SignInPage() {
           routing="path"
           path="/sign-in"
           signUpUrl="/sign-up"
-          fallbackRedirectUrl="/"
-          forceRedirectUrl="/"
+          fallbackRedirectUrl="/post-login"
+          forceRedirectUrl="/post-login"
         />
         <p style={{ marginTop: 18, color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
           After sign-in you go to Staff or Family based on your Clerk role.
