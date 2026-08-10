@@ -173,23 +173,20 @@ export function AddStudentWizard({
                 ))}
               </select>
             </label>
-            <fieldset style={{ border: "1px solid var(--line)", padding: 10, margin: 0 }}>
-              <legend style={{ fontSize: 8, color: "var(--muted)", padding: "0 4px" }}>Gender</legend>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            <label>
+              Gender
+              <select
+                value={draft.gender}
+                onChange={(event) => setDraft({ ...draft, gender: event.target.value })}
+              >
+                <option value="">Select gender</option>
                 {GENDER.options.map((option) => (
-                  <label key={option.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
-                    <input
-                      type="radio"
-                      name="student-gender"
-                      value={option.id}
-                      checked={draft.gender === option.id}
-                      onChange={() => setDraft({ ...draft, gender: option.id })}
-                    />
+                  <option key={option.id} value={option.id}>
                     {option.label}
-                  </label>
+                  </option>
                 ))}
-              </div>
-            </fieldset>
+              </select>
+            </label>
           </div>
           {!step1Valid ? (
             <div className="validation-hint">Complete all profile fields to continue.</div>
