@@ -22,10 +22,10 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Slice 1: Family onboarding unlock (`pending` → `active`) + household profile form
 - [x] Slice 1: Add Student multi-step wizard + real student cards
 - [x] Five-form field catalog + structured controls (`src/lib/forms`, wired into onboarding/Add Student)
-- [ ] Book Tutoring end-to-end (parent chooses suitable available tutor)
+- [x] Book Tutoring (trimmed wizard + seeded tutors/slots + consent-gated Stripe card-on-file)
 - [ ] Enroll in Courses (First Class / Express / Summer Master Class)
 - [ ] Calendar & Changes request flow
-- [ ] Payments/Receipts safe detail (still no raw cards)
+- [ ] Payments/Receipts detail + receipt download (saved card brand/last4 already shown)
 - [ ] Messages/Support → Staff inbox loop
 - [ ] Profile + Account & Security simulations replaced with real Clerk-backed edits where appropriate
 - [ ] Five Gravity Form field groups end-to-end (wizards consume catalog)
@@ -44,7 +44,9 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 
 ## Stage 4 — Money & integrations (gated)
 
-- [ ] Stripe hosted payment
+- [x] Stripe card-on-file (SetupIntent + consent) for Book Tutoring
+- [ ] Stripe charge / receipt capture for pending payment bookings
+
 - [ ] QuickBooks
 - [ ] Acuity
 - [ ] Zoho sync

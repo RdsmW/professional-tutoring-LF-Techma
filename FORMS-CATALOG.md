@@ -31,11 +31,12 @@ Machine-readable catalog for Professional Tutoring’s five live service forms. 
 
 ## Wired today
 
-- Add Student: grade select, graduation year select, gender radios
-- Family onboarding: US state select
-- APIs reject unknown catalog values for those fields
+- Add Student: grade select, graduation year select, gender select
+- Family onboarding: US state select + Mapbox address autocomplete
+- Book Tutoring: Academic/Summer subjects, schedule windows, payment plans from this catalog; APIs reject unknown catalog values
+- Stripe card-on-file during Book Tutoring **only after** explicit save-card permission (tokens + brand/last4 only)
 
 ## Next Stage 2 composition
 
-- **Book Tutoring** mounts Academic or Summer subject / window / package fields from this catalog
 - **Enroll** mounts First Class slots, Express (pending time), or Master Class session checkboxes + course payment radios
+- Full Gravity verified-intake field dump on tutoring journeys (deferred from Book Tutoring slice)

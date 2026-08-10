@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -44,6 +45,12 @@ export const households = pgTable("households", {
   postalCode: varchar("postal_code", { length: 32 }),
   timezone: text("timezone").notNull().default("America/New_York"),
   notes: text("notes"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeDefaultPaymentMethodId: text("stripe_default_payment_method_id"),
+  cardBrand: text("card_brand"),
+  cardLast4: varchar("card_last4", { length: 4 }),
+  paymentMethodConsentAt: timestamp("payment_method_consent_at", { withTimezone: true }),
+  paymentMethodConsentVersion: text("payment_method_consent_version"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -100,6 +107,16 @@ export const staffProfiles = pgTable("staff_profiles", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const tutoringRequestStatusEnum = pgEnum("tutoring_request_status", [
+  "draft",
+  "submitted",
+  "held",
+  "pending_staff_review",
+  "confirmed",
+  "cancelled",
+  "failed",
+]);
+
 export const tutors = pgTable("tutors", {
   id: uuid("id").defaultRandom().primaryKey(),
   displayName: text("display_name").notNull(),
@@ -119,6 +136,17 @@ export const subjects = pgTable("subjects", {
   category: text("category"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const tutorSubjects = pgTable("tutor_subjects", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tutorId: uuid("tutor_id")
+    .notNull()
+    .references(() => tutors.id),
+  subjectId: uuid("subject_id")
+    .notNull()
+    .references(() => subjects.id),
+  priority: integer("priority").notNull().default(0),
 });
 
 export const courseOfferings = pgTable("course_offerings", {
@@ -170,6 +198,29 @@ export const availabilitySlots = pgTable("availability_slots", {
   bookedSeats: integer("booked_seats").notNull().default(0),
   active: boolean("active").notNull().default(true),
   label: text("label"),
+  scheduleWindowId: varchar("schedule_window_id", { length: 64 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const tutoringRequests = pgTable("tutoring_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  householdId: uuid("household_id").notNull(),
+  studentId: uuid("student_id").notNull(),
+  subjectId: uuid("subject_id").notNull(),
+  requestedByGuardianId: uuid("requested_by_guardian_id"),
+  status: tutoringRequestStatusEnum("status").notNull().default("draft"),
+  preferredSlotId: uuid("preferred_slot_id"),
+  scheduleNotes: text("schedule_notes"),
+  subjectNotes: text("subject_notes"),
+  referralSource: text("referral_source"),
+  packageLabel: text("package_label"),
+  policyVersionId: uuid("policy_version_id"),
+  agreementAcceptedAt: timestamp("agreement_accepted_at", { withTimezone: true }),
+  formId: text("form_id"),
+  scheduleWindowId: varchar("schedule_window_id", { length: 64 }),
+  paymentPlanId: varchar("payment_plan_id", { length: 64 }),
+  payload: jsonb("payload"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

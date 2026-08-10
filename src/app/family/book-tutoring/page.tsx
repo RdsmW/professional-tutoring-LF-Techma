@@ -1,4 +1,6 @@
-import { ComingStageNote, PageIntro, Panel } from "@/components/ui";
+import { Suspense } from "react";
+import { PageIntro } from "@/components/ui";
+import { BookTutoringWizard } from "@/components/book-tutoring-wizard";
 
 export default function FamilyBookTutoringPage() {
   return (
@@ -8,17 +10,9 @@ export default function FamilyBookTutoringPage() {
         title="Book Tutoring"
         description="Academic-Year or Summer tutoring. Parents choose from suitable and available tutors — Best Fit is staff-only assist."
       />
-      <Panel title="Booking journey" eyebrow="Mockup steps">
-        <div className="wizard-progress">
-          {["Student", "Service", "Subject", "Pattern", "Window", "Tutor", "Slot", "Review"].map((step, index) => (
-            <div key={step} className={index === 0 ? "complete" : undefined}>
-              <span>{index + 1}</span>
-              <small>{step}</small>
-            </div>
-          ))}
-        </div>
-        <ComingStageNote feature="Full Book Tutoring wizard with capacity-safe confirmation" />
-      </Panel>
+      <Suspense fallback={<div className="panel">Loading booking wizard…</div>}>
+        <BookTutoringWizard />
+      </Suspense>
     </>
   );
 }
