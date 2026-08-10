@@ -24,8 +24,8 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Slice 1: Add Student multi-step wizard + real student cards
 - [x] Five-form field catalog + structured controls (`src/lib/forms`, wired into onboarding/Add Student)
 - [x] Book Tutoring (trimmed wizard + seeded tutors/slots + consent-gated Stripe card-on-file)
-- [ ] Enroll in Courses (First Class / Express / Summer Master Class)
-- [ ] Calendar & Changes request flow
+- [x] Enroll in Courses (First Class / Express / Summer Master Class)
+- [x] Calendar & Changes request flow
 - [ ] Payments/Receipts detail + receipt download (saved card brand/last4 already shown)
 - [ ] Messages/Support → Staff inbox loop
 - [ ] Profile + Account & Security simulations replaced with real Clerk-backed edits where appropriate

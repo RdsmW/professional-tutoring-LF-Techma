@@ -292,3 +292,31 @@ export const paymentRecords = pgTable("payment_records", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const changeRequestStatusEnum = pgEnum("change_request_status", [
+  "submitted",
+  "under_review",
+  "approved",
+  "declined",
+  "applied",
+]);
+
+export const changeRequests = pgTable("change_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  householdId: uuid("household_id").notNull(),
+  studentId: uuid("student_id").notNull(),
+  requestedByGuardianId: uuid("requested_by_guardian_id"),
+  relatedEntityType: text("related_entity_type").notNull(),
+  relatedEntityId: uuid("related_entity_id").notNull(),
+  changeType: text("change_type").notNull(),
+  reason: text("reason").notNull(),
+  requestedOutcome: text("requested_outcome").notNull(),
+  preferredAlternatives: text("preferred_alternatives"),
+  policyRecommendation: text("policy_recommendation").notNull(),
+  status: changeRequestStatusEnum("status").notNull().default("submitted"),
+  staffNotes: text("staff_notes"),
+  resolvedByStaffId: uuid("resolved_by_staff_id"),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
