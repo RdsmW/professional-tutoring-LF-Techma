@@ -255,17 +255,17 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .subject-multi-select{display:flex;flex-wrap:wrap;gap:7px;max-height:220px;overflow:auto;padding:2px;margin-top:4px}
 .subject-multi-select button{border:1px solid var(--line);background:#fff;padding:8px 10px;font-size:9px;font-weight:700;cursor:pointer;text-align:left}
 .subject-multi-select button.selected,.subject-multi-select button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
-.student-review-card{max-width:760px;margin:18px auto 0;border:1px solid var(--line);background:#fff;text-align:left}
+.student-review-card{max-width:760px;margin:18px auto 20px;border:1px solid var(--line);background:#fff;text-align:left}
 .student-review-profile{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0}
 .student-review-profile>div,.student-review-needs{padding:14px 15px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
 .student-review-profile>div:last-child{border-right:0}
 .student-review-profile small,.student-review-needs small{display:block;color:var(--muted);font-size:7px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
 .student-review-profile strong,.student-review-needs strong{display:block;font-size:10px;line-height:1.4}
-.student-review-meta{display:inline-block;margin-top:6px;font-size:8px;font-weight:800;color:var(--blue)}
 .student-review-needs{border-right:0;border-bottom:0}
 .student-review-chips{display:flex;flex-wrap:wrap;gap:6px}
 .student-review-chips span{border:1px solid var(--line);background:#f7f8f5;padding:5px 8px;font-size:8px;font-weight:800}
 .student-review-notes{margin:10px 0 0;font-size:9px;color:var(--muted);line-height:1.45}
+.success-state .success-actions{margin-top:4px;gap:12px}
 @media (max-width: 900px){
   .student-review-profile{grid-template-columns:1fr 1fr}
   .student-review-profile>div{border-right:0}

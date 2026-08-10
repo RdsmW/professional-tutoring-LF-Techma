@@ -312,9 +312,8 @@ export function AddStudentWizard({
               <div>
                 <small>Student</small>
                 <strong>
-                  {draft.firstName} {draft.lastName}
+                  {draft.firstName} {draft.lastName} ({initials})
                 </strong>
-                <span className="student-review-meta">{initials}</span>
               </div>
               <div>
                 <small>School</small>
