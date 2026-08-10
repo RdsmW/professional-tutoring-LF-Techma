@@ -19,8 +19,8 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 
 ## Stage 2 — Family journeys (next)
 
-- [ ] Family account creation / onboarding unlock
-- [ ] Add Student multi-step wizard
+- [x] Slice 1: Family onboarding unlock (`pending` → `active`) + household profile form
+- [x] Slice 1: Add Student multi-step wizard + real student cards
 - [ ] Book Tutoring end-to-end (parent chooses suitable available tutor)
 - [ ] Enroll in Courses (First Class / Express / Summer Master Class)
 - [ ] Calendar & Changes request flow

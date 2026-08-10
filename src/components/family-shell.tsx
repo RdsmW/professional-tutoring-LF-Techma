@@ -23,7 +23,14 @@ export function FamilyShell({
 
   return (
     <FamilyPortalProvider
-      value={{ displayName: label, householdName, householdStatus }}
+      value={{
+        displayName: label,
+        householdName,
+        householdStatus,
+        setDisplayName: setLabel,
+        setHouseholdName,
+        setHouseholdStatus,
+      }}
     >
       <div className="app-shell family-mode">
         <BootstrapSession

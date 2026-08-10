@@ -45,7 +45,7 @@ export default function FamilyHomePage() {
             <span>Restricted fields protected</span>
           </div>
           <Link
-            href="/family/students"
+            href="/family/students?add=1"
             className="primary-button family-primary"
             style={{
               textDecoration: "none",

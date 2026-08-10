@@ -83,6 +83,7 @@ export const students = pgTable("students", {
   cellPhone: varchar("cell_phone", { length: 64 }),
   email: text("email"),
   birthdate: text("birthdate"),
+  learningNeeds: text("learning_needs"),
   supportNotesRestricted: text("support_notes_restricted"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

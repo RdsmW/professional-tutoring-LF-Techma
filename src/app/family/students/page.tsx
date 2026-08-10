@@ -1,29 +1,39 @@
-import Link from "next/link";
-import { ComingStageNote, PageIntro, Panel } from "@/components/ui";
+import { Suspense } from "react";
+import { FamilyStudentsClient } from "@/components/family-students-client";
+import { getFamilyContext, listHouseholdStudents } from "@/lib/family/session";
 
-export default function FamilyStudentsPage() {
+export default async function FamilyStudentsPage() {
+  let initialStudents: {
+    id: string;
+    displayName: string;
+    schoolName: string | null;
+    gradeLabel: string | null;
+    graduationYear: number | null;
+    learningNeeds: string | null;
+    lifecycle: string;
+  }[] = [];
+
+  try {
+    const context = await getFamilyContext();
+    if (context) {
+      const rows = await listHouseholdStudents(context.household.id);
+      initialStudents = rows.map((row) => ({
+        id: row.id,
+        displayName: row.displayName,
+        schoolName: row.schoolName,
+        gradeLabel: row.gradeLabel,
+        graduationYear: row.graduationYear,
+        learningNeeds: row.learningNeeds,
+        lifecycle: row.lifecycle,
+      }));
+    }
+  } catch {
+    initialStudents = [];
+  }
+
   return (
-    <>
-      <PageIntro
-        eyebrow="Family Portal · Students"
-        title="Students"
-        description="Each student card will open Student Detail. Restricted education fields stay minimized and permissioned."
-        action={
-          <Link href="/family/students" className="primary-button family-primary" style={{ textDecoration: "none", padding: "10px 14px", background: "var(--coral)", color: "#fff", fontWeight: 800, fontSize: 11 }}>
-            Add student
-          </Link>
-        }
-      />
-      <Panel title="Your students" eyebrow="Stage 1 shell">
-        <div className="family-student-grid">
-          <button type="button" className="add-student-tile">
-            <span>+</span>
-            <h3>Add student</h3>
-            <p>Multi-step flow arrives in Stage 2</p>
-          </button>
-        </div>
-        <ComingStageNote feature="Add Student wizard with review, confirmation, and Student Detail" />
-      </Panel>
-    </>
+    <Suspense fallback={<p style={{ color: "var(--muted)", fontSize: 12 }}>Loading students…</p>}>
+      <FamilyStudentsClient initialStudents={initialStudents} />
+    </Suspense>
   );
 }

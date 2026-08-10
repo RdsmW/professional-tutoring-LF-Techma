@@ -38,7 +38,7 @@ export function FamilyHomeHero() {
               </Link>
             ) : null}
             <Link
-              href="/family/book-tutoring"
+              href="/family/students?add=1"
               className="primary-button family-primary"
               style={{
                 textDecoration: "none",
@@ -46,6 +46,20 @@ export function FamilyHomeHero() {
                 padding: "10px 14px",
                 background: "var(--coral)",
                 color: "#fff",
+                fontWeight: 800,
+                fontSize: 11,
+              }}
+            >
+              + Add student
+            </Link>
+            <Link
+              href="/family/book-tutoring"
+              className="secondary-button"
+              style={{
+                textDecoration: "none",
+                display: "inline-block",
+                padding: "10px 14px",
+                border: "1px solid var(--line)",
                 fontWeight: 800,
                 fontSize: 11,
               }}

@@ -6,12 +6,18 @@ export type FamilyPortalState = {
   displayName: string;
   householdName: string | null;
   householdStatus: string | null;
+  setHouseholdName: (name: string | null) => void;
+  setHouseholdStatus: (status: string | null) => void;
+  setDisplayName: (name: string) => void;
 };
 
 const FamilyPortalContext = createContext<FamilyPortalState>({
   displayName: "Family",
   householdName: null,
   householdStatus: null,
+  setHouseholdName: () => undefined,
+  setHouseholdStatus: () => undefined,
+  setDisplayName: () => undefined,
 });
 
 export function FamilyPortalProvider({
