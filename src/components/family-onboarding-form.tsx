@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { useFamilyPortal } from "@/components/family-portal-context";
 import { US_STATES } from "@/lib/forms/options";
 
@@ -176,9 +177,18 @@ export function FamilyOnboardingForm() {
         </label>
         <label>
           Address line 1
-          <input
+          <AddressAutocompleteInput
             value={form.addressLine1}
-            onChange={(event) => setForm({ ...form, addressLine1: event.target.value })}
+            onChange={(addressLine1) => setForm({ ...form, addressLine1 })}
+            onSelect={(suggestion) =>
+              setForm({
+                ...form,
+                addressLine1: suggestion.addressLine1,
+                city: suggestion.city || form.city,
+                state: suggestion.state || form.state,
+                postalCode: suggestion.postalCode || form.postalCode,
+              })
+            }
             required
           />
         </label>
