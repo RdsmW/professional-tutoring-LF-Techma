@@ -16,6 +16,7 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Postgres `connect_timeout` so login never hangs on DB
 - [x] Staff Dashboard mockup layout with live metrics where data exists
 - [x] Family portal polish (family-mode theme, sidebar naming, pending onboarding cue)
+- [x] Family Home/Students UI parity (metrics, live students/bookings, need chips, edit footer)
 
 ## Stage 2 — Family journeys (next)
 

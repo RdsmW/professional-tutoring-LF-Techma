@@ -11,13 +11,13 @@ export function FamilyHomeHero() {
     <>
       <section className="family-hero">
         <div>
-          <span className="eyebrow">Family Portal</span>
+          <span className="eyebrow">Separate adult accounts · Shared household</span>
           <h1 style={{ margin: "6px 0 10px", font: "700 32px/1.15 Georgia, serif" }}>
-            {householdName ? `Welcome, ${householdName}` : "Welcome home"}
+            {householdName ? `Welcome to the ${householdName} account.` : "Welcome to your family account."}
           </h1>
           <p>
-            Parent = Family account. Add students, then choose Book Tutoring or Enroll in Courses.
-            General inquiries stay in Zoho — this portal is for registered service journeys.
+            Each guardian signs in separately to the same household with their own permissions. Add
+            and manage children, then choose tutoring or a defined cohort course.
           </p>
           <div className="hero-actions" style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
             {pending ? (
@@ -65,20 +65,6 @@ export function FamilyHomeHero() {
               }}
             >
               Book Tutoring
-            </Link>
-            <Link
-              href="/family/enroll-courses"
-              className="secondary-button"
-              style={{
-                textDecoration: "none",
-                display: "inline-block",
-                padding: "10px 14px",
-                border: "1px solid var(--line)",
-                fontWeight: 800,
-                fontSize: 11,
-              }}
-            >
-              Enroll in Courses
             </Link>
           </div>
         </div>
