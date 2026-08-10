@@ -21,13 +21,14 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 
 - [x] Slice 1: Family onboarding unlock (`pending` → `active`) + household profile form
 - [x] Slice 1: Add Student multi-step wizard + real student cards
+- [x] Five-form field catalog + structured controls (`src/lib/forms`, wired into onboarding/Add Student)
 - [ ] Book Tutoring end-to-end (parent chooses suitable available tutor)
 - [ ] Enroll in Courses (First Class / Express / Summer Master Class)
 - [ ] Calendar & Changes request flow
 - [ ] Payments/Receipts safe detail (still no raw cards)
 - [ ] Messages/Support → Staff inbox loop
 - [ ] Profile + Account & Security simulations replaced with real Clerk-backed edits where appropriate
-- [ ] Five Gravity Form field groups per `FORM-TO-APP-FIELD-MAPPING.md`
+- [ ] Five Gravity Form field groups end-to-end (wizards consume catalog)
 
 ## Stage 3 — Staff depth
 

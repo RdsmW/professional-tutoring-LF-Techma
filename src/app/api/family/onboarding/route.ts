@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getFamilyContext } from "@/lib/family/session";
 import { requireDb } from "@/lib/db";
 import { households } from "@/lib/db/schema";
+import { isValidOptionId } from "@/lib/forms/options";
 
 type OnboardingBody = {
   displayName?: string;
@@ -70,6 +71,10 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
+    }
+
+    if (!isValidOptionId("US_STATES", state)) {
+      return NextResponse.json({ ok: false, error: "Invalid state selection." }, { status: 400 });
     }
 
     const database = requireDb();

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { GENDER, GRADE_LABELS, GRADUATION_YEARS } from "@/lib/forms/options";
 
 type Draft = {
   firstName: string;
@@ -9,6 +10,7 @@ type Draft = {
   schoolName: string;
   gradeLabel: string;
   graduationYear: string;
+  gender: string;
   learningNeeds: string;
 };
 
@@ -18,6 +20,7 @@ const emptyDraft: Draft = {
   schoolName: "",
   gradeLabel: "",
   graduationYear: "",
+  gender: "",
   learningNeeds: "",
 };
 
@@ -43,7 +46,8 @@ export function AddStudentWizard({
       draft.lastName.trim() &&
       draft.schoolName.trim() &&
       draft.gradeLabel.trim() &&
-      /^\d{4}$/.test(draft.graduationYear.trim()),
+      draft.graduationYear.trim() &&
+      draft.gender.trim(),
   );
   const step2Valid = Boolean(draft.learningNeeds.trim());
 
@@ -143,20 +147,49 @@ export function AddStudentWizard({
             </label>
             <label>
               Grade
-              <input
+              <select
                 value={draft.gradeLabel}
-                placeholder="e.g. Grade 8"
                 onChange={(event) => setDraft({ ...draft, gradeLabel: event.target.value })}
-              />
+              >
+                <option value="">Select grade</option>
+                {GRADE_LABELS.options.map((option) => (
+                  <option key={option.id} value={option.label}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Graduation year
-              <input
+              <select
                 value={draft.graduationYear}
-                placeholder="e.g. 2031"
                 onChange={(event) => setDraft({ ...draft, graduationYear: event.target.value })}
-              />
+              >
+                <option value="">Select year</option>
+                {GRADUATION_YEARS.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
+            <fieldset style={{ border: "1px solid var(--line)", padding: 10, margin: 0 }}>
+              <legend style={{ fontSize: 8, color: "var(--muted)", padding: "0 4px" }}>Gender</legend>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {GENDER.options.map((option) => (
+                  <label key={option.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+                    <input
+                      type="radio"
+                      name="student-gender"
+                      value={option.id}
+                      checked={draft.gender === option.id}
+                      onChange={() => setDraft({ ...draft, gender: option.id })}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </div>
           {!step1Valid ? (
             <div className="validation-hint">Complete all profile fields to continue.</div>
@@ -236,8 +269,10 @@ export function AddStudentWizard({
               </strong>
             </div>
             <div>
-              <small>Graduation</small>
-              <strong>{draft.graduationYear}</strong>
+              <small>Graduation / gender</small>
+              <strong>
+                {draft.graduationYear} · {draft.gender}
+              </strong>
             </div>
             <div>
               <small>Learning needs</small>

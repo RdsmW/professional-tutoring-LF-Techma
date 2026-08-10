@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getFamilyContext, listHouseholdStudents } from "@/lib/family/session";
 import { requireDb } from "@/lib/db";
 import { students } from "@/lib/db/schema";
+import { isValidOptionId } from "@/lib/forms/options";
 
 type StudentBody = {
   firstName?: string;
@@ -9,12 +10,14 @@ type StudentBody = {
   schoolName?: string;
   gradeLabel?: string;
   graduationYear?: string | number;
+  gender?: string;
   learningNeeds?: string;
 };
 
 function parseGraduationYear(value: string | number | undefined) {
   const year = typeof value === "number" ? value : Number.parseInt(String(value ?? "").trim(), 10);
-  if (!Number.isFinite(year) || year < 2000 || year > 2100) return null;
+  if (!Number.isFinite(year)) return null;
+  if (!isValidOptionId("GRADUATION_YEARS", String(year))) return null;
   return year;
 }
 
@@ -36,6 +39,7 @@ export async function GET() {
         schoolName: row.schoolName,
         gradeLabel: row.gradeLabel,
         graduationYear: row.graduationYear,
+        gender: row.gender,
         learningNeeds: row.learningNeeds,
         lifecycle: row.lifecycle,
       })),
@@ -62,17 +66,26 @@ export async function POST(request: Request) {
     const lastName = (body.lastName ?? "").trim();
     const schoolName = (body.schoolName ?? "").trim();
     const gradeLabel = (body.gradeLabel ?? "").trim();
+    const gender = (body.gender ?? "").trim();
     const learningNeeds = (body.learningNeeds ?? "").trim();
     const graduationYear = parseGraduationYear(body.graduationYear);
 
-    if (!firstName || !lastName || !schoolName || !gradeLabel || !graduationYear || !learningNeeds) {
+    if (!firstName || !lastName || !schoolName || !gradeLabel || !graduationYear || !gender || !learningNeeds) {
       return NextResponse.json(
         {
           ok: false,
-          error: "First name, last name, school, grade, graduation year, and learning needs are required.",
+          error:
+            "First name, last name, school, grade, graduation year, gender, and learning needs are required.",
         },
         { status: 400 },
       );
+    }
+
+    if (!isValidOptionId("GRADE_LABELS", gradeLabel)) {
+      return NextResponse.json({ ok: false, error: "Invalid grade selection." }, { status: 400 });
+    }
+    if (!isValidOptionId("GENDER", gender)) {
+      return NextResponse.json({ ok: false, error: "Invalid gender selection." }, { status: 400 });
     }
 
     const displayName = `${firstName} ${lastName}`.trim();
@@ -87,6 +100,7 @@ export async function POST(request: Request) {
         schoolName,
         gradeLabel,
         graduationYear,
+        gender,
         learningNeeds,
         lifecycle: "prospect",
       })
@@ -100,6 +114,7 @@ export async function POST(request: Request) {
         schoolName: created.schoolName,
         gradeLabel: created.gradeLabel,
         graduationYear: created.graduationYear,
+        gender: created.gender,
         learningNeeds: created.learningNeeds,
         lifecycle: created.lifecycle,
       },

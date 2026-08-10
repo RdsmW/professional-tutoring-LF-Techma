@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFamilyPortal } from "@/components/family-portal-context";
+import { US_STATES } from "@/lib/forms/options";
 
 type OnboardingForm = {
   displayName: string;
@@ -198,11 +199,18 @@ export function FamilyOnboardingForm() {
         </label>
         <label>
           State
-          <input
+          <select
             value={form.state}
             onChange={(event) => setForm({ ...form, state: event.target.value })}
             required
-          />
+          >
+            <option value="">Select state</option>
+            {US_STATES.options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Postal code
