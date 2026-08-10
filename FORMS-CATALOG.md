@@ -31,7 +31,7 @@ Machine-readable catalog for Professional Tutoring’s five live service forms. 
 
 ## Wired today
 
-- Add Student: grade select, graduation year select, gender select
+- Add Student: grade select, graduation year select, gender select, academic subject multi-select for learning needs
 - Family onboarding: US state select + Mapbox address autocomplete
 - Book Tutoring: Academic/Summer subjects, schedule windows, payment plans from this catalog; APIs reject unknown catalog values
 - Stripe card-on-file during Book Tutoring **only after** explicit save-card permission (tokens + brand/last4 only)

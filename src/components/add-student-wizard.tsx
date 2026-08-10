@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GENDER, GRADE_LABELS, GRADUATION_YEARS } from "@/lib/forms/options";
+import { ACADEMIC_SUBJECTS, GENDER, GRADE_LABELS, GRADUATION_YEARS } from "@/lib/forms/options";
 
 type Draft = {
   firstName: string;
@@ -11,7 +11,8 @@ type Draft = {
   gradeLabel: string;
   graduationYear: string;
   gender: string;
-  learningNeeds: string;
+  subjectIds: string[];
+  learningNeedNotes: string;
 };
 
 const emptyDraft: Draft = {
@@ -21,10 +22,21 @@ const emptyDraft: Draft = {
   gradeLabel: "",
   graduationYear: "",
   gender: "",
-  learningNeeds: "",
+  subjectIds: [],
+  learningNeedNotes: "",
 };
 
 const steps = ["Student profile", "Learning needs", "Complete"];
+
+function composeLearningNeeds(subjectIds: string[], notes: string) {
+  const labels = ACADEMIC_SUBJECTS.options
+    .filter((option) => subjectIds.includes(option.id))
+    .map((option) => option.label);
+  const trimmedNotes = notes.trim();
+  if (labels.length === 0) return trimmedNotes;
+  if (!trimmedNotes) return labels.join(", ");
+  return `${labels.join(", ")} — ${trimmedNotes}`;
+}
 
 export function AddStudentWizard({
   open,
@@ -49,7 +61,12 @@ export function AddStudentWizard({
       draft.graduationYear.trim() &&
       draft.gender.trim(),
   );
-  const step2Valid = Boolean(draft.learningNeeds.trim());
+  const step2Valid = draft.subjectIds.length > 0;
+
+  const selectedSubjects = useMemo(
+    () => ACADEMIC_SUBJECTS.options.filter((option) => draft.subjectIds.includes(option.id)),
+    [draft.subjectIds],
+  );
 
   const initials = useMemo(() => {
     const a = draft.firstName.trim()[0] ?? "";
@@ -66,6 +83,15 @@ export function AddStudentWizard({
     onClose();
   }
 
+  function toggleSubject(subjectId: string) {
+    setDraft((prev) => ({
+      ...prev,
+      subjectIds: prev.subjectIds.includes(subjectId)
+        ? prev.subjectIds.filter((id) => id !== subjectId)
+        : [...prev.subjectIds, subjectId],
+    }));
+  }
+
   async function createStudent() {
     if (saving) return;
     setSaving(true);
@@ -75,8 +101,15 @@ export function AddStudentWizard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...draft,
+          firstName: draft.firstName,
+          lastName: draft.lastName,
+          schoolName: draft.schoolName,
+          gradeLabel: draft.gradeLabel,
           graduationYear: Number.parseInt(draft.graduationYear, 10),
+          gender: draft.gender,
+          subjectIds: draft.subjectIds,
+          learningNeedNotes: draft.learningNeedNotes,
+          learningNeeds: composeLearningNeeds(draft.subjectIds, draft.learningNeedNotes),
         }),
       });
       const data = await response.json();
@@ -210,12 +243,34 @@ export function AddStudentWizard({
       {step === 2 ? (
         <div className="wizard-stage">
           <h3>Learning needs</h3>
-          <label className="full-input">
-            Subjects or learning goals
+          <div className="select-block">
+            <strong>Subjects or learning goals</strong>
+            <p style={{ margin: "6px 0 10px", fontSize: 10, color: "var(--muted)" }}>
+              Select one or more subjects. Add optional notes for anything else.
+            </p>
+            <div className="subject-multi-select" role="group" aria-label="Subjects or learning goals">
+              {ACADEMIC_SUBJECTS.options.map((option) => {
+                const selected = draft.subjectIds.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={selected ? "selected" : undefined}
+                    aria-pressed={selected}
+                    onClick={() => toggleSubject(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <label className="full-input" style={{ marginTop: 16 }}>
+            Additional notes (optional)
             <textarea
-              value={draft.learningNeeds}
-              placeholder="Example: Algebra I, writing organization"
-              onChange={(event) => setDraft({ ...draft, learningNeeds: event.target.value })}
+              value={draft.learningNeedNotes}
+              placeholder="Example: struggles with word problems, wants writing organization help"
+              onChange={(event) => setDraft({ ...draft, learningNeedNotes: event.target.value })}
             />
           </label>
           <div className="privacy-callout">
@@ -229,7 +284,7 @@ export function AddStudentWizard({
             </div>
           </div>
           {!step2Valid ? (
-            <div className="validation-hint">Add at least one learning need to continue.</div>
+            <div className="validation-hint">Select at least one subject or learning goal to continue.</div>
           ) : null}
           <div className="wizard-footer">
             <button type="button" className="wizard-back" onClick={() => setStep(1)}>
@@ -252,28 +307,42 @@ export function AddStudentWizard({
           <span>✓</span>
           <h3>Student profile ready</h3>
           <p>Review the record, then add it beneath your Family account.</p>
-          <div className="review-summary">
-            <div>
-              <small>Student</small>
-              <strong>
-                {draft.firstName} {draft.lastName} ({initials})
-              </strong>
+          <div className="student-review-card">
+            <div className="student-review-profile">
+              <div>
+                <small>Student</small>
+                <strong>
+                  {draft.firstName} {draft.lastName}
+                </strong>
+                <span className="student-review-meta">{initials}</span>
+              </div>
+              <div>
+                <small>School</small>
+                <strong>{draft.schoolName}</strong>
+              </div>
+              <div>
+                <small>Grade</small>
+                <strong>{draft.gradeLabel}</strong>
+              </div>
+              <div>
+                <small>Graduation year</small>
+                <strong>{draft.graduationYear}</strong>
+              </div>
+              <div>
+                <small>Gender</small>
+                <strong>{draft.gender}</strong>
+              </div>
             </div>
-            <div>
-              <small>School / grade</small>
-              <strong>
-                {draft.schoolName} · {draft.gradeLabel}
-              </strong>
-            </div>
-            <div>
-              <small>Graduation / gender</small>
-              <strong>
-                {draft.graduationYear} · {draft.gender}
-              </strong>
-            </div>
-            <div>
+            <div className="student-review-needs">
               <small>Learning needs</small>
-              <strong>{draft.learningNeeds}</strong>
+              <div className="student-review-chips">
+                {selectedSubjects.map((option) => (
+                  <span key={option.id}>{option.label}</span>
+                ))}
+              </div>
+              {draft.learningNeedNotes.trim() ? (
+                <p className="student-review-notes">{draft.learningNeedNotes.trim()}</p>
+              ) : null}
             </div>
           </div>
           {error ? <div className="validation-hint">{error}</div> : null}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getFamilyContext, listHouseholdStudents } from "@/lib/family/session";
 import { requireDb } from "@/lib/db";
 import { students } from "@/lib/db/schema";
-import { isValidOptionId } from "@/lib/forms/options";
+import { isValidOptionId, ACADEMIC_SUBJECTS } from "@/lib/forms/options";
 
 type StudentBody = {
   firstName?: string;
@@ -12,6 +12,8 @@ type StudentBody = {
   graduationYear?: string | number;
   gender?: string;
   learningNeeds?: string;
+  subjectIds?: string[];
+  learningNeedNotes?: string;
 };
 
 function parseGraduationYear(value: string | number | undefined) {
@@ -67,15 +69,32 @@ export async function POST(request: Request) {
     const schoolName = (body.schoolName ?? "").trim();
     const gradeLabel = (body.gradeLabel ?? "").trim();
     const gender = (body.gender ?? "").trim();
-    const learningNeeds = (body.learningNeeds ?? "").trim();
+    const subjectIds = Array.isArray(body.subjectIds)
+      ? body.subjectIds.map((id) => String(id).trim()).filter(Boolean)
+      : [];
+    const learningNeedNotes = (body.learningNeedNotes ?? "").trim();
     const graduationYear = parseGraduationYear(body.graduationYear);
+
+    if (subjectIds.some((id) => !isValidOptionId("ACADEMIC_SUBJECTS", id))) {
+      return NextResponse.json({ ok: false, error: "Invalid subject selection." }, { status: 400 });
+    }
+
+    const subjectLabels = ACADEMIC_SUBJECTS.options
+      .filter((option) => subjectIds.includes(option.id))
+      .map((option) => option.label);
+    const learningNeeds =
+      subjectLabels.length > 0
+        ? learningNeedNotes
+          ? `${subjectLabels.join(", ")} — ${learningNeedNotes}`
+          : subjectLabels.join(", ")
+        : (body.learningNeeds ?? "").trim();
 
     if (!firstName || !lastName || !schoolName || !gradeLabel || !graduationYear || !gender || !learningNeeds) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "First name, last name, school, grade, graduation year, gender, and learning needs are required.",
+            "First name, last name, school, grade, graduation year, gender, and at least one learning need are required.",
         },
         { status: 400 },
       );
