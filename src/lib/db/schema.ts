@@ -92,6 +92,11 @@ export const students = pgTable("students", {
   birthdate: text("birthdate"),
   learningNeeds: text("learning_needs"),
   supportNotesRestricted: text("support_notes_restricted"),
+  availabilityNotes: text("availability_notes"),
+  emergencyContact: text("emergency_contact"),
+  changeRequestStatus: text("change_request_status"),
+  pendingIntakeNote: text("pending_intake_note"),
+  serviceHistory: jsonb("service_history").$type<string[]>().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
