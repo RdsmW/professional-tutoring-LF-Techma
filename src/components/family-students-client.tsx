@@ -151,19 +151,21 @@ export function FamilyStudentsClient({
                   className="family-student-main"
                   onClick={() => setSelectedId(student.id)}
                 >
-                  <span className={`pill ${active ? "mint" : "amber"}`}>{statusLabel(student.lifecycle)}</span>
-                  <span className="student-detail-avatar small">{initials(student.displayName)}</span>
+                  <div className="student-card-top">
+                    <span className="student-detail-avatar small">{initials(student.displayName)}</span>
+                    <span className={`pill ${active ? "mint" : "amber"}`}>{statusLabel(student.lifecycle)}</span>
+                  </div>
                   <h3>{student.displayName}</h3>
                   <p>
                     {student.schoolName ?? "School pending"} · {student.gradeLabel ?? "Grade pending"}
                   </p>
-                  {chips.length > 0 ? (
-                    <div className="field-cloud">
-                      {chips.map((chip) => (
-                        <span key={chip}>{chip}</span>
-                      ))}
-                    </div>
-                  ) : null}
+                  <div className="field-cloud">
+                    {chips.length > 0 ? (
+                      chips.map((chip) => <span key={chip}>{chip}</span>)
+                    ) : (
+                      <span>Needs not listed yet</span>
+                    )}
+                  </div>
                   <b>Open Student Detail →</b>
                 </button>
                 <button
