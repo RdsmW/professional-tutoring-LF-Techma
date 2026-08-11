@@ -147,7 +147,7 @@ export function FamilyPaymentsClient() {
             <button
               type="button"
               disabled={!selected.studentId}
-              onClick={() => router.push("/family/students")}
+              onClick={() => router.push(`/family/students?studentId=${selected.studentId}`)}
             >
               <span aria-hidden="true">→</span>
               <span>
@@ -155,7 +155,11 @@ export function FamilyPaymentsClient() {
                 <small>{selected.studentName || "Unavailable"}</small>
               </span>
             </button>
-            <button type="button" onClick={() => router.push("/family/calendar")}>
+            <button
+              type="button"
+              disabled={!selected.relatedEntityId}
+              onClick={() => router.push(`/family/calendar?id=${selected.relatedEntityId}`)}
+            >
               <span aria-hidden="true">→</span>
               <span>
                 <strong>

@@ -167,20 +167,31 @@ export function FamilyCalendarClient() {
   useEffect(() => {
     if (loading || deepLinkHandled.current) return;
     const changeId = searchParams.get("change");
-    if (!changeId) return;
+    const detailId = searchParams.get("id");
+    if (!changeId && !detailId) return;
     deepLinkHandled.current = true;
 
-    const target = items.find((item) => item.id === changeId);
+    if (changeId) {
+      const target = items.find((item) => item.id === changeId);
+      if (!target) {
+        setError("That booking was not found. Open a booking from the list to request a change.");
+        return;
+      }
+      if (openChangeForItem(target)) {
+        openDetail(changeId);
+        setError("An open change request already exists for this booking. Staff review is still in progress.");
+        return;
+      }
+      startChange(changeId);
+      return;
+    }
+
+    const target = items.find((item) => item.id === detailId);
     if (!target) {
-      setError("That booking was not found. Open a booking from the list to request a change.");
+      setError("That booking or enrollment was not found.");
       return;
     }
-    if (openChangeForItem(target)) {
-      openDetail(changeId);
-      setError("An open change request already exists for this booking. Staff review is still in progress.");
-      return;
-    }
-    startChange(changeId);
+    openDetail(detailId!);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep-link after calendar load
   }, [loading, items, changeRequests, searchParams]);
 

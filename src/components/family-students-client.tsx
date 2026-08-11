@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AddStudentWizard } from "@/components/add-student-wizard";
@@ -71,18 +71,12 @@ export function FamilyStudentsClient({
   const [history, setHistory] = useState<string[]>(["Student profile created", "No services selected yet"]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
+  const studentDeepLinkHandled = useRef(false);
 
   useEffect(() => {
     setStudents(initialStudents);
   }, [initialStudents]);
-
-  useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setAdding(true);
-      setMode("list");
-      setSelectedId(null);
-    }
-  }, [searchParams]);
 
   const reload = useCallback(async () => {
     try {
@@ -141,6 +135,28 @@ export function FamilyStudentsClient({
     setDetail(null);
     setDetailError(null);
   }
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setAdding(true);
+      setMode("list");
+      setSelectedId(null);
+      setListError(null);
+      return;
+    }
+    if (studentDeepLinkHandled.current) return;
+    const studentId = searchParams.get("studentId");
+    if (!studentId) return;
+    studentDeepLinkHandled.current = true;
+    const match = students.find((student) => student.id === studentId);
+    if (!match) {
+      setListError("That student was not found in this household.");
+      return;
+    }
+    setListError(null);
+    void openDetail(studentId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep-link after students load
+  }, [searchParams, students]);
 
   if (adding) {
     return (
@@ -227,6 +243,8 @@ export function FamilyStudentsClient({
           </button>
         }
       />
+
+      {listError ? <p className="form-error" style={{ marginBottom: 12 }}>{listError}</p> : null}
 
       <section className="family-student-grid">
         {students.map((student) => {
