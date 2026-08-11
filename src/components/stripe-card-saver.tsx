@@ -109,7 +109,8 @@ export const StripeCardSaver = forwardRef<StripeCardSaverHandle, StripeCardSaver
   function StripeCardSaver({ saveForFuture, savedCard, onCollected, onUseSaved, onStartReplace }, ref) {
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [publishableKey, setPublishableKey] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [confirmError, setConfirmError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [replaceMode, setReplaceMode] = useState(!savedCard?.last4);
     const formRef = useRef<SetupFormHandle>(null);
@@ -129,7 +130,8 @@ export const StripeCardSaver = forwardRef<StripeCardSaverHandle, StripeCardSaver
 
       const controller = new AbortController();
       setLoading(true);
-      setError(null);
+      setLoadError(null);
+      setConfirmError(null);
       void fetch("/api/family/billing/setup-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -145,7 +147,7 @@ export const StripeCardSaver = forwardRef<StripeCardSaverHandle, StripeCardSaver
         })
         .catch((err: unknown) => {
           if (controller.signal.aborted) return;
-          setError(err instanceof Error ? err.message : "Unable to start card setup");
+          setLoadError(err instanceof Error ? err.message : "Unable to start card setup");
         })
         .finally(() => {
           if (!controller.signal.aborted) setLoading(false);
@@ -215,15 +217,15 @@ export const StripeCardSaver = forwardRef<StripeCardSaverHandle, StripeCardSaver
     }
 
     if (loading) return <div className="validation-hint">Preparing secure card form…</div>;
-    if (error) return <div className="validation-hint">{error}</div>;
+    if (loadError) return <div className="validation-hint">{loadError}</div>;
     if (!clientSecret || !stripePromise) return null;
 
     return (
       <>
         <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <SetupForm ref={formRef} onError={setError} />
+          <SetupForm ref={formRef} onError={setConfirmError} />
         </Elements>
-        {error ? <div className="validation-hint">{error}</div> : null}
+        {confirmError ? <div className="validation-hint">{confirmError}</div> : null}
         <p style={{ marginTop: 10, fontSize: 9, color: "var(--muted)" }}>
           Enter card details above, then Continue. The card is confirmed with Stripe for this request;
           it is saved on your family account only if you checked save-for-future.
