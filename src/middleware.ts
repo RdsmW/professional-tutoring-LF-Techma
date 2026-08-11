@@ -4,6 +4,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/health(.*)",
+  "/invite(.*)",
+  "/api/invite(.*)",
 ]);
 
 /** Bootstrap authenticates inside the route so unauth clients get JSON 401, not a Clerk rewrite. */
