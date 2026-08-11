@@ -45,7 +45,7 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [ ] Session Detail + attendance
 - [ ] Exception queue with policy traces
 - [x] Billing Detail + controlled actions (manual ledger status/notes; no Stripe charges)
-- [ ] Reports filters/export + school suggestion admin + controlled merge
+- [x] Reports live summary queries (active families, lifecycle, tutor capacity, unpaid billing, course fill) — filters/export polish + school suggestion admin + controlled merge still open
 
 ### QA note — Playwright auth smoke
 
