@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
 
@@ -21,8 +21,16 @@ type TutorDetail = {
   workloadCount: number;
 };
 
+type CatalogSubject = {
+  id: string;
+  code: string;
+  name: string;
+  category: string | null;
+};
+
 export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [tutor, setTutor] = useState<TutorDetail | null>(null);
+  const [catalog, setCatalog] = useState<CatalogSubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
@@ -30,21 +38,34 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [savingNotes, setSavingNotes] = useState(false);
   const [savingSeats, setSavingSeats] = useState(false);
   const [togglingActive, setTogglingActive] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/staff/tutors/${tutorId}`);
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to load tutor.");
+      const [tutorRes, subjectsRes] = await Promise.all([
+        fetch(`/api/staff/tutors/${tutorId}`),
+        fetch("/api/staff/subjects"),
+      ]);
+      const tutorData = await tutorRes.json();
+      const subjectsData = await subjectsRes.json();
+
+      if (!tutorRes.ok || !tutorData.ok) {
+        setError(tutorData.error || "Unable to load tutor.");
         return;
       }
-      setTutor(data.tutor);
-      setNotes(data.tutor.notes ?? "");
-      setMaxSeatsPerSlot(String(data.tutor.maxSeatsPerSlot ?? 1));
+
+      setTutor(tutorData.tutor);
+      setNotes(tutorData.tutor.notes ?? "");
+      setMaxSeatsPerSlot(String(tutorData.tutor.maxSeatsPerSlot ?? 1));
+
+      if (subjectsRes.ok && subjectsData.ok) {
+        setCatalog(subjectsData.subjects ?? []);
+      }
     } catch {
       setError("Unable to load tutor.");
     } finally {
@@ -55,6 +76,19 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  const availableSubjects = useMemo(() => {
+    if (!tutor) return catalog;
+    const assigned = new Set(tutor.subjects.map((s) => s.id));
+    return catalog.filter((s) => !assigned.has(s.id));
+  }, [catalog, tutor]);
+
+  useEffect(() => {
+    if (!selectedSubjectId) return;
+    if (!availableSubjects.some((s) => s.id === selectedSubjectId)) {
+      setSelectedSubjectId("");
+    }
+  }, [availableSubjects, selectedSubjectId]);
 
   async function patchTutor(body: Record<string, unknown>, mode: "notes" | "seats" | "active") {
     setError(null);
@@ -84,6 +118,57 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     }
   }
 
+  async function assignSubject() {
+    if (!selectedSubjectId) {
+      setError("Select a subject to assign.");
+      return;
+    }
+    setError(null);
+    setMessage(null);
+    setAssigning(true);
+    try {
+      const response = await fetch(`/api/staff/tutors/${tutorId}/subjects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectId: selectedSubjectId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to assign subject.");
+        return;
+      }
+      setSelectedSubjectId("");
+      setMessage("Subject assigned.");
+      await reload();
+    } catch {
+      setError("Unable to assign subject.");
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function removeSubject(subjectId: string) {
+    setError(null);
+    setMessage(null);
+    setRemovingId(subjectId);
+    try {
+      const response = await fetch(`/api/staff/tutors/${tutorId}/subjects/${subjectId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to remove subject.");
+        return;
+      }
+      setMessage("Subject removed.");
+      await reload();
+    } catch {
+      setError("Unable to remove subject.");
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
   if (loading) return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading tutor…</p>;
   if (error && !tutor) return <p className="form-error">{error}</p>;
   if (!tutor) return null;
@@ -97,7 +182,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         eyebrow="Staff · Tutor Detail"
         title={tutor.displayName}
         description="Profile, capacity, subjects, and active workload."
-        action={<span className="pill">{tutor.active ? "Active" : "Inactive"}</span>}
+        action={<span className="pill">{tutor.active ? "Active" : "Archived"}</span>}
       />
       {error ? <p className="form-error">{error}</p> : null}
       {message ? <p style={{ fontSize: 11, marginBottom: 12 }}>{message}</p> : null}
@@ -115,7 +200,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             </span>
             <span>
               <small>Status</small>
-              <strong>{tutor.active ? "Active" : "Inactive"}</strong>
+              <strong>{tutor.active ? "Active" : "Archived"}</strong>
             </span>
             <span>
               <small>Workload</small>
@@ -131,7 +216,11 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             disabled={togglingActive}
             onClick={() => void patchTutor({ active: !tutor.active }, "active")}
           >
-            {togglingActive ? "Updating…" : tutor.active ? "Deactivate tutor" : "Activate tutor"}
+            {togglingActive
+              ? "Updating…"
+              : tutor.active
+                ? "Archive tutor"
+                : "Activate tutor"}
           </button>
         </Panel>
 
@@ -174,18 +263,67 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
       </Panel>
 
       <Panel title="Subjects" eyebrow="Coverage">
+        <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap", marginBottom: 12 }}>
+          <label style={{ flex: "1 1 220px", margin: 0 }}>
+            Assign subject
+            <select
+              value={selectedSubjectId}
+              onChange={(e) => setSelectedSubjectId(e.target.value)}
+              disabled={assigning || availableSubjects.length === 0}
+            >
+              <option value="">
+                {availableSubjects.length === 0 ? "No subjects available" : "Select subject…"}
+              </option>
+              {availableSubjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                  {subject.code ? ` (${subject.code})` : ""}
+                  {subject.category ? ` · ${subject.category}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="primary-button"
+            disabled={assigning || !selectedSubjectId}
+            onClick={() => void assignSubject()}
+          >
+            {assigning ? "Adding…" : "Add"}
+          </button>
+        </div>
+
         {tutor.subjects.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 11 }}>
-            No subjects linked yet. Subject assignment deferred.
-          </p>
+          <p style={{ color: "var(--muted)", fontSize: 11 }}>No subjects linked yet.</p>
         ) : (
           tutor.subjects.map((subject) => (
-            <div key={subject.id} style={{ borderTop: "1px solid var(--line)", padding: "10px 0" }}>
-              <strong>{subject.name}</strong>
-              <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--muted)" }}>
-                {subject.code}
-                {subject.priority ? ` · priority ${subject.priority}` : ""}
-              </p>
+            <div
+              key={subject.id}
+              style={{
+                borderTop: "1px solid var(--line)",
+                padding: "10px 0",
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <strong>{subject.name}</strong>
+                <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--muted)" }}>
+                  {subject.code}
+                  {subject.priority ? ` · priority ${subject.priority}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="secondary-button"
+                style={{ height: 32, flexShrink: 0 }}
+                disabled={removingId === subject.id}
+                onClick={() => void removeSubject(subject.id)}
+              >
+                {removingId === subject.id ? "Removing…" : "Remove"}
+              </button>
             </div>
           ))
         )}
