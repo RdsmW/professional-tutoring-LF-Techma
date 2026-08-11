@@ -22,7 +22,39 @@ function amountLabel(cents: number, currency: string) {
 }
 
 function statusLabel(status: string) {
-  return status.replace(/_/g, " ");
+  if (status === "pending" || status === "unpaid") return "Awaiting charge";
+  if (status === "partial") return "Partially paid";
+  const cleaned = status.replace(/_/g, " ");
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+function formatMethodLabel(
+  stored: string | null | undefined,
+  brand: string | null | undefined,
+  last4: string | null | undefined,
+) {
+  const householdFormatted =
+    last4 != null && last4.length > 0
+      ? `${(brand || "Card").toUpperCase()} ···· ${last4}`
+      : null;
+  const trimmed = stored?.trim() || "";
+  const placeholder =
+    !trimmed ||
+    /\*{2,}|····\s*\*{0,4}$/i.test(trimmed) ||
+    /^card\s*[·.]{2,}/i.test(trimmed) ||
+    /ending\s*\*{4}/i.test(trimmed);
+
+  if (householdFormatted && placeholder) return householdFormatted;
+  if (trimmed) {
+    const masked = trimmed.match(/^([a-z0-9]+)\s*[·.]{2,}\s*(\d{4})$/i);
+    if (masked) return `${masked[1].toUpperCase()} ···· ${masked[2]}`;
+    const ending = trimmed.match(/ending\s+(\d{4})/i);
+    if (ending) {
+      return `${(brand || "Card").toUpperCase()} ···· ${ending[1]}`;
+    }
+    return trimmed;
+  }
+  return householdFormatted || "No card on file";
 }
 
 export async function GET() {
@@ -100,11 +132,6 @@ export async function GET() {
       }
     }
 
-    const householdMethod =
-      context.household.cardLast4
-        ? `Card ending ${context.household.cardLast4}`
-        : "Payment method on file";
-
     const payments = rows.map((row) => {
       const relatedId = row.relatedEntityId;
       const booking = row.relatedEntityType === "booking" && relatedId ? bookingMeta.get(relatedId) : null;
@@ -120,7 +147,11 @@ export async function GET() {
             ? "Tutoring booking"
             : "Payment record";
       const description = row.notes?.trim() || baseDescription;
-      const methodLabel = row.methodLabel?.trim() || householdMethod;
+      const methodLabel = formatMethodLabel(
+        row.methodLabel,
+        context.household.cardBrand,
+        context.household.cardLast4,
+      );
 
       return {
         id: row.id,

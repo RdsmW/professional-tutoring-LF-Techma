@@ -28,6 +28,7 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Calendar & Changes request flow
 - [x] Calendar change UX: booking-first CTA (list banner softened; Messages bridges to Calendar)
 - [x] Payments/Receipts detail + receipt download (saved card brand/last4 already shown)
+- [x] Payments detail UX polish (friendly status, 3-card summary, plain-language receipt)
 - [ ] Messages/Support → Staff inbox loop
 - [ ] Profile + Account & Security simulations replaced with real Clerk-backed edits where appropriate
 - [ ] Five Gravity Form field groups end-to-end (wizards consume catalog)

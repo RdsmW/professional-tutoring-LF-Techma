@@ -45,22 +45,22 @@ function statusTone(status: string) {
   return "amber";
 }
 
-function downloadSyntheticReceipt(payment: PaymentRow) {
+function downloadReceiptPreview(payment: PaymentRow) {
   const body = [
-    "SYNTHETIC RECEIPT",
+    "RECEIPT PREVIEW",
     payment.displayCode,
     formatDate(payment.createdAt),
     payment.description,
     payment.amountLabel,
     payment.statusLabel,
     payment.methodLabel,
-    "Not a live processor receipt.",
+    "Not an official processor receipt.",
   ].join("\n");
   const blob = new Blob([body], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${payment.displayCode}-synthetic-receipt.txt`;
+  anchor.download = `${payment.displayCode}-receipt-preview.txt`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -103,18 +103,7 @@ export function FamilyPaymentsClient() {
   }
 
   if (selected) {
-    const linksLabel = [
-      selected.studentName,
-      selected.serviceLabel,
-      selected.relatedEntityType === "booking"
-        ? "Booking"
-        : selected.relatedEntityType === "course_enrollment"
-          ? "Course enrollment"
-          : null,
-      selected.displayCode.replace("PT-", "INV-"),
-    ]
-      .filter(Boolean)
-      .join(" · ");
+    const linksLead = [selected.studentName, selected.serviceLabel].filter(Boolean).join(" · ");
 
     return (
       <>
@@ -133,7 +122,7 @@ export function FamilyPaymentsClient() {
           <span className={`pill ${statusTone(selected.status)}`}>{selected.statusLabel}</span>
         </section>
 
-        <section className="family-summary-grid">
+        <section className="family-summary-grid three">
           <article className="panel">
             <small>Amount</small>
             <strong>{selected.amountLabel}</strong>
@@ -142,53 +131,60 @@ export function FamilyPaymentsClient() {
           <article className="panel">
             <small>Payment method</small>
             <strong>{selected.methodLabel}</strong>
-            <span>Masked family-safe summary</span>
+            <span>Masked card on file</span>
           </article>
           <article className="panel">
             <small>Refund / credit</small>
             <strong>{selected.creditLabel}</strong>
-            <span>No processor internals shown</span>
-          </article>
-          <article className="panel">
-            <small>Receipt</small>
-            <strong>{selected.displayCode}</strong>
-            <span>Synthetic artifact only</span>
+            <span>None applied</span>
           </article>
         </section>
 
         <section className="panel">
           <span className="eyebrow">Linked service records</span>
-          <h3>{linksLabel}</h3>
+          <h3>{linksLead || "Linked records"}</h3>
           <div className="record-link-grid">
             <button
               type="button"
               disabled={!selected.studentId}
               onClick={() => router.push("/family/students")}
             >
-              Student: {selected.studentName || "Unavailable"} →
+              <span aria-hidden="true">→</span>
+              <span>
+                <strong>Student</strong>
+                <small>{selected.studentName || "Unavailable"}</small>
+              </span>
             </button>
             <button type="button" onClick={() => router.push("/family/calendar")}>
-              {selected.relatedEntityType === "course_enrollment"
-                ? "Course enrollment →"
-                : "Booking / Session →"}
+              <span aria-hidden="true">→</span>
+              <span>
+                <strong>
+                  {selected.relatedEntityType === "course_enrollment" ? "Course enrollment" : "Booking / Session"}
+                </strong>
+                <small>{selected.serviceLabel}</small>
+              </span>
             </button>
-            <button type="button" disabled title="Pending Stage 4 charge">
-              Invoice {selected.displayCode.replace("PT-", "INV-")} · Pending Stage 4 charge
+            <button type="button" disabled title="Invoice available after charge">
+              <span aria-hidden="true">—</span>
+              <span>
+                <strong>Invoice</strong>
+                <small>Available after charge</small>
+              </span>
             </button>
           </div>
         </section>
 
         <section className="panel receipt-download">
-          <span className="eyebrow">Receipt artifact</span>
-          <h3>Download synthetic receipt</h3>
-          <p>The file contains synthetic values only and is not a processor-issued receipt.</p>
+          <span className="eyebrow">Receipt preview</span>
+          <h3>Download receipt preview</h3>
+          <p>Preview only — not an official processor receipt.</p>
           <button
             type="button"
             className="family-primary"
             style={{ marginTop: 12 }}
-            onClick={() => downloadSyntheticReceipt(selected)}
+            onClick={() => downloadReceiptPreview(selected)}
           >
-            Download synthetic receipt
+            Download receipt preview
           </button>
         </section>
       </>
