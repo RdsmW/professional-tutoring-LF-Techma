@@ -138,6 +138,11 @@ export function StaffSupportClient() {
 
   if (selected) {
     const options = selected.staffOptions?.length ? selected.staffOptions : staffOptions;
+    const initialFamilyMessage =
+      selected.messages.find((item) => item.authorRole === "family") ?? null;
+    const activityMessages = selected.messages.filter(
+      (item) => item.id !== initialFamilyMessage?.id,
+    );
     return (
       <>
         <button
@@ -183,12 +188,7 @@ export function StaffSupportClient() {
               ))}
             </select>
           </div>
-          {selected.messages
-            .filter((item) => item.authorRole === "family")
-            .slice(0, 1)
-            .map((item) => (
-              <blockquote key={item.id}>{item.body}</blockquote>
-            ))}
+          {initialFamilyMessage ? <blockquote>{initialFamilyMessage.body}</blockquote> : null}
           <div className="input-grid">
             <label>
               Status
@@ -232,10 +232,14 @@ export function StaffSupportClient() {
         <section className="panel history-panel">
           <span className="eyebrow">Audit history</span>
           <h3>Case activity</h3>
-          {selected.messages.map((item) => (
+          {activityMessages.map((item) => (
             <div key={item.id}>
               <span />
-              {item.authorRole === "staff" ? `Reply: ${item.body}` : item.body}
+              {item.authorRole === "staff"
+                ? `Reply: ${item.body}`
+                : item.authorRole === "family"
+                  ? `Family reply: ${item.body}`
+                  : item.body}
             </div>
           ))}
         </section>

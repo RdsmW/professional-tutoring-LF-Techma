@@ -39,7 +39,7 @@ function statusTone(status: string) {
 
 function messageLabel(message: SupportMessage) {
   if (message.authorRole === "staff") return `Staff reply: ${message.body}`;
-  if (message.authorRole === "family") return message.body;
+  if (message.authorRole === "family") return `Your reply: ${message.body}`;
   return message.body;
 }
 
@@ -244,6 +244,11 @@ export function FamilyMessagesClient() {
 
   if (mode === "detail" && selected) {
     const canReply = selected.status === "waiting_on_family";
+    const initialFamilyMessage =
+      selected.messages.find((item) => item.authorRole === "family") ?? null;
+    const activityMessages = selected.messages.filter(
+      (item) => item.id !== initialFamilyMessage?.id,
+    );
     return (
       <>
         <button
@@ -267,14 +272,9 @@ export function FamilyMessagesClient() {
             </div>
             <span className={`pill ${statusTone(selected.status)}`}>{selected.statusLabel}</span>
           </div>
-          {selected.messages
-            .filter((item) => item.authorRole === "family")
-            .slice(0, 1)
-            .map((item) => (
-              <blockquote key={item.id}>{item.body}</blockquote>
-            ))}
+          {initialFamilyMessage ? <blockquote>{initialFamilyMessage.body}</blockquote> : null}
           <div className="history-panel">
-            {selected.messages.map((item) => (
+            {activityMessages.map((item) => (
               <div key={item.id}>
                 <span />
                 {messageLabel(item)}
