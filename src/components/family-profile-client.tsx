@@ -1,14 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { UserProfile } from "@clerk/nextjs";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { useFamilyPortal } from "@/components/family-portal-context";
-import { PageIntro, Panel } from "@/components/ui";
 import { US_STATES } from "@/lib/forms/options";
 
 type Mode = "view" | "edit" | "security";
+
+type GuardianRow = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  isBillingOwner: boolean;
+  linked: boolean;
+  invitePending: boolean;
+};
 
 type ProfileData = {
   guardian: {
@@ -30,6 +40,9 @@ type ProfileData = {
     state: string;
     postalCode: string;
   };
+  guardians: GuardianRow[];
+  studentCount: number;
+  hasStudents: boolean;
 };
 
 type EditForm = {
@@ -44,6 +57,27 @@ type EditForm = {
   state: string;
   postalCode: string;
 };
+
+const clerkFamilyAppearance = {
+  variables: {
+    colorPrimary: "#ca6d52",
+    colorText: "#172133",
+    colorTextSecondary: "#697486",
+    colorBackground: "#ffffff",
+    colorInputBackground: "#ffffff",
+    colorInputText: "#172133",
+    colorNeutral: "#24382f",
+    borderRadius: "2px",
+    fontFamily: "Georgia, 'Times New Roman', serif",
+    fontFamilyButtons: "system-ui, -apple-system, Segoe UI, sans-serif",
+  },
+  elements: {
+    rootBox: "family-clerk-root",
+    cardBox: "family-clerk-card",
+    navbar: "family-clerk-navbar",
+    scrollBox: "family-clerk-scroll",
+  },
+} as const;
 
 function emptyForm(): EditForm {
   return {
@@ -78,7 +112,36 @@ function formFromProfile(data: ProfileData): EditForm {
 function formatAddress(household: ProfileData["household"]) {
   const line = [household.addressLine1, household.addressLine2].filter(Boolean).join(", ");
   const cityLine = [household.city, household.state, household.postalCode].filter(Boolean).join(", ");
-  return [line, cityLine].filter(Boolean).join(" · ") || "Address not set";
+  return [line, cityLine].filter(Boolean).join(" · ") || "—";
+}
+
+function initials(firstName: string, lastName: string) {
+  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "?";
+}
+
+function fullName(firstName: string, lastName: string) {
+  return [firstName, lastName].filter(Boolean).join(" ").trim() || "Guardian";
+}
+
+function parseProfilePayload(data: Record<string, unknown>): ProfileData {
+  return {
+    guardian: data.guardian as ProfileData["guardian"],
+    household: data.household as ProfileData["household"],
+    guardians: Array.isArray(data.guardians) ? (data.guardians as GuardianRow[]) : [],
+    studentCount: Number(data.studentCount ?? 0),
+    hasStudents: Boolean(data.hasStudents ?? Number(data.studentCount ?? 0) > 0),
+  };
+}
+
+function householdProfileComplete(household: ProfileData["household"]) {
+  return Boolean(
+    household.status === "active" &&
+      household.primaryPhone.trim() &&
+      household.addressLine1.trim() &&
+      household.city.trim() &&
+      household.state.trim() &&
+      household.postalCode.trim(),
+  );
 }
 
 export function FamilyProfileClient() {
@@ -101,10 +164,7 @@ export function FamilyProfileClient() {
         setError(data.error || "Unable to load profile.");
         return;
       }
-      const next: ProfileData = {
-        guardian: data.guardian,
-        household: data.household,
-      };
+      const next = parseProfilePayload(data);
       setProfile(next);
       setForm(formFromProfile(next));
     } catch {
@@ -128,6 +188,34 @@ export function FamilyProfileClient() {
     form.state.trim() &&
     form.postalCode.trim();
 
+  const billingOwnerName = useMemo(() => {
+    if (!profile) return "—";
+    const owner = profile.guardians.find((row) => row.isBillingOwner);
+    if (owner) return fullName(owner.firstName, owner.lastName);
+    if (profile.guardian.isBillingOwner) {
+      return fullName(profile.guardian.firstName, profile.guardian.lastName);
+    }
+    return "—";
+  }, [profile]);
+
+  const completionItems = useMemo(() => {
+    if (!profile) return [];
+    const active = profile.household.status === "active";
+    const householdDone = householdProfileComplete(profile.household);
+    const hasBillingOwner =
+      profile.guardians.some((row) => row.isBillingOwner) || profile.guardian.isBillingOwner;
+    const studentLabel = `${profile.studentCount} student profile${profile.studentCount === 1 ? "" : "s"} added`;
+
+    return [
+      { label: "Primary adult account created", done: true },
+      { label: "Shared household profile complete", done: householdDone },
+      { label: "Guardian permissions assigned", done: hasBillingOwner },
+      { label: "Communication consent", done: false, note: "Not collected yet" },
+      { label: "Full portal available", done: active },
+      { label: studentLabel, done: profile.studentCount > 0 },
+    ];
+  }, [profile]);
+
   async function saveProfile(event: React.FormEvent) {
     event.preventDefault();
     if (!valid || saving) return;
@@ -145,10 +233,7 @@ export function FamilyProfileClient() {
         setError(data.error || "Unable to save profile.");
         return;
       }
-      const next: ProfileData = {
-        guardian: data.guardian,
-        household: data.household,
-      };
+      const next = parseProfilePayload(data);
       setProfile(next);
       setForm(formFromProfile(next));
       if (data.displayName) setDisplayName(data.displayName);
@@ -162,27 +247,35 @@ export function FamilyProfileClient() {
     }
   }
 
+  function openEdit() {
+    if (!profile) return;
+    setSavedMessage(null);
+    setError(null);
+    setForm(formFromProfile(profile));
+    setMode("edit");
+  }
+
   if (mode === "security") {
     return (
-      <section className="wizard-shell panel">
+      <section className="wizard-shell panel family-clerk-profile">
         <button type="button" className="page-back" onClick={() => setMode("view")}>
           ← Family profile
         </button>
         <span className="eyebrow">Account & security</span>
         <h2>Sign-in and password</h2>
-        <p style={{ maxWidth: 640, fontSize: 11, color: "var(--muted)" }}>
-          Email, password, and sessions are managed by Clerk. Credentials are individual — never share
-          a sign-in between guardians.
+        <p className="wizard-lead" style={{ fontSize: 11, color: "var(--muted)" }}>
+          Email, password, and sessions are managed securely for this adult account. Credentials are
+          individual — never share a sign-in between guardians.
         </p>
-        <div className="privacy-callout" style={{ marginBottom: 16 }}>
+        <div className="privacy-callout compact">
           <span>i</span>
           <div>
             <strong>Guardian access is individual</strong>
             <p>Separate invites and passwords apply per adult. No shared credentials.</p>
           </div>
         </div>
-        <div style={{ marginTop: 8 }}>
-          <UserProfile routing="hash" />
+        <div className="family-clerk-profile-widget">
+          <UserProfile routing="hash" appearance={clerkFamilyAppearance} />
         </div>
       </section>
     );
@@ -340,29 +433,28 @@ export function FamilyProfileClient() {
     );
   }
 
+  const isActive = profile?.household.status === "active";
+
   return (
     <>
-      <PageIntro
-        eyebrow="Family Portal · Profile"
-        title="Profile"
-        description="Guardian contact and preferences for the signed-in adult. Credentials are never shared between guardians."
-        action={
-          <Link
-            href="/family/students?add=1"
-            className="primary-button family-primary"
-            style={{
-              textDecoration: "none",
-              padding: "10px 14px",
-              background: "var(--coral)",
-              color: "#fff",
-              fontWeight: 800,
-              fontSize: 11,
-            }}
-          >
+      <section className="view-intro">
+        <div>
+          <span className="eyebrow">Separate adult accounts · shared household</span>
+          <h2>Family profile</h2>
+          <p>
+            Manage guardian access, billing ownership, and household details; student records remain
+            the children beneath this shared family account.
+          </p>
+        </div>
+        <div className="hero-actions">
+          <button type="button" className="secondary-button" onClick={openEdit} disabled={!profile}>
+            Edit my profile
+          </button>
+          <Link href="/family/students?add=1" className="family-primary" style={{ textDecoration: "none" }}>
             + Add student
           </Link>
-        }
-      />
+        </div>
+      </section>
 
       {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading profile…</p> : null}
       {error ? <p className="form-error">{error}</p> : null}
@@ -371,102 +463,154 @@ export function FamilyProfileClient() {
       ) : null}
 
       {profile ? (
-        <div className="profile-layout">
-          <Panel title="Household profile" eyebrow="Family account">
-            <div className="family-detail-grid profile-detail-grid" style={{ marginTop: 8 }}>
-              <span>
-                <small>Family account</small>
-                <strong>{profile.household.displayName}</strong>
-              </span>
-              <span>
-                <small>Status</small>
-                <strong>{profile.household.status === "active" ? "Active" : "Pending onboarding"}</strong>
-              </span>
-              <span>
-                <small>Primary phone</small>
-                <strong>{profile.household.primaryPhone || "—"}</strong>
-              </span>
-              <span>
-                <small>Address</small>
-                <strong>{formatAddress(profile.household)}</strong>
-              </span>
-            </div>
-            {profile.household.status !== "active" ? (
-              <p style={{ marginTop: 12, fontSize: 10 }}>
-                <Link href="/family/onboarding" style={{ color: "var(--blue)", fontWeight: 800 }}>
-                  Complete onboarding to unlock the portal →
-                </Link>
-              </p>
-            ) : null}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
-              <button
-                type="button"
-                className="family-primary"
-                style={{ border: 0, padding: "10px 14px", cursor: "pointer" }}
-                onClick={() => {
-                  setSavedMessage(null);
-                  setError(null);
-                  setForm(formFromProfile(profile));
-                  setMode("edit");
-                }}
-              >
-                Edit profile
-              </button>
-              <Link
-                href="/family/students"
-                className="text-button"
-                style={{ color: "var(--blue)", fontWeight: 800, fontSize: 10, alignSelf: "center" }}
-              >
-                Manage students →
-              </Link>
-            </div>
-          </Panel>
+        <section className="profile-layout">
+          <article className="panel booking-form">
+            {isActive ? (
+              <div className="form-step">
+                <span>✓</span>
+                <div>
+                  <strong>Initial family onboarding complete</strong>
+                  <small>Full Family Portal access is available.</small>
+                </div>
+              </div>
+            ) : (
+              <div className="form-step pending">
+                <span>○</span>
+                <div>
+                  <strong>Family onboarding in progress</strong>
+                  <small>
+                    <Link href="/family/onboarding" style={{ color: "var(--blue)", fontWeight: 800 }}>
+                      Complete onboarding to unlock the portal →
+                    </Link>
+                  </small>
+                </div>
+              </div>
+            )}
 
-          <Panel title="Guardian contact" eyebrow="Signed-in adult">
-            <div className="family-detail-grid profile-detail-grid" style={{ marginTop: 8 }}>
-              <span>
-                <small>Name</small>
-                <strong>
-                  {profile.guardian.firstName} {profile.guardian.lastName}
-                </strong>
-              </span>
-              <span>
-                <small>Sign-in email</small>
-                <strong>{profile.guardian.email || "—"}</strong>
-              </span>
-              <span>
-                <small>Mobile</small>
-                <strong>
-                  {profile.guardian.phone?.trim()
-                    ? profile.guardian.phone
-                    : "Not set — add in Edit profile"}
-                </strong>
-              </span>
-              <span>
-                <small>Billing owner</small>
-                <strong>{profile.guardian.isBillingOwner ? "Yes" : "No"}</strong>
-              </span>
+            <div className="input-grid profile-readonly-grid">
+              <label>
+                Primary guardian
+                <input
+                  value={fullName(profile.guardian.firstName, profile.guardian.lastName)}
+                  readOnly
+                />
+              </label>
+              <label>
+                Preferred / first name
+                <input value={profile.guardian.firstName || "—"} readOnly />
+              </label>
+              <label>
+                Sign-in email
+                <input value={profile.guardian.email || "—"} readOnly />
+              </label>
+              <label>
+                Mobile
+                <input value={profile.guardian.phone?.trim() || "Not set"} readOnly />
+              </label>
+              <label>
+                Billing contact
+                <input value={billingOwnerName} readOnly />
+              </label>
+              <label>
+                Household phone
+                <input value={profile.household.primaryPhone || "—"} readOnly />
+              </label>
+              <label>
+                Household address
+                <input value={formatAddress(profile.household)} readOnly />
+              </label>
+              <label>
+                Portal policy
+                <input value="Portal policy · in effect" readOnly />
+              </label>
             </div>
-            <button
-              type="button"
-              className="family-secondary"
-              style={{ marginTop: 14 }}
-              onClick={() => setMode("security")}
-            >
-              Account &amp; Security
-            </button>
-            <div className="privacy-callout profile-privacy-callout" style={{ marginTop: 14 }}>
+
+            <div className="guardian-access-preview">
+              {(profile.guardians.length ? profile.guardians : [
+                {
+                  id: profile.guardian.id,
+                  firstName: profile.guardian.firstName,
+                  lastName: profile.guardian.lastName,
+                  email: profile.guardian.email,
+                  phone: profile.guardian.phone,
+                  isBillingOwner: profile.guardian.isBillingOwner,
+                  linked: true,
+                  invitePending: false,
+                },
+              ]).map((row) => {
+                const pills = [
+                  row.linked ? "Own login" : null,
+                  row.isBillingOwner ? "Billing owner" : null,
+                  !row.linked && !row.invitePending ? "Listed" : null,
+                ].filter(Boolean);
+                return (
+                  <article key={row.id}>
+                    <span className="mini-avatar">{initials(row.firstName, row.lastName)}</span>
+                    <span>
+                      <strong>{fullName(row.firstName, row.lastName)}</strong>
+                      <small>{pills.join(" · ") || "Guardian"}</small>
+                    </span>
+                    <span className={`pill ${row.invitePending ? "amber" : "green"}`}>
+                      {row.invitePending ? "Invite pending" : "Active"}
+                    </span>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="privacy-callout compact">
               <span>i</span>
               <div>
-                <strong>Restricted changes require staff</strong>
+                <strong>Guardian access is individual</strong>
                 <p>
-                  Billing ownership, another guardian’s identity/permissions, consent history, and
-                  protected Student records stay with staff.
+                  Additional guardians receive their own invitation and password. Permissions can
+                  differ; no adult shares another guardian’s credentials.
                 </p>
               </div>
             </div>
-          </Panel>
-        </div>
+
+            <div className="profile-actions profile-actions-equal">
+              <button type="button" className="family-primary" onClick={openEdit}>
+                Edit my profile
+              </button>
+              <button type="button" className="secondary-button" onClick={() => setMode("security")}>
+                Account & security
+              </button>
+              <Link href="/family/students" className="secondary-button" style={{ textDecoration: "none", textAlign: "center" }}>
+                Manage students
+              </Link>
+            </div>
+          </article>
+
+          <article className="panel onboarding-checklist">
+            <span className="eyebrow">Account completion</span>
+            <h3>Family onboarding</h3>
+            {completionItems.map((item) => (
+              <div key={item.label} className={item.done ? "complete" : "pending"}>
+                <span>{item.done ? "✓" : "○"}</span>
+                <span>
+                  {item.label}
+                  {"note" in item && item.note ? (
+                    <small style={{ display: "block", color: "var(--muted)", fontWeight: 600 }}>
+                      {item.note}
+                    </small>
+                  ) : null}
+                </span>
+              </div>
+            ))}
+            <Link href="/family/students" className="text-button" style={{ display: "block", marginTop: 10 }}>
+              Manage students →
+            </Link>
+            {!isActive ? (
+              <Link href="/family/onboarding" className="text-button" style={{ display: "block" }}>
+                Complete onboarding →
+              </Link>
+            ) : null}
+            <p className="profile-invite-note">
+              Inviting another guardian is handled by staff for now.
+            </p>
+          </article>
+        </section>
       ) : null}
     </>
   );

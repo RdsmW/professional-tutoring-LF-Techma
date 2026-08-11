@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { getFamilyContext } from "@/lib/family/session";
 import { requireDb } from "@/lib/db";
-import { guardians, households } from "@/lib/db/schema";
+import { guardians, households, students } from "@/lib/db/schema";
 import { isValidOptionId } from "@/lib/forms/options";
 
 type ProfileBody = {
@@ -28,10 +28,49 @@ function clerkEmail(user: Awaited<ReturnType<typeof safeCurrentUser>>) {
   );
 }
 
+function serializeGuardianRow(row: typeof guardians.$inferSelect, signInEmailForSelf?: string) {
+  const linked = Boolean(row.clerkUserId);
+  const invitePending = Boolean(row.inviteToken && !row.inviteAcceptedAt && !row.clerkUserId);
+  return {
+    id: row.id,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    email: signInEmailForSelf && row.clerkUserId ? signInEmailForSelf : row.email,
+    phone: row.phone ?? "",
+    isBillingOwner: row.isBillingOwner,
+    linked,
+    invitePending,
+  };
+}
+
+async function loadHouseholdExtras(
+  householdId: string,
+  currentGuardianId: string,
+  signInEmail: string,
+) {
+  const database = requireDb();
+  const guardianRows = await database
+    .select()
+    .from(guardians)
+    .where(eq(guardians.householdId, householdId));
+  const [studentCountRow] = await database
+    .select({ value: count() })
+    .from(students)
+    .where(eq(students.householdId, householdId));
+
+  return {
+    guardians: guardianRows.map((row) =>
+      serializeGuardianRow(row, row.id === currentGuardianId ? signInEmail : undefined),
+    ),
+    studentCount: Number(studentCountRow?.value ?? 0),
+  };
+}
+
 function serializeProfile(
   guardian: typeof guardians.$inferSelect,
   household: typeof households.$inferSelect,
   signInEmail: string,
+  extras: { guardians: ReturnType<typeof serializeGuardianRow>[]; studentCount: number },
 ) {
   return {
     guardian: {
@@ -53,6 +92,9 @@ function serializeProfile(
       state: household.state ?? "",
       postalCode: household.postalCode ?? "",
     },
+    guardians: extras.guardians,
+    studentCount: extras.studentCount,
+    hasStudents: extras.studentCount > 0,
   };
 }
 
@@ -67,21 +109,21 @@ export async function GET() {
     const signInEmail = clerkEmail(user) || context.guardian.email;
     const database = requireDb();
 
+    let guardianRow = context.guardian;
     if (signInEmail && signInEmail !== context.guardian.email) {
       const [updatedGuardian] = await database
         .update(guardians)
         .set({ email: signInEmail, updatedAt: new Date() })
         .where(eq(guardians.id, context.guardian.id))
         .returning();
-      return NextResponse.json({
-        ok: true,
-        ...serializeProfile(updatedGuardian, context.household, signInEmail),
-      });
+      guardianRow = updatedGuardian;
     }
+
+    const extras = await loadHouseholdExtras(context.household.id, guardianRow.id, signInEmail);
 
     return NextResponse.json({
       ok: true,
-      ...serializeProfile(context.guardian, context.household, signInEmail),
+      ...serializeProfile(guardianRow, context.household, signInEmail, extras),
     });
   } catch (error) {
     console.warn("[family/profile] GET soft-fail", error);
@@ -163,10 +205,11 @@ export async function PATCH(request: Request) {
 
     const user = await safeCurrentUser();
     const signInEmail = clerkEmail(user) || updatedGuardian.email;
+    const extras = await loadHouseholdExtras(updatedHousehold.id, updatedGuardian.id, signInEmail);
 
     return NextResponse.json({
       ok: true,
-      ...serializeProfile(updatedGuardian, updatedHousehold, signInEmail),
+      ...serializeProfile(updatedGuardian, updatedHousehold, signInEmail, extras),
       displayName: [firstName, lastName].filter(Boolean).join(" "),
       householdName: updatedHousehold.displayName,
     });
