@@ -8,14 +8,28 @@ import { getStaffContext } from "@/lib/staff/session";
 type NewFamilyBody = {
   displayName?: string;
   primaryPhone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  notes?: string;
   billingFirstName?: string;
   billingLastName?: string;
   billingEmail?: string;
+  billingPhone?: string;
   secondFirstName?: string;
   secondLastName?: string;
   secondEmail?: string;
+  secondPhone?: string;
   studentDisplayName?: string;
+  secondStudentDisplayName?: string;
 };
+
+function optionalText(value: string | undefined) {
+  const trimmed = (value ?? "").trim();
+  return trimmed || null;
+}
 
 export async function GET() {
   try {
@@ -47,6 +61,24 @@ export async function GET() {
   }
 }
 
+function insertStudentFromDisplayName(
+  studentName: string,
+  householdId: string,
+  now: Date,
+) {
+  const parts = studentName.split(/\s+/);
+  const firstName = parts[0] ?? studentName;
+  const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "Student";
+  return {
+    householdId,
+    displayName: studentName,
+    firstName,
+    lastName,
+    lifecycle: "prospect" as const,
+    updatedAt: now,
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const context = await getStaffContext();
@@ -60,6 +92,7 @@ export async function POST(request: Request) {
     const billingFirstName = (body.billingFirstName ?? "").trim();
     const billingLastName = (body.billingLastName ?? "").trim();
     const billingEmail = (body.billingEmail ?? "").trim().toLowerCase();
+    const billingPhone = optionalText(body.billingPhone);
 
     if (!displayName || !billingFirstName || !billingLastName || !billingEmail) {
       return NextResponse.json(
@@ -76,6 +109,12 @@ export async function POST(request: Request) {
         displayName,
         status: "pending",
         primaryPhone: primaryPhone || null,
+        addressLine1: optionalText(body.addressLine1),
+        addressLine2: optionalText(body.addressLine2),
+        city: optionalText(body.city),
+        state: optionalText(body.state),
+        postalCode: optionalText(body.postalCode),
+        notes: optionalText(body.notes),
         timezone: "America/New_York",
         updatedAt: now,
       })
@@ -89,6 +128,7 @@ export async function POST(request: Request) {
         email: billingEmail,
         firstName: billingFirstName,
         lastName: billingLastName,
+        phone: billingPhone,
         isBillingOwner: true,
         inviteToken: billingToken,
         updatedAt: now,
@@ -112,6 +152,7 @@ export async function POST(request: Request) {
           email: secondEmail,
           firstName: (body.secondFirstName ?? "").trim(),
           lastName: (body.secondLastName ?? "").trim(),
+          phone: optionalText(body.secondPhone),
           isBillingOwner: false,
           inviteToken: secondInviteToken,
           updatedAt: now,
@@ -120,24 +161,15 @@ export async function POST(request: Request) {
       secondGuardianId = second.id;
     }
 
-    const studentName = (body.studentDisplayName ?? "").trim();
-    let studentId: string | null = null;
-    if (studentName) {
-      const parts = studentName.split(/\s+/);
-      const firstName = parts[0] ?? studentName;
-      const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "Student";
+    const studentIds: string[] = [];
+    for (const rawName of [body.studentDisplayName, body.secondStudentDisplayName]) {
+      const studentName = (rawName ?? "").trim();
+      if (!studentName) continue;
       const [student] = await database
         .insert(students)
-        .values({
-          householdId: household.id,
-          displayName: studentName,
-          firstName,
-          lastName,
-          lifecycle: "prospect",
-          updatedAt: now,
-        })
+        .values(insertStudentFromDisplayName(studentName, household.id, now))
         .returning();
-      studentId = student.id;
+      studentIds.push(student.id);
     }
 
     return NextResponse.json({
@@ -146,7 +178,8 @@ export async function POST(request: Request) {
       billingInvitePath: `/invite/${billingToken}`,
       secondGuardianId,
       secondInvitePath: secondInviteToken ? `/invite/${secondInviteToken}` : null,
-      studentId,
+      studentId: studentIds[0] ?? null,
+      studentIds,
     });
   } catch (error) {
     console.warn("[staff/families] POST soft-fail", error);
