@@ -52,9 +52,14 @@ export function StaffFamiliesClient() {
         title="Families"
         description="Each Family account is owned by a parent/guardian. Students are children under the household."
         action={
-          <button type="button" className="primary-button" onClick={() => setCreating(true)}>
-            + New Family
-          </button>
+          <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link href="/staff/families/merges" className="secondary-button" style={{ textDecoration: "none" }}>
+              Merge queue
+            </Link>
+            <button type="button" className="primary-button" onClick={() => setCreating(true)}>
+              + New Family
+            </button>
+          </span>
         }
       />
       {error ? <p className="form-error">{error}</p> : null}

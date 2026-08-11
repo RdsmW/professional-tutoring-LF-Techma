@@ -367,3 +367,21 @@ export const supportCaseMessages = pgTable("support_case_messages", {
   authorStaffId: uuid("author_staff_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Staff identity merge queue: queued | merged | dismissed */
+export const identityMergeRequests = pgTable("identity_merge_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sourceHouseholdId: uuid("source_household_id")
+    .notNull()
+    .references(() => households.id),
+  targetHouseholdId: uuid("target_household_id")
+    .notNull()
+    .references(() => households.id),
+  matchOn: text("match_on"),
+  status: text("status").notNull().default("queued"),
+  notes: text("notes"),
+  createdByStaffId: uuid("created_by_staff_id"),
+  resolvedByStaffId: uuid("resolved_by_staff_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+});

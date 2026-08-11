@@ -346,8 +346,8 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
                 <div>
                   <strong>Possible existing household</strong>
                   <p>
-                    Open the existing Family if this is a duplicate, or continue as new if staff confirms these are
-                    different people. Full merge queue is a later phase.
+                    Open the existing Family if this is a duplicate, continue as new if different people, or queue a
+                    merge with this household as the target.
                   </p>
                 </div>
               </div>
@@ -378,14 +378,27 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
                       </small>
                     </span>
                     <span className="pill">{candidate.householdStatus}</span>
-                    <Link href={`/staff/families/${candidate.householdId}`} className="secondary-button" style={{ textDecoration: "none" }}>
-                      Open existing
-                    </Link>
+                    <span style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
+                      <Link
+                        href={`/staff/families/${candidate.householdId}`}
+                        className="secondary-button"
+                        style={{ textDecoration: "none" }}
+                      >
+                        Open existing
+                      </Link>
+                      <Link
+                        href={`/staff/families/merges?target=${candidate.householdId}&matchOn=${encodeURIComponent(candidate.guardian.matchOn.join("+"))}`}
+                        className="secondary-button"
+                        style={{ textDecoration: "none" }}
+                      >
+                        Queue merge with this household
+                      </Link>
+                    </span>
                   </div>
                 ))}
               </div>
               <p style={{ color: "var(--muted)", fontSize: 11, marginBottom: 12 }}>
-                Attach / full merge is not available in this slice — use Open existing, or Continue as new below.
+                Queue merge opens the merge queue with this household as the target — pick the source household there.
               </p>
             </>
           ) : null}
