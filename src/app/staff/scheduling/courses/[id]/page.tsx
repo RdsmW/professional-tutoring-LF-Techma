@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { ENROLLMENT_STATUSES } from "@/lib/enrollment/status";
 
 type CourseMeta = {
   id: string;
@@ -21,10 +22,14 @@ type RosterRow = {
   studentName: string;
   householdName: string;
   status: string;
+  notes: string | null;
   createdAt: string;
   studentId: string;
   householdId: string;
 };
+
+type FamilyOption = { id: string; displayName: string };
+type StudentOption = { id: string; displayName: string };
 
 function formatWhen(iso: string) {
   try {
@@ -45,6 +50,18 @@ export default function StaffCourseRosterPage() {
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const [families, setFamilies] = useState<FamilyOption[]>([]);
+  const [householdId, setHouseholdId] = useState("");
+  const [students, setStudents] = useState<StudentOption[]>([]);
+  const [studentId, setStudentId] = useState("");
+  const [enrollStatus, setEnrollStatus] = useState("submitted");
+  const [enrollNotes, setEnrollNotes] = useState("");
+  const [enrolling, setEnrolling] = useState(false);
+
+  const [draftStatus, setDraftStatus] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!id) return;
@@ -58,7 +75,9 @@ export default function StaffCourseRosterPage() {
         return;
       }
       setCourse(data.course ?? null);
-      setRoster(data.roster ?? []);
+      const rows: RosterRow[] = data.roster ?? [];
+      setRoster(rows);
+      setDraftStatus(Object.fromEntries(rows.map((row) => [row.id, row.status])));
     } catch {
       setError("Unable to load course roster.");
     } finally {
@@ -69,6 +88,121 @@ export default function StaffCourseRosterPage() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/staff/families");
+        const data = await response.json();
+        if (!cancelled && response.ok && data.ok) {
+          setFamilies(
+            (data.families ?? []).map((row: { id: string; displayName: string }) => ({
+              id: row.id,
+              displayName: row.displayName,
+            })),
+          );
+        }
+      } catch {
+        /* soft-fail options */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setStudentId("");
+    setStudents([]);
+    if (!householdId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(`/api/staff/students?householdId=${encodeURIComponent(householdId)}`);
+        const data = await response.json();
+        if (!cancelled && response.ok && data.ok) {
+          setStudents(
+            (data.students ?? []).map((row: { id: string; displayName: string }) => ({
+              id: row.id,
+              displayName: row.displayName,
+            })),
+          );
+        }
+      } catch {
+        /* soft-fail options */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [householdId]);
+
+  async function submitEnrollment(event: React.FormEvent) {
+    event.preventDefault();
+    if (!id || enrolling) return;
+    setEnrolling(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/staff/courses/${id}/enrollments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          studentId,
+          status: enrollStatus,
+          notes: enrollNotes.trim() || null,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to enroll student.");
+        return;
+      }
+      setMessage("Enrollment added.");
+      setEnrollNotes("");
+      setStudentId("");
+      await reload();
+    } catch {
+      setError("Unable to enroll student.");
+    } finally {
+      setEnrolling(false);
+    }
+  }
+
+  async function saveEnrollmentStatus(enrollmentId: string) {
+    if (!id || savingId) return;
+    const status = draftStatus[enrollmentId];
+    if (!status) return;
+    setSavingId(enrollmentId);
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/staff/courses/${id}/enrollments/${enrollmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update enrollment.");
+        return;
+      }
+      setMessage("Enrollment status saved.");
+      if (data.course && course) {
+        setCourse({ ...course, enrolledCount: data.course.enrolledCount, capacity: data.course.capacity });
+      }
+      await reload();
+    } catch {
+      setError("Unable to update enrollment.");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  const seatsLeft = course ? Math.max(0, course.capacity - course.enrolledCount) : 0;
+  const atCapacity = course ? course.enrolledCount >= course.capacity : false;
 
   return (
     <>
@@ -85,12 +219,85 @@ export default function StaffCourseRosterPage() {
         }
       />
       {error ? <p className="form-error">{error}</p> : null}
+      {message ? <p style={{ color: "var(--blue)", fontSize: 12, fontWeight: 700 }}>{message}</p> : null}
+
+      <Panel
+        title="Capacity"
+        eyebrow={course ? (course.active ? "Active offering" : "Inactive") : "Course"}
+      >
+        {course ? (
+          <p style={{ margin: 0 }}>
+            <strong>
+              {course.enrolledCount}/{course.capacity}
+            </strong>{" "}
+            enrolled
+            <span style={{ color: "var(--muted)", marginLeft: 8 }}>
+              {atCapacity ? "Full — active enrollments blocked" : `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left`}
+            </span>
+          </p>
+        ) : (
+          <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading…</p>
+        )}
+      </Panel>
+
+      <Panel title="Add enrollment" eyebrow="Staff create">
+        <form className="input-grid" onSubmit={(event) => void submitEnrollment(event)}>
+          <label>
+            Household
+            <select value={householdId} onChange={(event) => setHouseholdId(event.target.value)} required>
+              <option value="">Select household…</option>
+              {families.map((family) => (
+                <option key={family.id} value={family.id}>
+                  {family.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Student
+            <select
+              value={studentId}
+              onChange={(event) => setStudentId(event.target.value)}
+              required
+              disabled={!householdId}
+            >
+              <option value="">{householdId ? "Select student…" : "Pick a household first"}</option>
+              {students.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Status
+            <select value={enrollStatus} onChange={(event) => setEnrollStatus(event.target.value)}>
+              {ENROLLMENT_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Notes
+            <input
+              value={enrollNotes}
+              onChange={(event) => setEnrollNotes(event.target.value)}
+              placeholder="Optional staff note"
+            />
+          </label>
+          <button type="submit" className="primary-button" disabled={enrolling || !householdId || !studentId}>
+            {enrolling ? "Enrolling…" : "Add enrollment"}
+          </button>
+        </form>
+      </Panel>
 
       <Panel
         title="Roster"
         eyebrow={
           course
-            ? `${course.enrolledCount}/${course.capacity} · ${course.active ? "Active" : "Inactive"}`
+            ? `${course.enrolledCount}/${course.capacity} active seats · ${roster.length} rows`
             : "Course"
         }
       >
@@ -99,32 +306,57 @@ export default function StaffCourseRosterPage() {
           <p style={{ color: "var(--muted)" }}>No enrollments for this course.</p>
         ) : (
           <div className="family-list">
-            {roster.map((row) => (
-              <div key={row.id} className="family-row">
-                <div style={{ flex: 1 }}>
-                  <strong>{row.studentName}</strong>
-                  <small style={{ display: "block", color: "var(--muted)", marginTop: 4 }}>
-                    {row.householdName} · enrolled {formatWhen(row.createdAt)}
-                  </small>
+            {roster.map((row) => {
+              const dirty = (draftStatus[row.id] ?? row.status) !== row.status;
+              return (
+                <div key={row.id} className="family-row" style={{ alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <strong>{row.studentName}</strong>
+                    <small style={{ display: "block", color: "var(--muted)", marginTop: 4 }}>
+                      {row.householdName} · enrolled {formatWhen(row.createdAt)}
+                    </small>
+                    {row.notes ? (
+                      <small style={{ display: "block", color: "var(--muted)", marginTop: 4 }}>{row.notes}</small>
+                    ) : null}
+                  </div>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 10, fontWeight: 700 }}>
+                    Status
+                    <select
+                      value={draftStatus[row.id] ?? row.status}
+                      disabled={savingId === row.id}
+                      onChange={(event) =>
+                        setDraftStatus((prev) => ({ ...prev, [row.id]: event.target.value }))
+                      }
+                    >
+                      {ENROLLMENT_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ height: 36, alignSelf: "flex-end" }}
+                    disabled={!dirty || savingId === row.id}
+                    onClick={() => void saveEnrollmentStatus(row.id)}
+                  >
+                    {savingId === row.id ? "Saving…" : "Save"}
+                  </button>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
+                      Student →
+                    </Link>
+                    <Link href={`/staff/families/${row.householdId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
+                      Household →
+                    </Link>
+                  </div>
                 </div>
-                <span className="pill" style={{ marginRight: 10 }}>
-                  {row.status}
-                </span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
-                    Student →
-                  </Link>
-                  <Link href={`/staff/families/${row.householdId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
-                    Household →
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-        <p style={{ marginTop: 12, fontSize: 10, color: "var(--muted)" }}>
-          Enrollment manage / archive actions come in a later slice.
-        </p>
       </Panel>
     </>
   );

@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     const lifecycle = (searchParams.get("lifecycle") ?? "").trim();
     const grade = (searchParams.get("grade") ?? "").trim();
     const school = (searchParams.get("school") ?? "").trim();
+    const householdId = (searchParams.get("householdId") ?? searchParams.get("household") ?? "").trim();
 
     if (lifecycle && !LIFECYCLES.has(lifecycle)) {
       return NextResponse.json({ ok: false, error: "Invalid lifecycle filter." }, { status: 400 });
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
     if (lifecycle) filters.push(eq(students.lifecycle, lifecycle as typeof students.$inferSelect.lifecycle));
     if (grade) filters.push(ilike(students.gradeLabel, `%${grade}%`));
     if (school) filters.push(ilike(students.schoolName, `%${school}%`));
+    if (householdId) filters.push(eq(students.householdId, householdId));
 
     const rows = await database
       .select({

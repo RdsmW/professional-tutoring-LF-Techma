@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { asc, count, inArray } from "drizzle-orm";
+import { and, asc, count, inArray } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { courseEnrollments, courseOfferings } from "@/lib/db/schema";
+import { ACTIVE_ENROLLMENT_STATUSES } from "@/lib/enrollment/status";
 import { getStaffContext } from "@/lib/staff/session";
 
 export async function GET() {
@@ -23,7 +24,12 @@ export async function GET() {
           liveCount: count(courseEnrollments.id),
         })
         .from(courseEnrollments)
-        .where(inArray(courseEnrollments.courseOfferingId, ids))
+        .where(
+          and(
+            inArray(courseEnrollments.courseOfferingId, ids),
+            inArray(courseEnrollments.status, [...ACTIVE_ENROLLMENT_STATUSES]),
+          ),
+        )
         .groupBy(courseEnrollments.courseOfferingId);
       for (const row of counts) {
         countMap.set(row.courseOfferingId, Number(row.liveCount));

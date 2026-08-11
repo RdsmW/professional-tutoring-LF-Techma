@@ -42,6 +42,7 @@ export async function GET(_request: Request, context: RouteContext) {
       .select({
         id: courseEnrollments.id,
         status: courseEnrollments.status,
+        notes: courseEnrollments.notes,
         createdAt: courseEnrollments.createdAt,
         studentId: courseEnrollments.studentId,
         householdId: courseEnrollments.householdId,
@@ -63,7 +64,7 @@ export async function GET(_request: Request, context: RouteContext) {
         termLabel: course.termLabel,
         scheduleSummary: course.scheduleSummary,
         capacity: course.capacity,
-        enrolledCount: rows.length || course.enrolledCount,
+        enrolledCount: course.enrolledCount,
         active: course.active,
       },
       roster: rows.map((row) => ({
@@ -71,6 +72,7 @@ export async function GET(_request: Request, context: RouteContext) {
         studentName: row.studentName,
         householdName: row.householdName,
         status: row.status,
+        notes: row.notes,
         createdAt: row.createdAt.toISOString(),
         studentId: row.studentId,
         householdId: row.householdId,
