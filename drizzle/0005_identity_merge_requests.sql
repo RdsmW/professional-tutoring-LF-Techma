@@ -1,4 +1,5 @@
 -- Additive: staff identity merge queue (minimal real merge)
+-- Numbered 0005 because 0004 is tutor_subjects unique index.
 
 CREATE TABLE IF NOT EXISTS identity_merge_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

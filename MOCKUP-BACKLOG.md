@@ -36,7 +36,7 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 ## Stage 3 â€” Staff depth
 
 - [x] Family Detail core (hero, guardians/invites, notes, student links, service activity)
-- [x] New Family multi-step wizard + identity match + merge queue (minimal real merge; apply `drizzle/0004_identity_merge_requests.sql`)
+- [x] New Family multi-step wizard + identity match + merge queue (minimal real merge; apply `drizzle/0005_identity_merge_requests.sql`)
 - [x] Student Detail + filters + notes (Best Fit still deferred)
 - [x] Tutor Detail + Add Tutor + workload + subject assign / archive (soft active toggle)
 - [x] Scheduling Week board + recent bookings + staff create booking
