@@ -55,6 +55,9 @@ type SummaryResponse = {
   };
 };
 
+type Reports = NonNullable<SummaryResponse["reports"]>;
+type ReportSection = keyof Reports;
+
 const HOUSEHOLD_STATUS_OPTIONS = ["active", "pending", "inactive", "archived"];
 const LIFECYCLE_OPTIONS = ["", "prospect", "active", "paused", "completed", "archived"];
 const DEFERRED_REPORTS = ["Sessions / attendance", "Waitlist", "School rollup"];
@@ -66,18 +69,114 @@ function formatMoney(cents: number) {
   }).format(cents / 100);
 }
 
-function copyActiveFamiliesCsv(
-  households: NonNullable<SummaryResponse["reports"]>["activeFamilies"]["households"],
-) {
-  const lines = [
-    "displayName,status,updatedAt,id",
-    ...households.map((row) =>
-      [row.displayName, row.status, row.updatedAt, row.id]
-        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-        .join(","),
-    ),
-  ];
-  void navigator.clipboard.writeText(lines.join("\n"));
+function csvEscape(value: string | number | boolean | null | undefined) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function toCsv(headers: string[], rows: Array<Array<string | number | boolean | null | undefined>>) {
+  return [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
+}
+
+function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function activeFamiliesCsv(households: Reports["activeFamilies"]["households"]) {
+  return toCsv(
+    ["displayName", "status", "updatedAt", "id"],
+    households.map((row) => [row.displayName, row.status, row.updatedAt, row.id]),
+  );
+}
+
+function studentsByLifecycleCsv(counts: Reports["studentsByLifecycle"]["counts"]) {
+  return toCsv(
+    ["lifecycle", "count"],
+    counts.map((row) => [row.lifecycle, row.count]),
+  );
+}
+
+function tutorCapacityCsv(tutors: Reports["tutorCapacity"]["tutors"]) {
+  return toCsv(
+    ["displayName", "active", "maxSeatsPerSlot", "bookingWorkloadCount", "id"],
+    tutors.map((row) => [row.displayName, row.active, row.maxSeatsPerSlot, row.bookingWorkloadCount, row.id]),
+  );
+}
+
+function unpaidBillingCsv(billing: Reports["unpaidBilling"]) {
+  return toCsv(
+    ["count", "amountCentsSum", "amountUsd", "statuses"],
+    [[billing.count, billing.amountCentsSum, formatMoney(billing.amountCentsSum), billing.statuses.join("|")]],
+  );
+}
+
+function courseFillCsv(courses: Reports["courseFill"]["courses"]) {
+  return toCsv(
+    ["name", "termLabel", "enrolledCount", "capacity", "fillPercent", "active", "id"],
+    courses.map((course) => {
+      const fill =
+        course.capacity > 0 ? Math.round((course.enrolledCount / course.capacity) * 100) : "";
+      return [
+        course.name,
+        course.termLabel,
+        course.enrolledCount,
+        course.capacity,
+        fill,
+        course.active,
+        course.id,
+      ];
+    }),
+  );
+}
+
+function sectionCsv(section: ReportSection, data: Reports) {
+  switch (section) {
+    case "activeFamilies":
+      return activeFamiliesCsv(data.activeFamilies.households);
+    case "studentsByLifecycle":
+      return studentsByLifecycleCsv(data.studentsByLifecycle.counts);
+    case "tutorCapacity":
+      return tutorCapacityCsv(data.tutorCapacity.tutors);
+    case "unpaidBilling":
+      return unpaidBillingCsv(data.unpaidBilling);
+    case "courseFill":
+      return courseFillCsv(data.courseFill.courses);
+  }
+}
+
+function sectionFilename(section: ReportSection) {
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `report-${section}-${stamp}.csv`;
+}
+
+function sectionHasRows(section: ReportSection, data: Reports) {
+  switch (section) {
+    case "activeFamilies":
+      return data.activeFamilies.households.length > 0;
+    case "studentsByLifecycle":
+      return data.studentsByLifecycle.counts.length > 0;
+    case "tutorCapacity":
+      return data.tutorCapacity.tutors.length > 0;
+    case "unpaidBilling":
+      return true;
+    case "courseFill":
+      return data.courseFill.courses.length > 0;
+  }
+}
+
+function allSectionsCsv(data: Reports) {
+  const parts: string[] = [];
+  (Object.keys(data) as ReportSection[]).forEach((section) => {
+    parts.push(`# ${section}`);
+    parts.push(sectionCsv(section, data));
+    parts.push("");
+  });
+  return parts.join("\n");
 }
 
 export function StaffReportsClient() {
@@ -88,6 +187,7 @@ export function StaffReportsClient() {
   const [lifecycle, setLifecycle] = useState("");
   const [applied, setApplied] = useState({ status: "active", lifecycle: "" });
   const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -128,11 +228,29 @@ export function StaffReportsClient() {
     setApplied({ status: "active", lifecycle: "" });
   }
 
+  function flashDownloaded(key: string) {
+    setDownloaded(key);
+    window.setTimeout(() => setDownloaded(null), 1800);
+  }
+
   function onCopyCsv() {
     if (!data?.activeFamilies.households.length) return;
-    copyActiveFamiliesCsv(data.activeFamilies.households);
+    void navigator.clipboard.writeText(activeFamiliesCsv(data.activeFamilies.households));
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  function onDownloadSection(section: ReportSection) {
+    if (!data || !sectionHasRows(section, data)) return;
+    downloadCsv(sectionFilename(section), sectionCsv(section, data));
+    flashDownloaded(section);
+  }
+
+  function onDownloadAll() {
+    if (!data) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`report-summary-${stamp}.csv`, allSectionsCsv(data));
+    flashDownloaded("all");
   }
 
   const unpaidAmount = data ? formatMoney(data.unpaidBilling.amountCentsSum) : "$0.00";
@@ -171,7 +289,7 @@ export function StaffReportsClient() {
       </section>
 
       <Panel title="Report filters" eyebrow="Live queries">
-        <form className="student-filter-panel" onSubmit={applyFilters} style={{ gridTemplateColumns: "1fr 1fr auto auto" }}>
+        <form className="student-filter-panel" onSubmit={applyFilters} style={{ gridTemplateColumns: "1fr 1fr auto auto auto" }}>
           <label>
             Household status
             <select value={status} onChange={(event) => setStatus(event.target.value)}>
@@ -198,6 +316,15 @@ export function StaffReportsClient() {
           <button type="button" className="secondary-button" style={{ height: 36, alignSelf: "end" }} onClick={clearFilters}>
             Reset
           </button>
+          <button
+            type="button"
+            className="secondary-button"
+            style={{ height: 36, alignSelf: "end" }}
+            onClick={onDownloadAll}
+            disabled={!data || loading}
+          >
+            {downloaded === "all" ? "Downloaded" : "Download all CSV"}
+          </button>
         </form>
         {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading report summary…</p> : null}
       </Panel>
@@ -210,8 +337,13 @@ export function StaffReportsClient() {
               <button type="button" className="secondary-button" onClick={onCopyCsv} disabled={!data.activeFamilies.households.length}>
                 {copied ? "Copied CSV" : "Copy CSV"}
               </button>
-              <button type="button" className="secondary-button" disabled title="File export comes later">
-                Export
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => onDownloadSection("activeFamilies")}
+                disabled={!data.activeFamilies.households.length}
+              >
+                {downloaded === "activeFamilies" ? "Downloaded" : "Download CSV"}
               </button>
             </div>
             {data.activeFamilies.households.length === 0 ? (
@@ -250,6 +382,17 @@ export function StaffReportsClient() {
           </Panel>
 
           <Panel title={data.studentsByLifecycle.name} eyebrow="students-by-lifecycle">
+            <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+              <strong style={{ fontSize: 13 }}>{data.studentsByLifecycle.total} students</strong>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => onDownloadSection("studentsByLifecycle")}
+                disabled={!data.studentsByLifecycle.counts.length}
+              >
+                {downloaded === "studentsByLifecycle" ? "Downloaded" : "Download CSV"}
+              </button>
+            </div>
             {data.studentsByLifecycle.counts.length === 0 ? (
               <p style={{ color: "var(--muted)" }}>No students match this lifecycle filter.</p>
             ) : (
@@ -266,6 +409,17 @@ export function StaffReportsClient() {
           </Panel>
 
           <Panel title={data.tutorCapacity.name} eyebrow="tutor-capacity">
+            <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+              <strong style={{ fontSize: 13 }}>{data.tutorCapacity.activeTutorCount} active tutors</strong>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => onDownloadSection("tutorCapacity")}
+                disabled={!data.tutorCapacity.tutors.length}
+              >
+                {downloaded === "tutorCapacity" ? "Downloaded" : "Download CSV"}
+              </button>
+            </div>
             {data.tutorCapacity.tutors.length === 0 ? (
               <p style={{ color: "var(--muted)" }}>No active tutors.</p>
             ) : (
@@ -302,6 +456,12 @@ export function StaffReportsClient() {
           </Panel>
 
           <Panel title={data.unpaidBilling.name} eyebrow="unpaid-billing">
+            <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+              <strong style={{ fontSize: 13 }}>{data.unpaidBilling.count} unpaid/pending</strong>
+              <button type="button" className="secondary-button" onClick={() => onDownloadSection("unpaidBilling")}>
+                {downloaded === "unpaidBilling" ? "Downloaded" : "Download CSV"}
+              </button>
+            </div>
             <div className="family-summary-grid three" style={{ marginBottom: 0 }}>
               <article className="panel" style={{ padding: 14 }}>
                 <small>Unpaid / pending count</small>
@@ -322,6 +482,17 @@ export function StaffReportsClient() {
           </Panel>
 
           <Panel title={data.courseFill.name} eyebrow="course-fill">
+            <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+              <strong style={{ fontSize: 13 }}>{data.courseFill.courses.length} courses</strong>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => onDownloadSection("courseFill")}
+                disabled={!data.courseFill.courses.length}
+              >
+                {downloaded === "courseFill" ? "Downloaded" : "Download CSV"}
+              </button>
+            </div>
             {data.courseFill.courses.length === 0 ? (
               <p style={{ color: "var(--muted)" }}>No active course offerings.</p>
             ) : (
