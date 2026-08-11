@@ -37,8 +37,8 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 
 - [x] Family Detail core (hero, guardians/invites, notes, student links, service activity) — New Family wizard/merge queue still open
 - [ ] New Family multi-step wizard + identity match/merge queue
-- [ ] Student Detail + filters + notes + Best Fit assist
-- [ ] Tutor Detail + Add Tutor + workload
+- [x] Student Detail + filters + notes (Best Fit still deferred)
+- [x] Tutor Detail + Add Tutor + workload (subject assign / archive still deferred)
 - [ ] Staff booking on weekly calendar
 - [ ] Course roster / enrollment management
 - [ ] Session Detail + attendance
