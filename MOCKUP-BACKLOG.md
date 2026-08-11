@@ -39,11 +39,12 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [ ] New Family multi-step wizard + identity match/merge queue
 - [x] Student Detail + filters + notes (Best Fit still deferred)
 - [x] Tutor Detail + Add Tutor + workload (subject assign / archive still deferred)
-- [ ] Staff booking on weekly calendar
-- [ ] Course roster / enrollment management
+- [x] Scheduling Week board + recent bookings (staff create booking still open)
+- [x] Course list + roster read (manage enrollment / archive still open)
+- [x] Sessions list (bookings-as-sessions) + Exception queue status actions — Session Detail / attendance / full policy traces still open
 - [ ] Session Detail + attendance
 - [ ] Exception queue with policy traces
-- [ ] Billing Detail + controlled actions
+- [x] Billing Detail + controlled actions (manual ledger status/notes; no Stripe charges)
 - [ ] Reports filters/export + school suggestion admin + controlled merge
 
 ### QA note — Playwright auth smoke
