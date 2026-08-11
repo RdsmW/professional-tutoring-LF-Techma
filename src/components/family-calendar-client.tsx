@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro } from "@/components/ui";
 import { useFamilyPortal } from "@/components/family-portal-context";
 import {
@@ -64,6 +64,7 @@ function dateBlock(item: CalendarItem) {
 
 export function FamilyCalendarClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { householdName } = useFamilyPortal();
   const [mode, setMode] = useState<Mode>("list");
   const [items, setItems] = useState<CalendarItem[]>([]);
@@ -78,6 +79,7 @@ export function FamilyCalendarClient() {
   const [preferredAlternatives, setPreferredAlternatives] = useState("");
   const [saving, setSaving] = useState(false);
   const [submittedRequest, setSubmittedRequest] = useState<ChangeRequest | null>(null);
+  const deepLinkHandled = useRef(false);
 
   const selected = items.find((item) => item.id === selectedId) ?? null;
 
@@ -117,6 +119,17 @@ export function FamilyCalendarClient() {
     void reload();
   }, [reload]);
 
+  function openChangeForItem(item: CalendarItem) {
+    return (
+      changeRequests.find(
+        (row) =>
+          row.open &&
+          row.relatedEntityId === item.id &&
+          row.relatedEntityType === (item.kind === "booking" ? "booking" : "course_enrollment"),
+      ) ?? null
+    );
+  }
+
   function openDetail(itemId: string) {
     setSelectedId(itemId);
     setMode("detail");
@@ -129,6 +142,17 @@ export function FamilyCalendarClient() {
       setError("Open a booking or enrollment first, then request a change.");
       return;
     }
+    const target = items.find((item) => item.id === targetId);
+    if (!target) {
+      setError("That booking was not found. Open a booking from the list to request a change.");
+      return;
+    }
+    if (openChangeForItem(target)) {
+      setSelectedId(targetId);
+      setMode("detail");
+      setError("An open change request already exists for this booking. Staff review is still in progress.");
+      return;
+    }
     setSelectedId(targetId);
     setChangeStep(1);
     setChangeReason("");
@@ -139,6 +163,26 @@ export function FamilyCalendarClient() {
     setError(null);
     setMode("change");
   }
+
+  useEffect(() => {
+    if (loading || deepLinkHandled.current) return;
+    const changeId = searchParams.get("change");
+    if (!changeId) return;
+    deepLinkHandled.current = true;
+
+    const target = items.find((item) => item.id === changeId);
+    if (!target) {
+      setError("That booking was not found. Open a booking from the list to request a change.");
+      return;
+    }
+    if (openChangeForItem(target)) {
+      openDetail(changeId);
+      setError("An open change request already exists for this booking. Staff review is still in progress.");
+      return;
+    }
+    startChange(changeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep-link after calendar load
+  }, [loading, items, changeRequests, searchParams]);
 
   const requestValid =
     Boolean(changeReason) &&
@@ -459,10 +503,17 @@ export function FamilyCalendarClient() {
             type="button"
             className="family-primary"
             style={{ marginTop: 14 }}
+            disabled={Boolean(openChange)}
+            title={openChange ? "An open change request already exists" : undefined}
             onClick={() => startChange(selected.id)}
           >
-            Request a booking change
+            Request cancellation / make-up / refund review
           </button>
+          {openChange ? (
+            <p style={{ marginTop: 10, fontSize: 9, color: "var(--muted)" }}>
+              A request is already awaiting staff review for this record.
+            </p>
+          ) : null}
         </section>
       </>
     );
@@ -524,20 +575,10 @@ export function FamilyCalendarClient() {
         <div>
           <strong>Policy-guided changes</strong>
           <p>
-            PT-CAN-2026.3 uses a 24-hour notice window and reason/outcome rules to recommend eligibility. Staff
-            approval is always required before a banked credit or refund workflow.
+            PT-CAN-2026.3 uses a 24-hour notice window and reason/outcome rules. Staff approval is always
+            required before a banked credit or refund. Open a booking or enrollment, then request a change.
           </p>
         </div>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => {
-            if (items[0]) startChange(items[0].id);
-            else setError("Add a booking or enrollment before requesting a change.");
-          }}
-        >
-          Request cancellation / make-up / refund review
-        </button>
       </section>
     </>
   );
