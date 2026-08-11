@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { StripeCardSaver } from "@/components/stripe-card-saver";
+import {
+  StripeCardSaver,
+  type CollectedCard,
+  type StripeCardSaverHandle,
+} from "@/components/stripe-card-saver";
 import type { EnrollFormId } from "@/lib/enrollment/course-map";
 
 type Option = { id: string; label: string };
@@ -32,8 +36,9 @@ type Draft = {
   paymentPlanId: string;
   slotPreference: string[];
   policyAck: boolean;
-  paymentMethodConsent: boolean;
-  cardSaved: boolean;
+  saveCardForFuture: boolean;
+  cardReady: boolean;
+  paymentMethodId: string | null;
 };
 
 const steps = ["Student", "Course", "Program", "Billing", "Policy", "Review"];
@@ -45,27 +50,32 @@ const emptyDraft: Draft = {
   paymentPlanId: "",
   slotPreference: [],
   policyAck: false,
-  paymentMethodConsent: false,
-  cardSaved: false,
+  saveCardForFuture: false,
+  cardReady: false,
+  paymentMethodId: null,
 };
 
 export function EnrollCoursesWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const cardRef = useRef<StripeCardSaverHandle>(null);
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [students, setStudents] = useState<Student[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
+  const [displayCard, setDisplayCard] = useState<SavedCard | null>(null);
   const [stripeConfigured, setStripeConfigured] = useState(true);
   const [householdStatus, setHouseholdStatus] = useState("pending");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmingCard, setConfirmingCard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<{
     courseName: string;
     studentName: string;
     scheduleLabel: string;
+    savedForFuture: boolean;
   } | null>(null);
 
   const selectedStudent = students.find((student) => student.id === draft.studentId);
@@ -89,11 +99,14 @@ export function EnrollCoursesWizard() {
         setStripeConfigured(Boolean(data.stripeConfigured));
         setHouseholdStatus(data.householdStatus);
         if (data.savedCard?.last4) {
-          setSavedCard({ brand: data.savedCard.brand, last4: data.savedCard.last4 });
+          const card = { brand: data.savedCard.brand, last4: data.savedCard.last4 };
+          setSavedCard(card);
+          setDisplayCard(card);
           setDraft((prev) => ({
             ...prev,
-            cardSaved: true,
-            paymentMethodConsent: Boolean(data.savedCard.consentAt),
+            cardReady: true,
+            paymentMethodId: null,
+            saveCardForFuture: Boolean(data.savedCard.consentAt),
           }));
         }
         if (presetStudent && (data.students ?? []).some((s: Student) => s.id === presetStudent)) {
@@ -119,9 +132,7 @@ export function EnrollCoursesWizard() {
     }
     if (step === 4) return Boolean(draft.paymentPlanId);
     if (step === 5) {
-      return Boolean(
-        draft.policyAck && draft.paymentMethodConsent && draft.cardSaved && stripeConfigured,
-      );
+      return Boolean(draft.policyAck && stripeConfigured);
     }
     return true;
   }, [draft, selectedCourse, step, stripeConfigured]);
@@ -148,6 +159,42 @@ export function EnrollCoursesWizard() {
     });
   }
 
+  function applyCollectedCard(card: CollectedCard) {
+    setDisplayCard({ brand: card.brand, last4: card.last4 });
+    if (card.savedForFuture && card.last4) {
+      setSavedCard({ brand: card.brand, last4: card.last4 });
+    }
+    setDraft((prev) => ({
+      ...prev,
+      cardReady: true,
+      paymentMethodId: card.id,
+      saveCardForFuture: card.savedForFuture ? true : prev.saveCardForFuture,
+    }));
+  }
+
+  async function handleContinue() {
+    if (step !== 5) {
+      setStep((value) => value + 1);
+      return;
+    }
+    if (draft.cardReady) {
+      setStep(6);
+      return;
+    }
+    setConfirmingCard(true);
+    setError(null);
+    try {
+      const collected = await cardRef.current?.confirm();
+      if (!collected) return;
+      applyCollectedCard(collected);
+      setStep(6);
+    } catch {
+      setError("Unable to confirm card.");
+    } finally {
+      setConfirmingCard(false);
+    }
+  }
+
   async function confirmEnrollment() {
     if (saving) return;
     setSaving(true);
@@ -166,7 +213,8 @@ export function EnrollCoursesWizard() {
               ? draft.slotPreference
               : draft.slotPreference[0] ?? "",
           policyAck: draft.policyAck,
-          paymentMethodConsent: draft.paymentMethodConsent,
+          saveCardForFuture: draft.saveCardForFuture,
+          paymentMethodId: draft.paymentMethodId || undefined,
         }),
       });
       const data = await response.json();
@@ -178,6 +226,7 @@ export function EnrollCoursesWizard() {
         courseName: data.enrollment.courseName,
         studentName: data.enrollment.studentName,
         scheduleLabel: data.enrollment.scheduleLabel,
+        savedForFuture: draft.saveCardForFuture || Boolean(savedCard?.last4 && !draft.paymentMethodId),
       });
       setStep(7);
     } catch {
@@ -222,7 +271,10 @@ export function EnrollCoursesWizard() {
         <h3>Enrollment submitted</h3>
         <p>
           {confirmed.courseName} for {confirmed.studentName} is saved as submitted. Schedule:{" "}
-          {confirmed.scheduleLabel}. Your card is on file with Stripe for future charges.
+          {confirmed.scheduleLabel}.
+          {confirmed.savedForFuture
+            ? " Your card was saved on file with Stripe for future charges."
+            : " Card details were confirmed for this enrollment only and were not saved for future charges."}
         </p>
         <div className="success-actions">
           <button type="button" className="family-primary" onClick={() => router.push("/family")}>
@@ -239,8 +291,9 @@ export function EnrollCoursesWizard() {
               setDraft({
                 ...emptyDraft,
                 studentId: draft.studentId,
-                cardSaved: draft.cardSaved,
-                paymentMethodConsent: draft.paymentMethodConsent,
+                cardReady: draft.cardReady,
+                paymentMethodId: draft.paymentMethodId,
+                saveCardForFuture: draft.saveCardForFuture,
               });
               setStep(draft.studentId ? 2 : 1);
             }}
@@ -429,29 +482,41 @@ export function EnrollCoursesWizard() {
             />
             I acknowledge the course agreement and cancellation policy for this enrollment.
           </label>
+          <StripeCardSaver
+            ref={cardRef}
+            saveForFuture={draft.saveCardForFuture}
+            savedCard={savedCard}
+            onCollected={applyCollectedCard}
+            onUseSaved={() => {
+              setDisplayCard(savedCard);
+              setDraft((prev) => ({
+                ...prev,
+                cardReady: true,
+                paymentMethodId: null,
+                saveCardForFuture: true,
+              }));
+            }}
+            onStartReplace={() =>
+              setDraft((prev) => ({
+                ...prev,
+                cardReady: false,
+                paymentMethodId: null,
+              }))
+            }
+          />
           <label className="merge-confirm">
             <input
               type="checkbox"
-              checked={draft.paymentMethodConsent}
+              checked={draft.saveCardForFuture}
               onChange={(event) =>
                 setDraft({
                   ...draft,
-                  paymentMethodConsent: event.target.checked,
-                  cardSaved: event.target.checked ? draft.cardSaved : false,
+                  saveCardForFuture: event.target.checked,
                 })
               }
             />
-            Save my card with Stripe for this enrollment and future Professional Tutoring charges.
+            Save this card for future Professional Tutoring charges.
           </label>
-          <StripeCardSaver
-            consent={draft.paymentMethodConsent}
-            savedCard={savedCard}
-            onSaved={(card) => {
-              setSavedCard(card);
-              setDraft((prev) => ({ ...prev, cardSaved: true }));
-            }}
-            onUseSaved={() => setDraft((prev) => ({ ...prev, cardSaved: true, paymentMethodConsent: true }))}
-          />
         </div>
       ) : null}
 
@@ -486,10 +551,16 @@ export function EnrollCoursesWizard() {
               <strong>{selectedPlan?.label}</strong>
             </div>
             <div>
-              <small>Card on file</small>
+              <small>Card for this enrollment</small>
               <strong>
-                {(savedCard?.brand || "Card").toUpperCase()} ···· {savedCard?.last4}
+                {displayCard?.last4
+                  ? `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4}`
+                  : "Pending confirmation"}
               </strong>
+            </div>
+            <div>
+              <small>Save for future</small>
+              <strong>{draft.saveCardForFuture || (savedCard?.last4 && !draft.paymentMethodId) ? "Yes" : "No"}</strong>
             </div>
           </div>
         </div>
@@ -512,10 +583,10 @@ export function EnrollCoursesWizard() {
           <button
             type="button"
             className="family-primary"
-            disabled={!stepValid}
-            onClick={() => setStep((value) => value + 1)}
+            disabled={!stepValid || confirmingCard}
+            onClick={() => void handleContinue()}
           >
-            Continue
+            {confirmingCard ? "Confirming card…" : "Continue"}
           </button>
         ) : (
           <button

@@ -211,7 +211,7 @@ export function FamilyPaymentsClient() {
           <p>
             {savedCard?.last4
               ? `Saved for future bookings: ${(savedCard.brand || "Card").toUpperCase()} ···· ${savedCard.last4}`
-              : "No card on file yet. Save one during Book Tutoring or Enroll after giving permission."}
+              : "No card on file yet. Enter a card during Book Tutoring or Enroll; save it for future charges only with permission."}
           </p>
         </div>
         <span className={`pill ${savedCard?.last4 ? "mint" : "amber"}`}>

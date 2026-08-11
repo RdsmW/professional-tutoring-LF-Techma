@@ -17,17 +17,15 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as {
+      /** Persist this card on the household for future charges. */
+      saveForFuture?: boolean;
+      /** @deprecated alias for saveForFuture */
       consent?: boolean;
       setupIntentId?: string;
       paymentMethodId?: string;
     };
 
-    if (!body.consent) {
-      return NextResponse.json(
-        { ok: false, error: "Permission to save a payment method is required." },
-        { status: 400 },
-      );
-    }
+    const saveForFuture = Boolean(body.saveForFuture ?? body.consent);
 
     if (!body.setupIntentId && !body.paymentMethodId) {
       return NextResponse.json({ ok: false, error: "Missing payment method confirmation." }, { status: 400 });
@@ -51,7 +49,7 @@ export async function POST(request: Request) {
     }
 
     if (!paymentMethodId) {
-      return NextResponse.json({ ok: false, error: "No payment method on file." }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "No payment method found." }, { status: 400 });
     }
 
     const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
@@ -64,27 +62,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Stripe customer missing." }, { status: 400 });
     }
 
-    await stripe.customers.update(customerId, {
-      invoice_settings: { default_payment_method: paymentMethodId },
-    });
+    if (
+      context.household.stripeCustomerId &&
+      customerId !== context.household.stripeCustomerId
+    ) {
+      return NextResponse.json({ ok: false, error: "Payment method does not belong to this household." }, { status: 403 });
+    }
 
     const card = paymentMethod.card;
     const database = requireDb();
-    await database
-      .update(households)
-      .set({
-        stripeCustomerId: customerId,
-        stripeDefaultPaymentMethodId: paymentMethodId,
-        cardBrand: card?.brand ?? null,
-        cardLast4: card?.last4 ?? null,
-        paymentMethodConsentAt: new Date(),
-        paymentMethodConsentVersion: PAYMENT_METHOD_CONSENT_VERSION,
-        updatedAt: new Date(),
-      })
-      .where(eq(households.id, context.household.id));
+
+    if (saveForFuture) {
+      await stripe.customers.update(customerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+
+      await database
+        .update(households)
+        .set({
+          stripeCustomerId: customerId,
+          stripeDefaultPaymentMethodId: paymentMethodId,
+          cardBrand: card?.brand ?? null,
+          cardLast4: card?.last4 ?? null,
+          paymentMethodConsentAt: new Date(),
+          paymentMethodConsentVersion: PAYMENT_METHOD_CONSENT_VERSION,
+          updatedAt: new Date(),
+        })
+        .where(eq(households.id, context.household.id));
+    } else if (!context.household.stripeCustomerId) {
+      await database
+        .update(households)
+        .set({
+          stripeCustomerId: customerId,
+          updatedAt: new Date(),
+        })
+        .where(eq(households.id, context.household.id));
+    }
 
     return NextResponse.json({
       ok: true,
+      savedForFuture: saveForFuture,
       paymentMethod: {
         id: paymentMethodId,
         brand: card?.brand ?? null,
@@ -93,6 +110,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.warn("[billing/confirm-method] fail", error);
-    return NextResponse.json({ ok: false, error: "Unable to save payment method" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Unable to confirm payment method" }, { status: 500 });
   }
 }

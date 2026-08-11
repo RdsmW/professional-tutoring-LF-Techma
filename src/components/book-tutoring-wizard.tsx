@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { StripeCardSaver } from "@/components/stripe-card-saver";
+import {
+  StripeCardSaver,
+  type CollectedCard,
+  type StripeCardSaverHandle,
+} from "@/components/stripe-card-saver";
 
 type Option = { id: string; label: string };
 type Student = { id: string; displayName: string; gradeLabel: string | null; schoolName: string | null };
@@ -29,8 +33,11 @@ type Draft = {
   slotId: string;
   paymentPlanId: string;
   policyAck: boolean;
-  paymentMethodConsent: boolean;
-  cardSaved: boolean;
+  /** Opt-in to store card on household for future charges. */
+  saveCardForFuture: boolean;
+  /** Card confirmed for this booking (collected or existing on-file). */
+  cardReady: boolean;
+  paymentMethodId: string | null;
 };
 
 const steps = ["Student", "Service", "Plan", "Tutor", "Slot", "Policy", "Review"];
@@ -47,13 +54,15 @@ const emptyDraft: Draft = {
   slotId: "",
   paymentPlanId: "",
   policyAck: false,
-  paymentMethodConsent: false,
-  cardSaved: false,
+  saveCardForFuture: false,
+  cardReady: false,
+  paymentMethodId: null,
 };
 
 export function BookTutoringWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const cardRef = useRef<StripeCardSaverHandle>(null);
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [students, setStudents] = useState<Student[]>([]);
@@ -65,15 +74,18 @@ export function BookTutoringWizard() {
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
+  const [displayCard, setDisplayCard] = useState<SavedCard | null>(null);
   const [stripeConfigured, setStripeConfigured] = useState(true);
   const [householdStatus, setHouseholdStatus] = useState<string>("pending");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmingCard, setConfirmingCard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<{
     tutorName: string;
     studentName: string;
     serviceTitle: string;
+    savedForFuture: boolean;
   } | null>(null);
 
   const windows = draft.formId === "summer_tutoring" ? summerWindows : academicWindows;
@@ -105,11 +117,14 @@ export function BookTutoringWizard() {
         setStripeConfigured(Boolean(data.stripeConfigured));
         setHouseholdStatus(data.householdStatus);
         if (data.savedCard?.last4) {
-          setSavedCard({ brand: data.savedCard.brand, last4: data.savedCard.last4 });
+          const card = { brand: data.savedCard.brand, last4: data.savedCard.last4 };
+          setSavedCard(card);
+          setDisplayCard(card);
           setDraft((prev) => ({
             ...prev,
-            cardSaved: true,
-            paymentMethodConsent: Boolean(data.savedCard.consentAt),
+            cardReady: true,
+            paymentMethodId: null,
+            saveCardForFuture: Boolean(data.savedCard.consentAt),
           }));
         }
         if (presetStudent && (data.students ?? []).some((s: Student) => s.id === presetStudent)) {
@@ -168,16 +183,46 @@ export function BookTutoringWizard() {
     if (step === 4) return Boolean(draft.tutorId);
     if (step === 5) return Boolean(draft.slotId);
     if (step === 6) {
-      return Boolean(
-        draft.paymentPlanId &&
-          draft.policyAck &&
-          draft.paymentMethodConsent &&
-          draft.cardSaved &&
-          stripeConfigured,
-      );
+      return Boolean(draft.paymentPlanId && draft.policyAck && stripeConfigured);
     }
     return true;
   }, [draft, step, stripeConfigured]);
+
+  function applyCollectedCard(card: CollectedCard) {
+    setDisplayCard({ brand: card.brand, last4: card.last4 });
+    if (card.savedForFuture && card.last4) {
+      setSavedCard({ brand: card.brand, last4: card.last4 });
+    }
+    setDraft((prev) => ({
+      ...prev,
+      cardReady: true,
+      paymentMethodId: card.id,
+      saveCardForFuture: card.savedForFuture ? true : prev.saveCardForFuture,
+    }));
+  }
+
+  async function handleContinue() {
+    if (step !== 6) {
+      setStep((value) => value + 1);
+      return;
+    }
+    if (draft.cardReady) {
+      setStep(7);
+      return;
+    }
+    setConfirmingCard(true);
+    setError(null);
+    try {
+      const collected = await cardRef.current?.confirm();
+      if (!collected) return;
+      applyCollectedCard(collected);
+      setStep(7);
+    } catch {
+      setError("Unable to confirm card.");
+    } finally {
+      setConfirmingCard(false);
+    }
+  }
 
   async function confirmBooking() {
     if (saving) return;
@@ -199,7 +244,8 @@ export function BookTutoringWizard() {
           slotId: draft.slotId,
           paymentPlanId: draft.paymentPlanId,
           policyAck: draft.policyAck,
-          paymentMethodConsent: draft.paymentMethodConsent,
+          saveCardForFuture: draft.saveCardForFuture,
+          paymentMethodId: draft.paymentMethodId || undefined,
         }),
       });
       const data = await response.json();
@@ -211,6 +257,7 @@ export function BookTutoringWizard() {
         tutorName: data.booking.tutorName,
         studentName: data.booking.studentName,
         serviceTitle: data.booking.serviceTitle,
+        savedForFuture: draft.saveCardForFuture || Boolean(savedCard?.last4 && !draft.paymentMethodId),
       });
       setStep(8);
     } catch {
@@ -255,7 +302,10 @@ export function BookTutoringWizard() {
         <h3>Booking submitted</h3>
         <p>
           {confirmed.serviceTitle} for {confirmed.studentName} with {confirmed.tutorName} is saved as pending
-          payment. Your card is on file with Stripe for future charges.
+          payment.
+          {confirmed.savedForFuture
+            ? " Your card was saved on file with Stripe for future charges."
+            : " Card details were confirmed for this booking only and were not saved for future charges."}
         </p>
         <div className="success-actions">
           <button type="button" className="family-primary" onClick={() => router.push("/family")}>
@@ -479,29 +529,41 @@ export function BookTutoringWizard() {
             />
             I acknowledge the tutoring agreement and cancellation policy for this booking.
           </label>
+          <StripeCardSaver
+            ref={cardRef}
+            saveForFuture={draft.saveCardForFuture}
+            savedCard={savedCard}
+            onCollected={applyCollectedCard}
+            onUseSaved={() => {
+              setDisplayCard(savedCard);
+              setDraft((prev) => ({
+                ...prev,
+                cardReady: true,
+                paymentMethodId: null,
+                saveCardForFuture: true,
+              }));
+            }}
+            onStartReplace={() =>
+              setDraft((prev) => ({
+                ...prev,
+                cardReady: false,
+                paymentMethodId: null,
+              }))
+            }
+          />
           <label className="merge-confirm">
             <input
               type="checkbox"
-              checked={draft.paymentMethodConsent}
+              checked={draft.saveCardForFuture}
               onChange={(event) =>
                 setDraft({
                   ...draft,
-                  paymentMethodConsent: event.target.checked,
-                  cardSaved: event.target.checked ? draft.cardSaved : false,
+                  saveCardForFuture: event.target.checked,
                 })
               }
             />
-            Save my card with Stripe for this booking and future Professional Tutoring charges.
+            Save this card for future Professional Tutoring charges.
           </label>
-          <StripeCardSaver
-            consent={draft.paymentMethodConsent}
-            savedCard={savedCard}
-            onSaved={(card) => {
-              setSavedCard(card);
-              setDraft((prev) => ({ ...prev, cardSaved: true }));
-            }}
-            onUseSaved={() => setDraft((prev) => ({ ...prev, cardSaved: true, paymentMethodConsent: true }))}
-          />
         </div>
       ) : null}
 
@@ -540,10 +602,16 @@ export function BookTutoringWizard() {
               <strong>{selectedPlan?.label}</strong>
             </div>
             <div>
-              <small>Card on file</small>
+              <small>Card for this booking</small>
               <strong>
-                {(savedCard?.brand || "Card").toUpperCase()} ···· {savedCard?.last4}
+                {displayCard?.last4
+                  ? `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4}`
+                  : "Pending confirmation"}
               </strong>
+            </div>
+            <div>
+              <small>Save for future</small>
+              <strong>{draft.saveCardForFuture || (savedCard?.last4 && !draft.paymentMethodId) ? "Yes" : "No"}</strong>
             </div>
           </div>
         </div>
@@ -566,10 +634,10 @@ export function BookTutoringWizard() {
           <button
             type="button"
             className="family-primary"
-            disabled={!stepValid}
-            onClick={() => setStep((value) => value + 1)}
+            disabled={!stepValid || confirmingCard}
+            onClick={() => void handleContinue()}
           >
-            Continue
+            {confirmingCard ? "Confirming card…" : "Continue"}
           </button>
         ) : (
           <button

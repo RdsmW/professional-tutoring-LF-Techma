@@ -12,6 +12,7 @@ import {
   slotOptionsForForm,
   slotPreferenceListId,
 } from "@/lib/enrollment/course-map";
+import { resolveFamilyPaymentMethod } from "@/lib/family/resolve-payment-method";
 
 type EnrollBody = {
   studentId?: string;
@@ -20,7 +21,11 @@ type EnrollBody = {
   paymentPlanId?: string;
   slotPreference?: string | string[];
   policyAck?: boolean;
+  /** Save this card on the household for future charges. */
+  saveCardForFuture?: boolean;
+  /** @deprecated alias for saveCardForFuture */
   paymentMethodConsent?: boolean;
+  paymentMethodId?: string;
 };
 
 function normalizeSlotPreference(value: string | string[] | undefined): string[] {
@@ -96,18 +101,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Policy acknowledgement is required." }, { status: 400 });
     }
 
-    if (!body.paymentMethodConsent) {
-      return NextResponse.json(
-        { ok: false, error: "Permission to save/use a payment method is required." },
-        { status: 400 },
-      );
-    }
-
-    if (!context.household.stripeDefaultPaymentMethodId || !context.household.paymentMethodConsentAt) {
-      return NextResponse.json(
-        { ok: false, error: "Save a payment method before confirming enrollment." },
-        { status: 400 },
-      );
+    const saveCardForFuture = Boolean(body.saveCardForFuture ?? body.paymentMethodConsent);
+    const payment = await resolveFamilyPaymentMethod(context, {
+      paymentMethodId: body.paymentMethodId,
+      saveForFuture: saveCardForFuture,
+    });
+    if (!payment.ok) {
+      return NextResponse.json({ ok: false, error: payment.error }, { status: payment.status });
     }
 
     const database = requireDb();
@@ -181,8 +181,8 @@ export async function POST(request: Request) {
       relatedEntityId: enrollment.id,
       status: "pending",
       amountCents: 0,
-      methodLabel: `${context.household.cardBrand || "card"} ···· ${context.household.cardLast4 || "****"}`,
-      stripeCustomerId: context.household.stripeCustomerId,
+      methodLabel: payment.value.methodLabel,
+      stripeCustomerId: payment.value.customerId,
       notes: `Payment plan: ${paymentPlanId}`,
       updatedAt: now,
     });
