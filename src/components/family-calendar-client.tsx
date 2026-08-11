@@ -235,7 +235,7 @@ export function FamilyCalendarClient() {
           : "";
 
     return (
-      <section className="wizard-shell panel">
+      <section className="wizard-shell panel change-request-shell">
         <button
           type="button"
           className="wizard-close"
@@ -265,9 +265,9 @@ export function FamilyCalendarClient() {
         </div>
 
         {changeStep === 1 ? (
-          <div className="wizard-stage">
+          <div className="wizard-stage change-request-form">
             <h3>Tell us what changed</h3>
-            <div className="review-summary">
+            <div className="change-context-strip">
               <div>
                 <small>Student</small>
                 <strong>{selected.studentName}</strong>
@@ -280,7 +280,7 @@ export function FamilyCalendarClient() {
               </div>
               <div>
                 <small>Notice</small>
-                <strong>Assumed ≥24 hours (provisional)</strong>
+                <strong>≥24 hours (provisional)</strong>
               </div>
             </div>
             <div className="select-block">
@@ -306,21 +306,27 @@ export function FamilyCalendarClient() {
                     key={type}
                     type="button"
                     className={changeType === type ? "selected" : ""}
-                    onClick={() => setChangeType(type)}
+                    onClick={() => {
+                      setChangeType(type);
+                      if (!requiresAlternatives(type)) setPreferredAlternatives("");
+                    }}
                   >
                     {type}
                   </button>
                 ))}
               </div>
             </div>
-            <label className="full-input">
-              Preferred alternative dates / times (when applicable)
-              <textarea
-                value={preferredAlternatives}
-                onChange={(event) => setPreferredAlternatives(event.target.value)}
-                placeholder="Example: Thursday after 5 PM or weekend morning"
-              />
-            </label>
+            {changeType && requiresAlternatives(changeType) ? (
+              <label className="full-input">
+                Preferred alternative dates / times
+                <textarea
+                  value={preferredAlternatives}
+                  onChange={(event) => setPreferredAlternatives(event.target.value)}
+                  placeholder="Example: Thursday after 5 PM or weekend morning"
+                  rows={3}
+                />
+              </label>
+            ) : null}
             <div className="select-block">
               <strong>Requested policy outcome</strong>
               <div className="field-choice-row">

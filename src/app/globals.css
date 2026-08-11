@@ -283,6 +283,19 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .success-actions-stack .family-primary{min-width:200px}
 .success-secondary-links{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
 .success-secondary-links button{border:0;background:none;color:var(--blue);font-size:10px;font-weight:800;cursor:pointer;padding:0}
+.change-request-shell .wizard-lead{margin-bottom:12px}
+.change-request-shell .wizard-progress{margin-bottom:16px;padding:10px 0}
+.change-request-shell .wizard-footer{margin-top:16px;padding-top:14px}
+.change-request-form{display:flex;flex-direction:column;gap:16px}
+.change-request-form>h3{margin:0}
+.change-request-form .select-block{margin-top:0}
+.change-request-form .full-input{margin:0}
+.change-request-form .full-input textarea{margin-top:8px;min-height:72px;resize:vertical}
+.change-context-strip{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);background:#fff}
+.change-context-strip>div{padding:10px 12px;border-right:1px solid var(--line)}
+.change-context-strip>div:last-child{border-right:0}
+.change-context-strip small{display:block;font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.change-context-strip strong{display:block;font-size:11px;line-height:1.35;font-weight:700}
 @media (max-width: 900px){
   .student-review-profile{grid-template-columns:1fr 1fr}
   .student-review-profile>div{border-right:0}
@@ -290,6 +303,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .review-group-grid>div{border-right:0}
   .review-group-grid>div:nth-last-child(-n+2){border-bottom:1px solid var(--line)}
   .review-group-grid>div:last-child{border-bottom:0}
+  .change-context-strip{grid-template-columns:1fr}
+  .change-context-strip>div{border-right:0;border-bottom:1px solid var(--line)}
+  .change-context-strip>div:last-child{border-bottom:0}
 }
 
 .saved-filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#eef3f7;border:1px solid #d5e0e9;padding:11px 13px;margin-bottom:12px}
