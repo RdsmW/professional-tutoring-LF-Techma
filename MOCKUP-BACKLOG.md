@@ -1,8 +1,8 @@
-# Mockup ├óΓÇáΓÇÖ build backlog
+# Mockup â†’ build backlog
 
 Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.md`.
 
-## Stage 1 ├óΓé¼ΓÇ¥ Foundation (this release)
+## Stage 1 â€” Foundation (this release)
 
 - [x] App scaffold (Next.js + Clerk + Drizzle)
 - [x] Mockup CSS tokens + Staff/Family themes
@@ -18,9 +18,9 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Family portal polish (family-mode theme, sidebar naming, pending onboarding cue)
 - [x] Family Home/Students UI parity (metrics, live students/bookings, need chips, edit footer)
 
-## Stage 2 ├óΓé¼ΓÇ¥ Family journeys (next)
+## Stage 2 â€” Family journeys (next)
 
-- [x] Slice 1: Family onboarding unlock (`pending` ├óΓÇáΓÇÖ `active`) + household profile form
+- [x] Slice 1: Family onboarding unlock (`pending` â†’ `active`) + household profile form
 - [x] Slice 1: Add Student multi-step wizard + real student cards
 - [x] Five-form field catalog + structured controls (`src/lib/forms`, wired into onboarding/Add Student)
 - [x] Book Tutoring (trimmed wizard + seeded tutors/slots + consent-gated Stripe card-on-file)
@@ -29,11 +29,11 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Calendar change UX: booking-first CTA (list banner softened; Messages bridges to Calendar)
 - [x] Payments/Receipts detail + receipt download (saved card brand/last4 already shown)
 - [x] Payments detail UX polish (friendly status, 3-card summary, plain-language receipt)
-- [x] Messages/Support ├óΓÇáΓÇÖ Staff inbox loop
+- [x] Messages/Support â†’ Staff inbox loop
 - [x] Profile + Account & Security simulations replaced with real Clerk-backed edits where appropriate
 - [x] Five Gravity Form field groups end-to-end (wizards consume catalog)
 
-## Stage 3 ├óΓé¼ΓÇ¥ Staff depth
+## Stage 3 â€” Staff depth
 
 - [x] Family Detail core (hero, guardians/invites, notes, student links, service activity)
 - [x] New Family multi-step wizard + identity match (full merge queue still open)
@@ -41,13 +41,13 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Tutor Detail + Add Tutor + workload + subject assign / archive (soft active toggle)
 - [x] Scheduling Week board + recent bookings + staff create booking
 - [x] Course list + roster + staff enrollment manage (add / status / capacity) + soft archive/reactivate
-- [x] Sessions list (bookings-as-sessions) + Exception queue status actions ├óΓé¼ΓÇ¥ full policy traces still open
+- [x] Sessions list (bookings-as-sessions) + Exception queue status actions â€” full policy traces still open
 - [x] Session Detail + attendance (bookings columns; apply `drizzle/0003_booking_attendance.sql` on Supabase)
 - [ ] Exception queue with policy traces
 - [x] Billing Detail + controlled actions (manual ledger status/notes; no Stripe charges)
-- [x] Reports live summary queries (active families, lifecycle, tutor capacity, unpaid billing, course fill) + CSV export polish (per-panel + download-all) ├óΓé¼ΓÇ¥ school suggestion admin + controlled merge still open
+- [x] Reports live summary queries (active families, lifecycle, tutor capacity, unpaid billing, course fill) + CSV export polish (per-panel + download-all) â€” school suggestion admin + controlled merge still open
 
-### QA note ├óΓé¼ΓÇ¥ Playwright auth smoke
+### QA note â€” Playwright auth smoke
 
 Authenticated suites in `e2e/smoke.spec.ts` run only when these are set in `.env.local`:
 
@@ -56,7 +56,7 @@ Authenticated suites in `e2e/smoke.spec.ts` run only when these are set in `.env
 
 Unauthenticated smoke always runs. No product code change required for auth smoke.
 
-## Stage 4 ├óΓé¼ΓÇ¥ Money & integrations (gated)
+## Stage 4 â€” Money & integrations (gated)
 
 - [x] Stripe card-on-file (SetupIntent + consent) for Book Tutoring
 - [ ] Stripe charge / receipt capture for pending payment bookings
@@ -66,7 +66,7 @@ Unauthenticated smoke always runs. No product code change required for auth smok
 - [ ] Zoho sync
 - [ ] Idempotent outbox + reconciliation
 
-## Stage 5 ├óΓé¼ΓÇ¥ Replit cutover
+## Stage 5 â€” Replit cutover
 
 - [ ] Deploy on Replit
 - [ ] Switch `DATABASE_URL` to Replit DB
