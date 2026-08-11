@@ -140,6 +140,7 @@ export function StaffSchedulingClient() {
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [rosterCourse, setRosterCourse] = useState<CourseRow | null>(null);
   const [rosterLoading, setRosterLoading] = useState(false);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -160,7 +161,7 @@ export function StaffSchedulingClient() {
     try {
       const [schedulingRes, coursesRes] = await Promise.all([
         fetch("/api/staff/scheduling"),
-        fetch("/api/staff/courses"),
+        fetch("/api/staff/courses?includeInactive=1"),
       ]);
       const schedulingData = await schedulingRes.json();
       const coursesData = await coursesRes.json();
@@ -323,6 +324,32 @@ export function StaffSchedulingClient() {
       setRosterCourse(null);
     } finally {
       setRosterLoading(false);
+    }
+  }
+
+  async function toggleCourseActive(course: CourseRow) {
+    if (archivingId) return;
+    const nextActive = !course.active;
+    setArchivingId(course.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/courses/${course.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: nextActive }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update course status.");
+        return;
+      }
+      const active = Boolean(data.course?.active ?? nextActive);
+      setCourses((prev) => prev.map((row) => (row.id === course.id ? { ...row, active } : row)));
+      setRosterCourse((prev) => (prev?.id === course.id ? { ...prev, active } : prev));
+    } catch {
+      setError("Unable to update course status.");
+    } finally {
+      setArchivingId(null);
     }
   }
 
@@ -606,7 +633,10 @@ export function StaffSchedulingClient() {
                     : "Inactive";
                   return (
                     <article key={course.id} className="course-card">
-                      <span className="pill">{capacityLabel}</span>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                        <span className="pill">{capacityLabel}</span>
+                        <span className="pill">{course.active ? "Active" : "Inactive"}</span>
+                      </div>
                       <span className="course-kicker">{course.code}</span>
                       <h3>{course.name}</h3>
                       <div>
@@ -619,6 +649,19 @@ export function StaffSchedulingClient() {
                       </div>
                       <button type="button" onClick={() => void openRoster(course.id)}>
                         Open Course Roster →
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        style={{ marginTop: 8, width: "100%" }}
+                        disabled={archivingId === course.id}
+                        onClick={() => void toggleCourseActive(course)}
+                      >
+                        {archivingId === course.id
+                          ? "Saving…"
+                          : course.active
+                            ? "Archive"
+                            : "Reactivate"}
                       </button>
                       <Link
                         href={`/staff/scheduling/courses/${course.id}`}

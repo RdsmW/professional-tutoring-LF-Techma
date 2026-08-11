@@ -1,19 +1,29 @@
 import { NextResponse } from "next/server";
-import { and, asc, count, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { courseEnrollments, courseOfferings } from "@/lib/db/schema";
 import { ACTIVE_ENROLLMENT_STATUSES } from "@/lib/enrollment/status";
 import { getStaffContext } from "@/lib/staff/session";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const context = await getStaffContext();
     if (!context) {
       return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
     }
 
+    const { searchParams } = new URL(request.url);
+    // Default: all offerings with active status. Pass includeInactive=0 for active-only.
+    const includeInactive = searchParams.get("includeInactive") !== "0";
+
     const database = requireDb();
-    const rows = await database.select().from(courseOfferings).orderBy(asc(courseOfferings.name));
+    const rows = includeInactive
+      ? await database.select().from(courseOfferings).orderBy(asc(courseOfferings.name))
+      : await database
+          .select()
+          .from(courseOfferings)
+          .where(eq(courseOfferings.active, true))
+          .orderBy(asc(courseOfferings.name));
 
     const ids = rows.map((row) => row.id);
     const countMap = new Map<string, number>();

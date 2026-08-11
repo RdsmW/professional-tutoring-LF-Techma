@@ -62,6 +62,7 @@ export default function StaffCourseRosterPage() {
 
   const [draftStatus, setDraftStatus] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [togglingActive, setTogglingActive] = useState(false);
 
   const reload = useCallback(async () => {
     if (!id) return;
@@ -171,6 +172,32 @@ export default function StaffCourseRosterPage() {
     }
   }
 
+  async function toggleCourseActive() {
+    if (!id || !course || togglingActive) return;
+    const nextActive = !course.active;
+    setTogglingActive(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/staff/courses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: nextActive }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update course status.");
+        return;
+      }
+      setCourse((prev) => (prev ? { ...prev, active: Boolean(data.course?.active) } : prev));
+      setMessage(nextActive ? "Course reactivated." : "Course archived.");
+    } catch {
+      setError("Unable to update course status.");
+    } finally {
+      setTogglingActive(false);
+    }
+  }
+
   async function saveEnrollmentStatus(enrollmentId: string) {
     if (!id || savingId) return;
     const status = draftStatus[enrollmentId];
@@ -226,15 +253,30 @@ export default function StaffCourseRosterPage() {
         eyebrow={course ? (course.active ? "Active offering" : "Inactive") : "Course"}
       >
         {course ? (
-          <p style={{ margin: 0 }}>
-            <strong>
-              {course.enrolledCount}/{course.capacity}
-            </strong>{" "}
-            enrolled
-            <span style={{ color: "var(--muted)", marginLeft: 8 }}>
-              {atCapacity ? "Full — active enrollments blocked" : `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left`}
-            </span>
-          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+            <p style={{ margin: 0, flex: 1, minWidth: 180 }}>
+              <strong>
+                {course.enrolledCount}/{course.capacity}
+              </strong>{" "}
+              enrolled
+              <span style={{ color: "var(--muted)", marginLeft: 8 }}>
+                {atCapacity ? "Full — active enrollments blocked" : `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left`}
+              </span>
+              {!course.active ? (
+                <span className="pill" style={{ marginLeft: 8 }}>
+                  Inactive
+                </span>
+              ) : null}
+            </p>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={togglingActive}
+              onClick={() => void toggleCourseActive()}
+            >
+              {togglingActive ? "Saving…" : course.active ? "Archive" : "Reactivate"}
+            </button>
+          </div>
         ) : (
           <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading…</p>
         )}
