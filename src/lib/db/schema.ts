@@ -320,3 +320,45 @@ export const changeRequests = pgTable("change_requests", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const supportCaseStatusEnum = pgEnum("support_case_status", [
+  "submitted",
+  "under_review",
+  "waiting_on_family",
+  "resolved",
+]);
+
+export const supportCasePriorityEnum = pgEnum("support_case_priority", [
+  "normal",
+  "time_sensitive",
+]);
+
+export const supportMessageAuthorEnum = pgEnum("support_message_author", [
+  "family",
+  "staff",
+  "system",
+]);
+
+export const supportCases = pgTable("support_cases", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  householdId: uuid("household_id").notNull(),
+  createdByGuardianId: uuid("created_by_guardian_id").notNull(),
+  topic: text("topic").notNull(),
+  priority: supportCasePriorityEnum("priority").notNull().default("normal"),
+  relatedLabel: text("related_label"),
+  studentId: uuid("student_id"),
+  status: supportCaseStatusEnum("status").notNull().default("submitted"),
+  assigneeStaffId: uuid("assignee_staff_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const supportCaseMessages = pgTable("support_case_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  caseId: uuid("case_id").notNull(),
+  body: text("body").notNull(),
+  authorRole: supportMessageAuthorEnum("author_role").notNull(),
+  authorGuardianId: uuid("author_guardian_id"),
+  authorStaffId: uuid("author_staff_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
