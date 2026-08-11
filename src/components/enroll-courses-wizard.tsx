@@ -76,6 +76,7 @@ export function EnrollCoursesWizard() {
     studentName: string;
     scheduleLabel: string;
     savedForFuture: boolean;
+    cardLabel: string;
   } | null>(null);
 
   const selectedStudent = students.find((student) => student.id === draft.studentId);
@@ -177,7 +178,7 @@ export function EnrollCoursesWizard() {
       setStep((value) => value + 1);
       return;
     }
-    if (draft.cardReady) {
+    if (displayCard?.last4 && draft.cardReady) {
       setStep(6);
       return;
     }
@@ -185,7 +186,7 @@ export function EnrollCoursesWizard() {
     setError(null);
     try {
       const collected = await cardRef.current?.confirm();
-      if (!collected) return;
+      if (!collected?.last4) return;
       applyCollectedCard(collected);
       setStep(6);
     } catch {
@@ -197,6 +198,11 @@ export function EnrollCoursesWizard() {
 
   async function confirmEnrollment() {
     if (saving) return;
+    if (!displayCard?.last4) {
+      setError("Confirm a payment method before submitting.");
+      setStep(5);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -222,11 +228,14 @@ export function EnrollCoursesWizard() {
         setError(data.error || "Unable to confirm enrollment.");
         return;
       }
+      const savedForFuture =
+        draft.saveCardForFuture || Boolean(savedCard?.last4 && !draft.paymentMethodId);
       setConfirmed({
         courseName: data.enrollment.courseName,
         studentName: data.enrollment.studentName,
         scheduleLabel: data.enrollment.scheduleLabel,
-        savedForFuture: draft.saveCardForFuture || Boolean(savedCard?.last4 && !draft.paymentMethodId),
+        savedForFuture,
+        cardLabel: `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4}`,
       });
       setStep(7);
     } catch {
@@ -269,37 +278,50 @@ export function EnrollCoursesWizard() {
       <div className="panel success-state">
         <span>✓</span>
         <h3>Enrollment submitted</h3>
-        <p>
-          {confirmed.courseName} for {confirmed.studentName} is saved as submitted. Schedule:{" "}
-          {confirmed.scheduleLabel}.
-          {confirmed.savedForFuture
-            ? " Your card was saved on file with Stripe for future charges."
-            : " Card details were confirmed for this enrollment only and were not saved for future charges."}
-        </p>
-        <div className="success-actions">
+        <div className="success-facts">
+          <p>
+            <small>Enrollment</small>
+            <strong>
+              {confirmed.courseName} · {confirmed.studentName}
+            </strong>
+          </p>
+          <p>
+            <small>Schedule</small>
+            <strong>{confirmed.scheduleLabel}</strong>
+          </p>
+          <p>
+            <small>Payment</small>
+            <strong>
+              {confirmed.cardLabel} ·{" "}
+              {confirmed.savedForFuture ? "Saved for future charges" : "This enrollment only"}
+            </strong>
+          </p>
+        </div>
+        <div className="success-actions-stack">
           <button type="button" className="family-primary" onClick={() => router.push("/family")}>
             Back to home
           </button>
-          <button type="button" className="secondary-button" onClick={() => router.push("/family/students")}>
-            View students
-          </button>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              setConfirmed(null);
-              setDraft({
-                ...emptyDraft,
-                studentId: draft.studentId,
-                cardReady: draft.cardReady,
-                paymentMethodId: draft.paymentMethodId,
-                saveCardForFuture: draft.saveCardForFuture,
-              });
-              setStep(draft.studentId ? 2 : 1);
-            }}
-          >
-            Enroll another
-          </button>
+          <div className="success-secondary-links">
+            <button type="button" onClick={() => router.push("/family/students")}>
+              View students
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmed(null);
+                setDraft({
+                  ...emptyDraft,
+                  studentId: draft.studentId,
+                  cardReady: Boolean(displayCard?.last4),
+                  paymentMethodId: draft.paymentMethodId,
+                  saveCardForFuture: draft.saveCardForFuture,
+                });
+                setStep(draft.studentId ? 2 : 1);
+              }}
+            >
+              Enroll another
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -523,45 +545,56 @@ export function EnrollCoursesWizard() {
       {step === 6 ? (
         <div className="wizard-stage">
           <h3>Review enrollment</h3>
-          <div className="review-summary">
-            <div>
-              <small>Student</small>
-              <strong>{selectedStudent?.displayName}</strong>
-            </div>
-            <div>
-              <small>Course</small>
-              <strong>{selectedCourse?.title}</strong>
-            </div>
-            <div>
-              <small>Term</small>
-              <strong>{selectedCourse?.termLabel || "TBD"}</strong>
-            </div>
-            <div>
-              <small>Schedule</small>
-              <strong>
-                {draft.formId === "express"
-                  ? selectedCourse?.scheduleSummary || "Pending confirmation"
-                  : draft.slotPreference
-                      .map((id) => slotOptions.find((option) => option.id === id)?.label || id)
-                      .join("; ") || selectedCourse?.scheduleSummary}
-              </strong>
-            </div>
-            <div>
-              <small>Payment plan</small>
-              <strong>{selectedPlan?.label}</strong>
-            </div>
-            <div>
-              <small>Card for this enrollment</small>
-              <strong>
-                {displayCard?.last4
-                  ? `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4}`
-                  : "Pending confirmation"}
-              </strong>
-            </div>
-            <div>
-              <small>Save for future</small>
-              <strong>{draft.saveCardForFuture || (savedCard?.last4 && !draft.paymentMethodId) ? "Yes" : "No"}</strong>
-            </div>
+          <p style={{ margin: "0 0 4px", fontSize: 11, color: "var(--muted)" }}>
+            You’re about to submit this enrollment.
+          </p>
+          <div className="review-groups">
+            <section className="review-group">
+              <div className="review-group-title">Enrollment</div>
+              <div className="review-group-grid">
+                <div>
+                  <small>Student</small>
+                  <strong>{selectedStudent?.displayName}</strong>
+                </div>
+                <div>
+                  <small>Course</small>
+                  <strong>{selectedCourse?.title}</strong>
+                </div>
+                <div>
+                  <small>Term</small>
+                  <strong>{selectedCourse?.termLabel || "TBD"}</strong>
+                </div>
+                <div>
+                  <small>Schedule</small>
+                  <strong>
+                    {draft.formId === "express"
+                      ? selectedCourse?.scheduleSummary || "Schedule pending"
+                      : draft.slotPreference
+                          .map((id) => slotOptions.find((option) => option.id === id)?.label || id)
+                          .join("; ") || selectedCourse?.scheduleSummary}
+                  </strong>
+                </div>
+              </div>
+            </section>
+            <section className="review-group">
+              <div className="review-group-title">Billing</div>
+              <div className="review-group-line">
+                <small>Payment plan</small>
+                <strong>{selectedPlan?.label}</strong>
+              </div>
+              <div className="review-group-line" style={{ borderTop: "1px solid var(--line)" }}>
+                <small>Card</small>
+                <strong>
+                  {displayCard?.last4
+                    ? `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4} · ${
+                        draft.saveCardForFuture || (savedCard?.last4 && !draft.paymentMethodId)
+                          ? "Saved for future charges"
+                          : "This enrollment only"
+                      }`
+                    : "Confirm a card on the previous step"}
+                </strong>
+              </div>
+            </section>
           </div>
         </div>
       ) : null}
@@ -592,7 +625,7 @@ export function EnrollCoursesWizard() {
           <button
             type="button"
             className="family-primary"
-            disabled={!stepValid || saving}
+            disabled={!stepValid || saving || !displayCard?.last4}
             onClick={() => void confirmEnrollment()}
           >
             {saving ? "Confirming…" : "Confirm enrollment"}

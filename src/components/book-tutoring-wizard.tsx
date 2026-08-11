@@ -86,6 +86,9 @@ export function BookTutoringWizard() {
     studentName: string;
     serviceTitle: string;
     savedForFuture: boolean;
+    cardLabel: string;
+    subjectLabel: string;
+    slotLabel: string;
   } | null>(null);
 
   const windows = draft.formId === "summer_tutoring" ? summerWindows : academicWindows;
@@ -206,7 +209,7 @@ export function BookTutoringWizard() {
       setStep((value) => value + 1);
       return;
     }
-    if (draft.cardReady) {
+    if (displayCard?.last4 && draft.cardReady) {
       setStep(7);
       return;
     }
@@ -214,7 +217,7 @@ export function BookTutoringWizard() {
     setError(null);
     try {
       const collected = await cardRef.current?.confirm();
-      if (!collected) return;
+      if (!collected?.last4) return;
       applyCollectedCard(collected);
       setStep(7);
     } catch {
@@ -226,6 +229,11 @@ export function BookTutoringWizard() {
 
   async function confirmBooking() {
     if (saving) return;
+    if (!displayCard?.last4) {
+      setError("Confirm a payment method before submitting.");
+      setStep(6);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -253,11 +261,16 @@ export function BookTutoringWizard() {
         setError(data.error || "Unable to confirm booking.");
         return;
       }
+      const savedForFuture =
+        draft.saveCardForFuture || Boolean(savedCard?.last4 && !draft.paymentMethodId);
       setConfirmed({
         tutorName: data.booking.tutorName,
         studentName: data.booking.studentName,
         serviceTitle: data.booking.serviceTitle,
-        savedForFuture: draft.saveCardForFuture || Boolean(savedCard?.last4 && !draft.paymentMethodId),
+        savedForFuture,
+        cardLabel: `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4}`,
+        subjectLabel: selectedSubject?.label || draft.subjectCode,
+        slotLabel: selectedSlot?.label || selectedSlot?.startTimeLocal || "Selected slot",
       });
       setStep(8);
     } catch {
@@ -300,20 +313,39 @@ export function BookTutoringWizard() {
       <div className="panel success-state">
         <span>✓</span>
         <h3>Booking submitted</h3>
-        <p>
-          {confirmed.serviceTitle} for {confirmed.studentName} with {confirmed.tutorName} is saved as pending
-          payment.
-          {confirmed.savedForFuture
-            ? " Your card was saved on file with Stripe for future charges."
-            : " Card details were confirmed for this booking only and were not saved for future charges."}
-        </p>
-        <div className="success-actions">
+        <div className="success-facts">
+          <p>
+            <small>Booking</small>
+            <strong>
+              {confirmed.serviceTitle} · {confirmed.studentName}
+            </strong>
+          </p>
+          <p>
+            <small>Schedule</small>
+            <strong>
+              {confirmed.subjectLabel} with {confirmed.tutorName} · {confirmed.slotLabel}
+            </strong>
+          </p>
+          <p>
+            <small>Payment</small>
+            <strong>
+              {confirmed.cardLabel} ·{" "}
+              {confirmed.savedForFuture ? "Saved for future charges" : "This booking only"}
+            </strong>
+          </p>
+        </div>
+        <div className="success-actions-stack">
           <button type="button" className="family-primary" onClick={() => router.push("/family")}>
             Back to home
           </button>
-          <button type="button" className="secondary-button" onClick={() => router.push("/family/payments")}>
-            View payments
-          </button>
+          <div className="success-secondary-links">
+            <button type="button" onClick={() => router.push("/family/payments")}>
+              View payments
+            </button>
+            <button type="button" onClick={() => router.push("/family/calendar")}>
+              View calendar
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -570,49 +602,60 @@ export function BookTutoringWizard() {
       {step === 7 ? (
         <div className="wizard-stage">
           <h3>Review booking</h3>
-          <div className="review-summary">
-            <div>
-              <small>Student</small>
-              <strong>{selectedStudent?.displayName}</strong>
-            </div>
-            <div>
-              <small>Service</small>
-              <strong>
-                {draft.formId === "summer_tutoring" ? "Summer Tutoring" : "Academic-Year Tutoring"}
-              </strong>
-            </div>
-            <div>
-              <small>Subject</small>
-              <strong>{selectedSubject?.label}</strong>
-            </div>
-            <div>
-              <small>Window</small>
-              <strong>{selectedWindow?.label}</strong>
-            </div>
-            <div>
-              <small>Tutor</small>
-              <strong>{selectedTutor?.displayName}</strong>
-            </div>
-            <div>
-              <small>Slot</small>
-              <strong>{selectedSlot?.label || selectedSlot?.startTimeLocal}</strong>
-            </div>
-            <div>
-              <small>Payment plan</small>
-              <strong>{selectedPlan?.label}</strong>
-            </div>
-            <div>
-              <small>Card for this booking</small>
-              <strong>
-                {displayCard?.last4
-                  ? `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4}`
-                  : "Pending confirmation"}
-              </strong>
-            </div>
-            <div>
-              <small>Save for future</small>
-              <strong>{draft.saveCardForFuture || (savedCard?.last4 && !draft.paymentMethodId) ? "Yes" : "No"}</strong>
-            </div>
+          <p style={{ margin: "0 0 4px", fontSize: 11, color: "var(--muted)" }}>
+            You’re about to submit this tutoring request.
+          </p>
+          <div className="review-groups">
+            <section className="review-group">
+              <div className="review-group-title">Tutoring request</div>
+              <div className="review-group-grid">
+                <div>
+                  <small>Student</small>
+                  <strong>{selectedStudent?.displayName}</strong>
+                </div>
+                <div>
+                  <small>Service</small>
+                  <strong>
+                    {draft.formId === "summer_tutoring" ? "Summer Tutoring" : "Academic-Year Tutoring"}
+                  </strong>
+                </div>
+                <div>
+                  <small>Subject</small>
+                  <strong>{selectedSubject?.label}</strong>
+                </div>
+                <div>
+                  <small>Window</small>
+                  <strong>{selectedWindow?.label}</strong>
+                </div>
+                <div>
+                  <small>Tutor</small>
+                  <strong>{selectedTutor?.displayName}</strong>
+                </div>
+                <div>
+                  <small>Slot</small>
+                  <strong>{selectedSlot?.label || selectedSlot?.startTimeLocal}</strong>
+                </div>
+              </div>
+            </section>
+            <section className="review-group">
+              <div className="review-group-title">Billing</div>
+              <div className="review-group-line">
+                <small>Payment plan</small>
+                <strong>{selectedPlan?.label}</strong>
+              </div>
+              <div className="review-group-line" style={{ borderTop: "1px solid var(--line)" }}>
+                <small>Card</small>
+                <strong>
+                  {displayCard?.last4
+                    ? `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4} · ${
+                        draft.saveCardForFuture || (savedCard?.last4 && !draft.paymentMethodId)
+                          ? "Saved for future charges"
+                          : "This booking only"
+                      }`
+                    : "Confirm a card on the previous step"}
+                </strong>
+              </div>
+            </section>
           </div>
         </div>
       ) : null}
@@ -643,7 +686,7 @@ export function BookTutoringWizard() {
           <button
             type="button"
             className="family-primary"
-            disabled={!stepValid || saving}
+            disabled={!stepValid || saving || !displayCard?.last4}
             onClick={() => void confirmBooking()}
           >
             {saving ? "Confirming…" : "Confirm booking"}
