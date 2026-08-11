@@ -158,16 +158,19 @@ export function FamilyProfileClient() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/family/profile");
+      const response = await fetch("/api/family/profile", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok || !data.ok) {
+        setProfile(null);
         setError(data.error || "Unable to load profile.");
         return;
       }
       const next = parseProfilePayload(data);
       setProfile(next);
       setForm(formFromProfile(next));
+      setError(null);
     } catch {
+      setProfile(null);
       setError("Unable to load profile.");
     } finally {
       setLoading(false);
@@ -203,7 +206,7 @@ export function FamilyProfileClient() {
     const active = profile.household.status === "active";
     const householdDone = householdProfileComplete(profile.household);
     const hasBillingOwner =
-      profile.guardians.some((row) => row.isBillingOwner) || profile.guardian.isBillingOwner;
+      (profile.guardians ?? []).some((row) => row.isBillingOwner) || profile.guardian.isBillingOwner;
     const studentLabel = `${profile.studentCount} student profile${profile.studentCount === 1 ? "" : "s"} added`;
 
     return [
@@ -457,12 +460,19 @@ export function FamilyProfileClient() {
       </section>
 
       {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading profile…</p> : null}
-      {error ? <p className="form-error">{error}</p> : null}
+      {!loading && error ? (
+        <div className="form-error" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <span>{error}</span>
+          <button type="button" className="text-button" onClick={() => void reload()}>
+            Retry →
+          </button>
+        </div>
+      ) : null}
       {savedMessage ? (
         <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 11, marginBottom: 12 }}>{savedMessage}</p>
       ) : null}
 
-      {profile ? (
+      {!loading && profile ? (
         <section className="profile-layout">
           <article className="panel booking-form">
             {isActive ? (
@@ -530,7 +540,7 @@ export function FamilyProfileClient() {
             </div>
 
             <div className="guardian-access-preview">
-              {(profile.guardians.length ? profile.guardians : [
+              {(profile.guardians?.length ? profile.guardians : [
                 {
                   id: profile.guardian.id,
                   firstName: profile.guardian.firstName,
