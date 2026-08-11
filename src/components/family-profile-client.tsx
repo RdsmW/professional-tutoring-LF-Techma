@@ -373,7 +373,7 @@ export function FamilyProfileClient() {
       {profile ? (
         <div className="profile-layout">
           <Panel title="Household profile" eyebrow="Family account">
-            <div className="family-detail-grid" style={{ marginTop: 8 }}>
+            <div className="family-detail-grid profile-detail-grid" style={{ marginTop: 8 }}>
               <span>
                 <small>Family account</small>
                 <strong>{profile.household.displayName}</strong>
@@ -423,7 +423,7 @@ export function FamilyProfileClient() {
           </Panel>
 
           <Panel title="Guardian contact" eyebrow="Signed-in adult">
-            <div className="family-detail-grid" style={{ marginTop: 8 }}>
+            <div className="family-detail-grid profile-detail-grid" style={{ marginTop: 8 }}>
               <span>
                 <small>Name</small>
                 <strong>
@@ -436,7 +436,11 @@ export function FamilyProfileClient() {
               </span>
               <span>
                 <small>Mobile</small>
-                <strong>{profile.guardian.phone || "—"}</strong>
+                <strong>
+                  {profile.guardian.phone?.trim()
+                    ? profile.guardian.phone
+                    : "Not set — add in Edit profile"}
+                </strong>
               </span>
               <span>
                 <small>Billing owner</small>
@@ -445,13 +449,13 @@ export function FamilyProfileClient() {
             </div>
             <button
               type="button"
-              className="secondary-button"
+              className="family-secondary"
               style={{ marginTop: 14 }}
               onClick={() => setMode("security")}
             >
               Account &amp; Security
             </button>
-            <div className="privacy-callout" style={{ marginTop: 14 }}>
+            <div className="privacy-callout profile-privacy-callout" style={{ marginTop: 14 }}>
               <span>i</span>
               <div>
                 <strong>Restricted changes require staff</strong>
