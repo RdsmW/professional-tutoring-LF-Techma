@@ -29,6 +29,16 @@ npm run dev
 
 Open http://localhost:3000
 
+## Database migrations (apply on Supabase)
+
+Run additive SQL in the Supabase SQL editor (or `psql`) against the `professional-tutoring` database when deploying schema changes:
+
+- `drizzle/0001_support_cases.sql`
+- `drizzle/0002_enrollment_referral.sql`
+- **`drizzle/0003_booking_attendance.sql`** — required for Staff Session Detail attendance fields (`attendance_status`, `attendance_notes`, `attendance_recorded_at`, `attendance_recorded_by_staff_id` on `bookings`)
+
+Until `0003` is applied, session detail attendance save/load will fail against Postgres.
+
 ## Important security note
 
 Supabase currently has **Row Level Security disabled** on existing tables. This app uses the **server-only** database URL (not the browser anon key). Still, you should enable RLS (or revoke anon/authenticated table grants) before any public exposure. Ask me when you want that hardening step applied carefully.

@@ -249,7 +249,12 @@ export function StaffSessionsClient() {
           ) : (
             <div className="table-panel">
               {sessions.map((row) => (
-                <div key={row.id} className="family-row" style={{ cursor: "default" }}>
+                <Link
+                  key={row.id}
+                  href={`/staff/sessions/${row.id}`}
+                  className="family-row"
+                  style={{ cursor: "pointer", textDecoration: "none", color: "inherit" }}
+                >
                   <span
                     className="avatar"
                     style={{
@@ -272,12 +277,8 @@ export function StaffSessionsClient() {
                     </small>
                   </span>
                   <span className={`pill ${statusTone(row.status)}`}>{statusLabel(row.status)}</span>
-                  <b>
-                    <Link href={`/staff/students/${row.studentId}`} style={{ color: "inherit" }}>
-                      Student →
-                    </Link>
-                  </b>
-                </div>
+                  <b>Open →</b>
+                </Link>
               ))}
             </div>
           )}

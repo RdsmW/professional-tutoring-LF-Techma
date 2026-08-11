@@ -272,6 +272,10 @@ export const bookings = pgTable("bookings", {
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
   cancellationReason: text("cancellation_reason"),
+  attendanceStatus: text("attendance_status"),
+  attendanceNotes: text("attendance_notes"),
+  attendanceRecordedAt: timestamp("attendance_recorded_at", { withTimezone: true }),
+  attendanceRecordedByStaffId: uuid("attendance_recorded_by_staff_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
