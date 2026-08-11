@@ -26,6 +26,7 @@ type EnrollBody = {
   /** @deprecated alias for saveCardForFuture */
   paymentMethodConsent?: boolean;
   paymentMethodId?: string;
+  referralSource?: string;
 };
 
 function normalizeSlotPreference(value: string | string[] | undefined): string[] {
@@ -101,6 +102,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Policy acknowledgement is required." }, { status: 400 });
     }
 
+    const referralSource = (body.referralSource ?? "").trim();
+    if (referralSource && !isValidOptionId("REFERRAL_SOURCE", referralSource)) {
+      return NextResponse.json({ ok: false, error: "Invalid referral source." }, { status: 400 });
+    }
+
     const saveCardForFuture = Boolean(body.saveCardForFuture ?? body.paymentMethodConsent);
     const payment = await resolveFamilyPaymentMethod(context, {
       paymentMethodId: body.paymentMethodId,
@@ -158,6 +164,7 @@ export async function POST(request: Request) {
         requestedByGuardianId: context.guardian.id,
         status: "submitted",
         requestedSlotPreference: slotPreferences.length > 0 ? slotPreferences.join(",") : null,
+        referralSource: referralSource || null,
         notes: JSON.stringify({
           formId,
           paymentPlanId,

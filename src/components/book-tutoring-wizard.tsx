@@ -7,6 +7,7 @@ import {
   type CollectedCard,
   type StripeCardSaverHandle,
 } from "@/components/stripe-card-saver";
+import { REFERRAL_SOURCE, TEST_PREP_INTERESTS } from "@/lib/forms/options";
 
 type Option = { id: string; label: string };
 type Student = { id: string; displayName: string; gradeLabel: string | null; schoolName: string | null };
@@ -38,6 +39,8 @@ type Draft = {
   /** Card confirmed for this booking (collected or existing on-file). */
   cardReady: boolean;
   paymentMethodId: string | null;
+  referralSource: string;
+  testPrepInterests: string[];
 };
 
 const steps = ["Student", "Service", "Plan", "Tutor", "Slot", "Policy", "Review"];
@@ -57,6 +60,8 @@ const emptyDraft: Draft = {
   saveCardForFuture: false,
   cardReady: false,
   paymentMethodId: null,
+  referralSource: "",
+  testPrepInterests: [],
 };
 
 export function BookTutoringWizard() {
@@ -254,6 +259,8 @@ export function BookTutoringWizard() {
           policyAck: draft.policyAck,
           saveCardForFuture: draft.saveCardForFuture,
           paymentMethodId: draft.paymentMethodId || undefined,
+          referralSource: draft.referralSource || undefined,
+          testPrepInterests: draft.testPrepInterests,
         }),
       });
       const data = await response.json();
@@ -551,6 +558,45 @@ export function BookTutoringWizard() {
                   </option>
                 ))}
               </select>
+            </label>
+            <label>
+              How did you hear about us? (optional)
+              <select
+                value={draft.referralSource}
+                onChange={(event) => setDraft({ ...draft, referralSource: event.target.value })}
+              >
+                <option value="">Prefer not to say</option>
+                {REFERRAL_SOURCE.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Test-prep interests (optional)
+              <div className="field-cloud" style={{ marginTop: 8 }}>
+                {TEST_PREP_INTERESTS.options.map((option) => {
+                  const checked = draft.testPrepInterests.includes(option.id);
+                  return (
+                    <label key={option.id} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            testPrepInterests: checked
+                              ? prev.testPrepInterests.filter((id) => id !== option.id)
+                              : [...prev.testPrepInterests, option.id],
+                          }))
+                        }
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </label>
           </div>
           <label className="merge-confirm">

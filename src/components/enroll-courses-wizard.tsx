@@ -8,6 +8,7 @@ import {
   type StripeCardSaverHandle,
 } from "@/components/stripe-card-saver";
 import type { EnrollFormId } from "@/lib/enrollment/course-map";
+import { REFERRAL_SOURCE } from "@/lib/forms/options";
 
 type Option = { id: string; label: string };
 type Student = { id: string; displayName: string; gradeLabel: string | null; schoolName: string | null };
@@ -39,6 +40,7 @@ type Draft = {
   saveCardForFuture: boolean;
   cardReady: boolean;
   paymentMethodId: string | null;
+  referralSource: string;
 };
 
 const steps = ["Student", "Course", "Program", "Billing", "Policy", "Review"];
@@ -53,6 +55,7 @@ const emptyDraft: Draft = {
   saveCardForFuture: false,
   cardReady: false,
   paymentMethodId: null,
+  referralSource: "",
 };
 
 export function EnrollCoursesWizard() {
@@ -221,6 +224,7 @@ export function EnrollCoursesWizard() {
           policyAck: draft.policyAck,
           saveCardForFuture: draft.saveCardForFuture,
           paymentMethodId: draft.paymentMethodId || undefined,
+          referralSource: draft.referralSource || undefined,
         }),
       });
       const data = await response.json();
@@ -504,6 +508,22 @@ export function EnrollCoursesWizard() {
             />
             I acknowledge the course agreement and cancellation policy for this enrollment.
           </label>
+          <div className="input-grid" style={{ marginTop: 12 }}>
+            <label>
+              How did you hear about us? (optional)
+              <select
+                value={draft.referralSource}
+                onChange={(event) => setDraft({ ...draft, referralSource: event.target.value })}
+              >
+                <option value="">Prefer not to say</option>
+                {REFERRAL_SOURCE.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <StripeCardSaver
             ref={cardRef}
             saveForFuture={draft.saveCardForFuture}

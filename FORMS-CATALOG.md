@@ -33,10 +33,14 @@ Machine-readable catalog for Professional Tutoring’s five live service forms. 
 
 - Add Student: grade select, graduation year select, gender select, academic subject multi-select for learning needs
 - Family onboarding: US state select + Mapbox address autocomplete
-- Book Tutoring: Academic/Summer subjects, schedule windows, payment plans from this catalog; APIs reject unknown catalog values
-- Stripe card-on-file during Book Tutoring **only after** explicit save-card permission (tokens + brand/last4 only)
+- Book Tutoring: Academic/Summer subjects, schedule windows, payment plans; optional referral source + test-prep interests; APIs reject unknown catalog values
+- Enroll in Courses: course payment plans / slots from catalog; optional referral source persisted on enrollment
+- Stripe card-on-file during Book/Enroll **only after** explicit save-card permission (tokens + brand/last4 only)
 
-## Next Stage 2 composition
+## Deferred (not Stage 2 closeout)
 
-- **Enroll** mounts First Class slots, Express (pending time), or Master Class session checkboxes + course payment radios
-- Full Gravity verified-intake field dump on tutoring journeys (deferred from Book Tutoring slice)
+- Restricted accommodations / 504 / IEP collection
+- Academic rate packages as live charge matrix
+- Parent2 / billing contact Gravity dumps
+- Express time slots (pending client confirmation)
+- Dynamic `fieldsForForm` UI engine

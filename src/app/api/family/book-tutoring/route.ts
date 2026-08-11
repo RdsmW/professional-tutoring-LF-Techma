@@ -34,6 +34,8 @@ type BookBody = {
   /** @deprecated alias for saveCardForFuture */
   paymentMethodConsent?: boolean;
   paymentMethodId?: string;
+  referralSource?: string;
+  testPrepInterests?: string[];
 };
 
 export async function POST(request: Request) {
@@ -79,6 +81,20 @@ export async function POST(request: Request) {
     const planList = formId === "summer_tutoring" ? "SUMMER_PAYMENT_PLANS" : "ACADEMIC_PAYMENT_PLANS";
     if (!isValidOptionId(windowList, windowId)) {
       return NextResponse.json({ ok: false, error: "Invalid schedule window." }, { status: 400 });
+    }
+
+    const referralSource = (body.referralSource ?? "").trim();
+    if (referralSource && !isValidOptionId("REFERRAL_SOURCE", referralSource)) {
+      return NextResponse.json({ ok: false, error: "Invalid referral source." }, { status: 400 });
+    }
+
+    const testPrepInterests = Array.isArray(body.testPrepInterests)
+      ? body.testPrepInterests.map((item) => String(item).trim()).filter(Boolean)
+      : [];
+    for (const interest of testPrepInterests) {
+      if (!isValidOptionId("TEST_PREP_INTERESTS", interest)) {
+        return NextResponse.json({ ok: false, error: "Invalid test-prep interest." }, { status: 400 });
+      }
     }
     if (!isValidOptionId(planList, paymentPlanId)) {
       return NextResponse.json({ ok: false, error: "Invalid payment plan." }, { status: 400 });
@@ -163,10 +179,12 @@ export async function POST(request: Request) {
         formId,
         scheduleWindowId: windowId,
         paymentPlanId,
+        referralSource: referralSource || null,
         payload: {
           catalogSubjectCode: subjectCode,
           summerDateRange: (body.summerDateRange ?? "").trim() || null,
           serviceTitle: FORM_META[formId].title,
+          testPrepInterests,
         },
         updatedAt: now,
       })

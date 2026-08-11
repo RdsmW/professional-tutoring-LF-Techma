@@ -192,6 +192,7 @@ export const courseEnrollments = pgTable("course_enrollments", {
   requestedSlotPreference: text("requested_slot_preference"),
   priceSnapshotId: uuid("price_snapshot_id"),
   policyVersionId: uuid("policy_version_id"),
+  referralSource: text("referral_source"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
