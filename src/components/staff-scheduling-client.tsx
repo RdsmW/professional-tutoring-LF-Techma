@@ -43,6 +43,26 @@ type RosterRow = {
   householdId: string;
 };
 
+type OptionHousehold = { id: string; displayName: string };
+type OptionStudent = {
+  id: string;
+  displayName: string;
+  gradeLabel: string | null;
+  schoolName: string | null;
+};
+type OptionTutor = { id: string; displayName: string };
+type OptionSubject = { id: string; code: string; name: string };
+type OptionSlot = {
+  id: string;
+  dayOfWeek: number;
+  startTimeLocal: string;
+  endTimeLocal: string;
+  label: string | null;
+  capacitySeats: number;
+  heldSeats: number;
+  bookedSeats: number;
+};
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const TIME_BUCKETS = ["9:00", "11:00", "1:00", "3:15", "5:15", "7:15"] as const;
 
@@ -89,6 +109,27 @@ function formatWhen(iso: string) {
   }
 }
 
+function slotOpenSeats(slot: OptionSlot) {
+  return Math.max(0, slot.capacitySeats - slot.bookedSeats - slot.heldSeats);
+}
+
+function slotChoiceLabel(slot: OptionSlot) {
+  const day = DAYS[slot.dayOfWeek] ?? `Day ${slot.dayOfWeek}`;
+  const range = `${slot.startTimeLocal}–${slot.endTimeLocal}`;
+  const open = slotOpenSeats(slot);
+  const label = slot.label ? ` · ${slot.label}` : "";
+  return `${day} · ${range}${label} · ${open} open`;
+}
+
+const emptyForm = {
+  householdId: "",
+  studentId: "",
+  subjectId: "",
+  tutorId: "",
+  slotId: "",
+  notes: "",
+};
+
 export function StaffSchedulingClient() {
   const [mode, setMode] = useState<"Week" | "Courses">("Week");
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -99,6 +140,19 @@ export function StaffSchedulingClient() {
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [rosterCourse, setRosterCourse] = useState<CourseRow | null>(null);
   const [rosterLoading, setRosterLoading] = useState(false);
+
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [households, setHouseholds] = useState<OptionHousehold[]>([]);
+  const [students, setStudents] = useState<OptionStudent[]>([]);
+  const [tutors, setTutors] = useState<OptionTutor[]>([]);
+  const [subjects, setSubjects] = useState<OptionSubject[]>([]);
+  const [slots, setSlots] = useState<OptionSlot[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -135,6 +189,119 @@ export function StaffSchedulingClient() {
     return bookings.filter((b) => b.dayOfWeek != null && b.status !== "cancelled" && b.status !== "failed");
   }, [bookings]);
 
+  async function openCreateBooking() {
+    setCreating(true);
+    setForm(emptyForm);
+    setStudents([]);
+    setSlots([]);
+    setFormError(null);
+    setError(null);
+    setOptionsLoading(true);
+    try {
+      const response = await fetch("/api/staff/scheduling/options");
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setFormError(data.error || "Unable to load booking options.");
+        return;
+      }
+      setHouseholds(data.households ?? []);
+      setTutors(data.tutors ?? []);
+      setSubjects(data.subjects ?? []);
+    } catch {
+      setFormError("Unable to load booking options.");
+    } finally {
+      setOptionsLoading(false);
+    }
+  }
+
+  async function onHouseholdChange(householdId: string) {
+    setForm((prev) => ({ ...prev, householdId, studentId: "" }));
+    setStudents([]);
+    if (!householdId) return;
+    setStudentsLoading(true);
+    setFormError(null);
+    try {
+      const response = await fetch(
+        `/api/staff/scheduling/options?householdId=${encodeURIComponent(householdId)}`,
+      );
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setFormError(data.error || "Unable to load students.");
+        return;
+      }
+      setStudents(data.students ?? []);
+    } catch {
+      setFormError("Unable to load students.");
+    } finally {
+      setStudentsLoading(false);
+    }
+  }
+
+  async function onTutorChange(tutorId: string) {
+    setForm((prev) => ({ ...prev, tutorId, slotId: "" }));
+    setSlots([]);
+    if (!tutorId) return;
+    setSlotsLoading(true);
+    setFormError(null);
+    try {
+      const response = await fetch(
+        `/api/staff/scheduling/options?tutorId=${encodeURIComponent(tutorId)}`,
+      );
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setFormError(data.error || "Unable to load availability.");
+        return;
+      }
+      setSlots(data.slots ?? []);
+      setHouseholds(data.households ?? []);
+      setTutors(data.tutors ?? []);
+      setSubjects(data.subjects ?? []);
+    } catch {
+      setFormError("Unable to load availability.");
+    } finally {
+      setSlotsLoading(false);
+    }
+  }
+
+  const openSlots = useMemo(() => slots.filter((slot) => slotOpenSeats(slot) > 0), [slots]);
+
+  const canSubmit =
+    Boolean(form.householdId && form.studentId && form.subjectId && form.tutorId && form.slotId) &&
+    !saving;
+
+  async function submitBooking(event: React.FormEvent) {
+    event.preventDefault();
+    if (!canSubmit) return;
+    setSaving(true);
+    setFormError(null);
+    try {
+      const response = await fetch("/api/staff/scheduling/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId: form.householdId,
+          studentId: form.studentId,
+          tutorId: form.tutorId,
+          slotId: form.slotId,
+          subjectId: form.subjectId,
+          notes: form.notes || undefined,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setFormError(data.error || "Unable to create booking.");
+        return;
+      }
+      setCreating(false);
+      setForm(emptyForm);
+      await reload();
+    } catch {
+      setFormError("Unable to create booking.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function openRoster(courseId: string) {
     setRosterCourseId(courseId);
     setRosterLoading(true);
@@ -159,12 +326,153 @@ export function StaffSchedulingClient() {
     }
   }
 
+  if (creating) {
+    return (
+      <section className="wizard-shell panel">
+        <button type="button" className="wizard-close" onClick={() => setCreating(false)} aria-label="Close">
+          ×
+        </button>
+        <span className="eyebrow">Staff booking on behalf of a family</span>
+        <h2>Create booking</h2>
+        <p className="wizard-lead">
+          Choose household, student, subject, tutor, and an open availability slot. Confirmed bookings appear on
+          the week board and recent list.
+        </p>
+        <form className="wizard-stage" onSubmit={submitBooking}>
+          {optionsLoading ? (
+            <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading options…</p>
+          ) : (
+            <div className="input-grid">
+              <label>
+                Household
+                <select
+                  value={form.householdId}
+                  onChange={(e) => void onHouseholdChange(e.target.value)}
+                  required
+                >
+                  <option value="">Select household</option>
+                  {households.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Student
+                <select
+                  value={form.studentId}
+                  onChange={(e) => setForm((prev) => ({ ...prev, studentId: e.target.value }))}
+                  required
+                  disabled={!form.householdId || studentsLoading}
+                >
+                  <option value="">
+                    {studentsLoading
+                      ? "Loading students…"
+                      : form.householdId
+                        ? "Select student"
+                        : "Select a household first"}
+                  </option>
+                  {students.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.displayName}
+                      {row.gradeLabel ? ` · ${row.gradeLabel}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Subject
+                <select
+                  value={form.subjectId}
+                  onChange={(e) => setForm((prev) => ({ ...prev, subjectId: e.target.value }))}
+                  required
+                >
+                  <option value="">Select subject</option>
+                  {subjects.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Tutor
+                <select
+                  value={form.tutorId}
+                  onChange={(e) => void onTutorChange(e.target.value)}
+                  required
+                >
+                  <option value="">Select tutor</option>
+                  {tutors.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ gridColumn: "1 / -1" }}>
+                Availability slot
+                <select
+                  value={form.slotId}
+                  onChange={(e) => setForm((prev) => ({ ...prev, slotId: e.target.value }))}
+                  required
+                  disabled={!form.tutorId || slotsLoading}
+                >
+                  <option value="">
+                    {slotsLoading
+                      ? "Loading slots…"
+                      : form.tutorId
+                        ? openSlots.length
+                          ? "Select open slot"
+                          : "No open slots for this tutor"
+                        : "Select a tutor first"}
+                  </option>
+                  {openSlots.map((slot) => (
+                    <option key={slot.id} value={slot.id}>
+                      {slotChoiceLabel(slot)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ gridColumn: "1 / -1" }}>
+                Notes (optional)
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  rows={3}
+                  placeholder="Staff notes for this booking"
+                />
+              </label>
+            </div>
+          )}
+          {formError ? <div className="validation-hint">{formError}</div> : null}
+          <div className="wizard-footer">
+            <button type="button" className="wizard-back" onClick={() => setCreating(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="primary-button" disabled={!canSubmit || optionsLoading}>
+              {saving ? "Creating…" : "Confirm booking"}
+            </button>
+          </div>
+        </form>
+      </section>
+    );
+  }
+
   return (
     <>
       <PageIntro
         eyebrow="Staff Operations · Scheduling"
         title="Scheduling"
         description="Sunday–Saturday week board for tutoring, with Courses nested here (not a top-level Staff menu)."
+        action={
+          mode === "Week" ? (
+            <button type="button" className="primary-button" onClick={() => void openCreateBooking()}>
+              + Create booking
+            </button>
+          ) : undefined
+        }
       />
       {error ? <p className="form-error">{error}</p> : null}
 
@@ -207,10 +515,16 @@ export function StaffSchedulingClient() {
                     );
                     if (cellBookings.length === 0) {
                       return (
-                        <div key={`${time}-${dayIndex}`} className="slot-card open">
+                        <button
+                          key={`${time}-${dayIndex}`}
+                          type="button"
+                          className="slot-card open"
+                          onClick={() => void openCreateBooking()}
+                          style={{ width: "100%", textAlign: "left", cursor: "pointer" }}
+                        >
                           <strong>Open</strong>
-                          <small>Staff create booking later</small>
-                        </div>
+                          <small>+ Create booking</small>
+                        </button>
                       );
                     }
                     const first = cellBookings[0];
@@ -236,9 +550,6 @@ export function StaffSchedulingClient() {
                 </div>
               ))}
             </div>
-            <p style={{ marginTop: 12, fontSize: 10, color: "var(--muted)" }}>
-              Staff create booking is not built yet. Open slots stay read-only for now.
-            </p>
           </Panel>
 
           <Panel title="Recent bookings" eyebrow={`${bookings.length} total`}>
@@ -325,7 +636,13 @@ export function StaffSchedulingClient() {
           {rosterCourseId ? (
             <Panel
               title={rosterCourse?.name ?? "Course roster"}
-              eyebrow={rosterLoading ? "Loading…" : `${roster.length} enrollments`}
+              eyebrow={
+                rosterLoading
+                  ? "Loading…"
+                  : rosterCourse
+                    ? `${rosterCourse.enrolledCount}/${rosterCourse.capacity} enrolled · ${roster.length} rows`
+                    : `${roster.length} enrollments`
+              }
             >
               {rosterLoading ? (
                 <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading roster…</p>
@@ -352,7 +669,11 @@ export function StaffSchedulingClient() {
                 </div>
               )}
               <p style={{ marginTop: 12, fontSize: 10, color: "var(--muted)" }}>
-                Enrollment manage / archive actions come in a later slice.
+                Add enrollments and change status on the{" "}
+                <Link href={`/staff/scheduling/courses/${rosterCourseId}`} style={{ color: "var(--blue)", fontWeight: 800 }}>
+                  full roster page
+                </Link>
+                .
               </p>
             </Panel>
           ) : null}
