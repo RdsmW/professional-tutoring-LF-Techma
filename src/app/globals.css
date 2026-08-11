@@ -344,10 +344,16 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .profile-privacy-callout strong{font-size:11px}
 .profile-privacy-callout p{font-size:10px;line-height:1.45}
 .profile-layout .booking-form{max-width:none}
+.profile-readonly-grid{gap:14px 16px}
 .profile-readonly-grid input[readonly]{background:#f7f8f5;cursor:default}
-.profile-actions-equal{width:100%;margin-top:16px;flex-wrap:wrap}
-.profile-actions-equal>*{flex:1 1 140px;display:inline-flex;align-items:center;justify-content:center;min-height:38px;box-sizing:border-box}
+.profile-readonly-grid input.is-empty{color:var(--muted);font-weight:600;font-style:italic}
+.profile-actions-equal{width:100%;margin-top:14px;flex-wrap:wrap;gap:8px}
+.profile-actions-equal>*{flex:1 1 120px;display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:9px 12px;font-size:10px;box-sizing:border-box}
 .form-step.pending>span{background:#d8ddd6;color:var(--muted)}
+.onboarding-checklist>div{align-items:flex-start}
+.onboarding-checklist>div>span{flex:0 0 auto;margin-top:1px}
+.onboarding-checklist>div>div{flex:1;min-width:0;line-height:1.35;font-size:9px}
+.onboarding-checklist>div>div small{display:block;margin-top:3px;color:var(--muted);font-size:8px;font-weight:600}
 .onboarding-checklist>div.pending>span:first-child{background:#d8ddd6;color:var(--muted)}
 .onboarding-checklist>div.complete>span:first-child{background:var(--mint);color:#fff}
 .profile-invite-note{margin:12px 0 0;font-size:8px;color:var(--muted);line-height:1.4}

@@ -505,7 +505,11 @@ export function FamilyProfileClient() {
               </label>
               <label>
                 Mobile
-                <input value={profile.guardian.phone?.trim() || "Not set"} readOnly />
+                <input
+                  className={profile.guardian.phone?.trim() ? undefined : "is-empty"}
+                  value={profile.guardian.phone?.trim() || "Not set"}
+                  readOnly
+                />
               </label>
               <label>
                 Billing contact
@@ -588,14 +592,10 @@ export function FamilyProfileClient() {
             {completionItems.map((item) => (
               <div key={item.label} className={item.done ? "complete" : "pending"}>
                 <span>{item.done ? "✓" : "○"}</span>
-                <span>
+                <div>
                   {item.label}
-                  {"note" in item && item.note ? (
-                    <small style={{ display: "block", color: "var(--muted)", fontWeight: 600 }}>
-                      {item.note}
-                    </small>
-                  ) : null}
-                </span>
+                  {"note" in item && item.note ? <small>{item.note}</small> : null}
+                </div>
               </div>
             ))}
             <Link href="/family/students" className="text-button" style={{ display: "block", marginTop: 10 }}>
