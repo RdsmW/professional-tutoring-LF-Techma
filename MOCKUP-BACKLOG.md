@@ -35,8 +35,8 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 
 ## Stage 3 — Staff depth
 
-- [x] Family Detail core (hero, guardians/invites, notes, student links, service activity) — New Family wizard/merge queue still open
-- [ ] New Family multi-step wizard + identity match/merge queue
+- [x] Family Detail core (hero, guardians/invites, notes, student links, service activity)
+- [x] New Family multi-step wizard + identity match (full merge queue still open)
 - [x] Student Detail + filters + notes (Best Fit still deferred)
 - [x] Tutor Detail + Add Tutor + workload (subject assign / archive still deferred)
 - [x] Scheduling Week board + recent bookings (staff create booking still open)
