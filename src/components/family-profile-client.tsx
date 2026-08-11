@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { UserProfile } from "@clerk/nextjs";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
+import { FamilySecurityForm } from "@/components/family-security-form";
 import { useFamilyPortal } from "@/components/family-portal-context";
 import { US_STATES } from "@/lib/forms/options";
 
@@ -57,27 +57,6 @@ type EditForm = {
   state: string;
   postalCode: string;
 };
-
-const clerkFamilyAppearance = {
-  variables: {
-    colorPrimary: "#ca6d52",
-    colorText: "#172133",
-    colorTextSecondary: "#697486",
-    colorBackground: "#ffffff",
-    colorInputBackground: "#ffffff",
-    colorInputText: "#172133",
-    colorNeutral: "#24382f",
-    borderRadius: "2px",
-    fontFamily: "Georgia, 'Times New Roman', serif",
-    fontFamilyButtons: "system-ui, -apple-system, Segoe UI, sans-serif",
-  },
-  elements: {
-    rootBox: "family-clerk-root",
-    cardBox: "family-clerk-card",
-    navbar: "family-clerk-navbar",
-    scrollBox: "family-clerk-scroll",
-  },
-} as const;
 
 function emptyForm(): EditForm {
   return {
@@ -260,27 +239,15 @@ export function FamilyProfileClient() {
 
   if (mode === "security") {
     return (
-      <section className="wizard-shell panel family-clerk-profile">
-        <button type="button" className="page-back" onClick={() => setMode("view")}>
-          ← Family profile
-        </button>
-        <span className="eyebrow">Account & security</span>
-        <h2>Sign-in and password</h2>
-        <p className="wizard-lead" style={{ fontSize: 11, color: "var(--muted)" }}>
-          Email, password, and sessions are managed securely for this adult account. Credentials are
-          individual — never share a sign-in between guardians.
-        </p>
-        <div className="privacy-callout compact">
-          <span>i</span>
-          <div>
-            <strong>Guardian access is individual</strong>
-            <p>Separate invites and passwords apply per adult. No shared credentials.</p>
-          </div>
-        </div>
-        <div className="family-clerk-profile-widget">
-          <UserProfile routing="hash" appearance={clerkFamilyAppearance} />
-        </div>
-      </section>
+      <FamilySecurityForm
+        initialEmail={profile?.guardian.email || ""}
+        onBack={() => setMode("view")}
+        onSaved={(message) => {
+          setSavedMessage(message);
+          setMode("view");
+          void reload();
+        }}
+      />
     );
   }
 
