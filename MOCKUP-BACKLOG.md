@@ -35,7 +35,8 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 
 ## Stage 3 — Staff depth
 
-- [ ] Family Detail + New Family + guardian invites/merge
+- [x] Family Detail core (hero, guardians/invites, notes, student links, service activity) — New Family wizard/merge queue still open
+- [ ] New Family multi-step wizard + identity match/merge queue
 - [ ] Student Detail + filters + notes + Best Fit assist
 - [ ] Tutor Detail + Add Tutor + workload
 - [ ] Staff booking on weekly calendar
@@ -44,6 +45,15 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [ ] Exception queue with policy traces
 - [ ] Billing Detail + controlled actions
 - [ ] Reports filters/export + school suggestion admin + controlled merge
+
+### QA note — Playwright auth smoke
+
+Authenticated suites in `e2e/smoke.spec.ts` run only when these are set in `.env.local`:
+
+- `E2E_CLERK_FAMILY_EMAIL` / `E2E_CLERK_FAMILY_PASSWORD`
+- `E2E_CLERK_STAFF_EMAIL` / `E2E_CLERK_STAFF_PASSWORD`
+
+Unauthenticated smoke always runs. No product code change required for auth smoke.
 
 ## Stage 4 — Money & integrations (gated)
 
