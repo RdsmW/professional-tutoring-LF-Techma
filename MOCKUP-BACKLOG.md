@@ -39,13 +39,13 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] New Family multi-step wizard + identity match (full merge queue still open)
 - [x] Student Detail + filters + notes (Best Fit still deferred)
 - [x] Tutor Detail + Add Tutor + workload (subject assign / archive still deferred)
- - [x] Scheduling Week board + recent bookings + staff create booking
- - [x] Course list + roster + staff enrollment manage (add / status / capacity) — archive still open
- - [x] Sessions list (bookings-as-sessions) + Exception queue status actions — full policy traces still open
- - [x] Session Detail + attendance (bookings columns; apply `drizzle/0003_booking_attendance.sql` on Supabase)
- - [ ] Exception queue with policy traces
- - [x] Billing Detail + controlled actions (manual ledger status/notes; no Stripe charges)
- - [x] Reports live summary queries (active families, lifecycle, tutor capacity, unpaid billing, course fill) + CSV export polish (per-panel + download-all) — school suggestion admin + controlled merge still open
+- [x] Scheduling Week board + recent bookings + staff create booking
+- [x] Course list + roster + staff enrollment manage (add / status / capacity) — archive still open
+- [x] Sessions list (bookings-as-sessions) + Exception queue status actions — full policy traces still open
+- [x] Session Detail + attendance (bookings columns; apply `drizzle/0003_booking_attendance.sql` on Supabase)
+- [ ] Exception queue with policy traces
+- [x] Billing Detail + controlled actions (manual ledger status/notes; no Stripe charges)
+- [x] Reports live summary queries (active families, lifecycle, tutor capacity, unpaid billing, course fill) + CSV export polish (per-panel + download-all) — school suggestion admin + controlled merge still open
 
 ### QA note — Playwright auth smoke
 
