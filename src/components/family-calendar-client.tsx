@@ -306,27 +306,22 @@ export function FamilyCalendarClient() {
                     key={type}
                     type="button"
                     className={changeType === type ? "selected" : ""}
-                    onClick={() => {
-                      setChangeType(type);
-                      if (!requiresAlternatives(type)) setPreferredAlternatives("");
-                    }}
+                    onClick={() => setChangeType(type)}
                   >
                     {type}
                   </button>
                 ))}
               </div>
             </div>
-            {changeType && requiresAlternatives(changeType) ? (
-              <label className="full-input">
-                Preferred alternative dates / times
-                <textarea
-                  value={preferredAlternatives}
-                  onChange={(event) => setPreferredAlternatives(event.target.value)}
-                  placeholder="Example: Thursday after 5 PM or weekend morning"
-                  rows={3}
-                />
-              </label>
-            ) : null}
+            <label className="full-input">
+              Preferred alternative dates / times (when applicable)
+              <textarea
+                value={preferredAlternatives}
+                onChange={(event) => setPreferredAlternatives(event.target.value)}
+                placeholder="Example: Thursday after 5 PM or weekend morning"
+                rows={3}
+              />
+            </label>
             <div className="select-block">
               <strong>Requested policy outcome</strong>
               <div className="field-choice-row">
