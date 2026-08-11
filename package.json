@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "db:generate": "drizzle-kit generate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test:smoke": "playwright test"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.7.0",
@@ -22,7 +23,9 @@
     "stripe": "^22.4.0"
   },
   "devDependencies": {
+    "@clerk/testing": "^2.2.22",
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19.2.18",
