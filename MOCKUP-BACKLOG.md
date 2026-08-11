@@ -41,9 +41,9 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Tutor Detail + Add Tutor + workload + subject assign / archive (soft active toggle)
 - [x] Scheduling Week board + recent bookings + staff create booking
 - [x] Course list + roster + staff enrollment manage (add / status / capacity) + soft archive/reactivate
-- [x] Sessions list (bookings-as-sessions) + Exception queue status actions â€” full policy traces still open
+- [x] Sessions list (bookings-as-sessions) + Exception queue status actions
 - [x] Session Detail + attendance (bookings columns; apply `drizzle/0003_booking_attendance.sql` on Supabase)
-- [ ] Exception queue with policy traces
+- [x] Exception queue with policy traces (full change_request fields + staff notes + status actions)
 - [x] Billing Detail + controlled actions (manual ledger status/notes; no Stripe charges)
 - [x] Reports live summary queries (active families, lifecycle, tutor capacity, unpaid billing, course fill) + CSV export polish (per-panel + download-all) â€” school suggestion admin + controlled merge still open
 

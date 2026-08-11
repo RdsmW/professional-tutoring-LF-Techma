@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { changeRequests, households, students } from "@/lib/db/schema";
+import { changeRequests } from "@/lib/db/schema";
+import { loadStaffException } from "@/lib/staff/exceptions";
 import { getStaffContext } from "@/lib/staff/session";
 
 const PATCH_STATUSES = new Set(["under_review", "approved", "declined", "applied"]);
@@ -11,41 +12,27 @@ type PatchBody = {
   staffNotes?: string | null;
 };
 
-async function loadException(id: string) {
-  const database = requireDb();
-  const [row] = await database
-    .select({
-      id: changeRequests.id,
-      status: changeRequests.status,
-      changeType: changeRequests.changeType,
-      reason: changeRequests.reason,
-      householdId: changeRequests.householdId,
-      policyRecommendation: changeRequests.policyRecommendation,
-      staffNotes: changeRequests.staffNotes,
-      createdAt: changeRequests.createdAt,
-      studentName: students.displayName,
-      householdName: households.displayName,
-    })
-    .from(changeRequests)
-    .innerJoin(students, eq(changeRequests.studentId, students.id))
-    .innerJoin(households, eq(changeRequests.householdId, households.id))
-    .where(eq(changeRequests.id, id))
-    .limit(1);
+export async function GET(
+  _request: Request,
+  contextParams: { params: Promise<{ id: string }> },
+) {
+  try {
+    const context = await getStaffContext();
+    if (!context) {
+      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+    }
 
-  if (!row) return null;
+    const { id } = await contextParams.params;
+    const exception = await loadStaffException(id);
+    if (!exception) {
+      return NextResponse.json({ ok: false, error: "Exception not found." }, { status: 404 });
+    }
 
-  return {
-    id: row.id,
-    status: row.status,
-    changeType: row.changeType,
-    reason: row.reason,
-    studentName: row.studentName,
-    householdName: row.householdName,
-    householdId: row.householdId,
-    policyRecommendation: row.policyRecommendation,
-    staffNotes: row.staffNotes,
-    createdAt: row.createdAt.toISOString(),
-  };
+    return NextResponse.json({ ok: true, exception });
+  } catch (error) {
+    console.warn("[staff/exceptions/id] GET soft-fail", error);
+    return NextResponse.json({ ok: false, error: "Unable to load exception." }, { status: 500 });
+  }
 }
 
 export async function PATCH(
@@ -63,7 +50,7 @@ export async function PATCH(
     const database = requireDb();
 
     const [existing] = await database
-      .select()
+      .select({ id: changeRequests.id })
       .from(changeRequests)
       .where(eq(changeRequests.id, id))
       .limit(1);
@@ -97,7 +84,7 @@ export async function PATCH(
       await database.update(changeRequests).set(updates).where(eq(changeRequests.id, id));
     }
 
-    const exception = await loadException(id);
+    const exception = await loadStaffException(id);
     return NextResponse.json({ ok: true, exception });
   } catch (error) {
     console.warn("[staff/exceptions/id] PATCH soft-fail", error);

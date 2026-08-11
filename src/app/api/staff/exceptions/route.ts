@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
-import { requireDb } from "@/lib/db";
-import { changeRequests, households, students } from "@/lib/db/schema";
+import { changeRequests } from "@/lib/db/schema";
+import { exceptionsBaseQuery, mapExceptionRow } from "@/lib/staff/exceptions";
 import { getStaffContext } from "@/lib/staff/session";
 
 const EXCEPTION_STATUSES = new Set([
@@ -26,38 +26,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: false, error: "Invalid status filter." }, { status: 400 });
     }
 
-    const database = requireDb();
-    const rows = await database
-      .select({
-        id: changeRequests.id,
-        status: changeRequests.status,
-        changeType: changeRequests.changeType,
-        reason: changeRequests.reason,
-        householdId: changeRequests.householdId,
-        policyRecommendation: changeRequests.policyRecommendation,
-        createdAt: changeRequests.createdAt,
-        studentName: students.displayName,
-        householdName: households.displayName,
-      })
-      .from(changeRequests)
-      .innerJoin(students, eq(changeRequests.studentId, students.id))
-      .innerJoin(households, eq(changeRequests.householdId, households.id))
+    const rows = await exceptionsBaseQuery()
       .where(status ? eq(changeRequests.status, status as typeof changeRequests.$inferSelect.status) : undefined)
       .orderBy(desc(changeRequests.createdAt));
 
     return NextResponse.json({
       ok: true,
-      exceptions: rows.map((row) => ({
-        id: row.id,
-        status: row.status,
-        changeType: row.changeType,
-        reason: row.reason,
-        studentName: row.studentName,
-        householdName: row.householdName,
-        householdId: row.householdId,
-        policyRecommendation: row.policyRecommendation,
-        createdAt: row.createdAt.toISOString(),
-      })),
+      exceptions: rows.map(mapExceptionRow),
     });
   } catch (error) {
     console.warn("[staff/exceptions] GET soft-fail", error);

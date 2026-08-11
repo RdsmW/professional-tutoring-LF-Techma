@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
+import {
+  evaluateChangePolicy,
+  isChangeReason,
+  isRequestedOutcome,
+} from "@/lib/family/change-policy";
 
 type SessionRow = {
   id: string;
@@ -20,12 +25,21 @@ type ExceptionRow = {
   status: string;
   changeType: string;
   reason: string;
-  studentName: string;
-  householdName: string;
-  householdId: string;
+  requestedOutcome: string;
+  preferredAlternatives: string | null;
   policyRecommendation: string;
+  relatedEntityType: string;
+  relatedEntityId: string;
+  staffNotes: string | null;
+  studentId: string;
+  studentName: string;
+  householdId: string;
+  householdName: string;
   createdAt: string;
+  resolvedAt: string | null;
 };
+
+type ExceptionStatusAction = "under_review" | "approved" | "declined" | "applied";
 
 const BOOKING_STATUS_OPTIONS = [
   "",
@@ -57,7 +71,8 @@ function statusTone(status: string) {
   return "amber";
 }
 
-function formatWhen(iso: string) {
+function formatWhen(iso: string | null) {
+  if (!iso) return "—";
   try {
     return new Date(iso).toLocaleString(undefined, {
       month: "short",
@@ -69,6 +84,22 @@ function formatWhen(iso: string) {
   } catch {
     return iso;
   }
+}
+
+function relatedEntityLabel(type: string) {
+  if (type === "booking") return "Booking / session";
+  if (type === "course_enrollment") return "Course enrollment";
+  return type.replace(/_/g, " ");
+}
+
+function relatedEntityHref(type: string, id: string) {
+  if (type === "booking") return `/staff/sessions/${id}`;
+  return null;
+}
+
+function policyTraceHeadline(reason: string) {
+  if (!isChangeReason(reason)) return null;
+  return evaluateChangePolicy(reason);
 }
 
 export function StaffSessionsClient() {
@@ -87,6 +118,9 @@ export function StaffSessionsClient() {
   const [exceptionStatus, setExceptionStatus] = useState("");
   const [appliedExceptionStatus, setAppliedExceptionStatus] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<ExceptionRow | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [staffNotesDraft, setStaffNotesDraft] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const reloadSessions = useCallback(async () => {
@@ -140,6 +174,45 @@ export function StaffSessionsClient() {
     if (mode === "Exceptions") void reloadExceptions();
   }, [mode, reloadExceptions]);
 
+  useEffect(() => {
+    if (!selectedId) {
+      setDetail(null);
+      setStaffNotesDraft("");
+      return;
+    }
+
+    let cancelled = false;
+    setDetailLoading(true);
+    setExceptionsError(null);
+
+    void (async () => {
+      try {
+        const response = await fetch(`/api/staff/exceptions/${selectedId}`);
+        const data = await response.json();
+        if (cancelled) return;
+        if (!response.ok || !data.ok) {
+          setExceptionsError(data.error || "Unable to load exception detail.");
+          setDetail(null);
+          return;
+        }
+        const exception = data.exception as ExceptionRow;
+        setDetail(exception);
+        setStaffNotesDraft(exception.staffNotes ?? "");
+      } catch {
+        if (!cancelled) {
+          setExceptionsError("Unable to load exception detail.");
+          setDetail(null);
+        }
+      } finally {
+        if (!cancelled) setDetailLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
+
   function applySessionFilters(event: React.FormEvent) {
     event.preventDefault();
     setApplied({ status, q: q.trim() });
@@ -161,7 +234,10 @@ export function StaffSessionsClient() {
     setAppliedExceptionStatus("");
   }
 
-  async function patchException(id: string, nextStatus: "under_review" | "approved" | "declined") {
+  async function patchException(
+    id: string,
+    body: { status?: ExceptionStatusAction; staffNotes?: string | null },
+  ) {
     if (savingId) return;
     setSavingId(id);
     setExceptionsError(null);
@@ -169,14 +245,17 @@ export function StaffSessionsClient() {
       const response = await fetch(`/api/staff/exceptions/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
+        body: JSON.stringify(body),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
         setExceptionsError(data.error || "Unable to update exception.");
         return;
       }
-      await reloadExceptions();
+      const exception = data.exception as ExceptionRow;
+      setDetail(exception);
+      setStaffNotesDraft(exception.staffNotes ?? "");
+      setExceptions((rows) => rows.map((row) => (row.id === exception.id ? exception : row)));
     } catch {
       setExceptionsError("Unable to update exception.");
     } finally {
@@ -184,7 +263,11 @@ export function StaffSessionsClient() {
     }
   }
 
-  const selected = exceptions.find((row) => row.id === selectedId) ?? null;
+  const selected = detail;
+  const policyHeadline = selected ? policyTraceHeadline(selected.reason) : null;
+  const relatedHref = selected
+    ? relatedEntityHref(selected.relatedEntityType, selected.relatedEntityId)
+    : null;
 
   return (
     <>
@@ -340,41 +423,145 @@ export function StaffSessionsClient() {
             </div>
           )}
 
-          {selected ? (
+          {selectedId ? (
             <div className="exception-actions" style={{ marginTop: 18 }}>
-              <p style={{ fontSize: 10, color: "var(--muted)", marginBottom: 10 }}>
-                Policy: {selected.policyRecommendation}
-              </p>
-              <div>
-                <button
-                  type="button"
-                  disabled={savingId === selected.id || selected.status === "under_review"}
-                  onClick={() => void patchException(selected.id, "under_review")}
-                >
-                  <span>Under review</span>
-                  <span>→</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={savingId === selected.id || selected.status === "approved"}
-                  onClick={() => void patchException(selected.id, "approved")}
-                >
-                  <span>Approve</span>
-                  <span>→</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={savingId === selected.id || selected.status === "declined"}
-                  onClick={() => void patchException(selected.id, "declined")}
-                >
-                  <span>Decline</span>
-                  <span>→</span>
-                </button>
-              </div>
-              <p style={{ marginTop: 10, fontSize: 10 }}>
-                Household:{" "}
-                <Link href={`/staff/families/${selected.householdId}`}>{selected.householdName}</Link>
-              </p>
+              {detailLoading && !selected ? (
+                <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading policy trace…</p>
+              ) : null}
+
+              {selected ? (
+                <>
+                  <section className="student-detail-hero" style={{ marginBottom: 14 }}>
+                    <span className="student-detail-avatar">
+                      {selected.studentName
+                        .split(" ")
+                        .map((word) => word[0])
+                        .join("")
+                        .slice(0, 2)}
+                    </span>
+                    <div>
+                      <span className="eyebrow">Exception detail</span>
+                      <h2 style={{ margin: "4px 0" }}>{selected.changeType}</h2>
+                      <p style={{ margin: 0 }}>
+                        <Link href={`/staff/students/${selected.studentId}`}>{selected.studentName}</Link>
+                        {" · "}
+                        <Link href={`/staff/families/${selected.householdId}`}>{selected.householdName}</Link>
+                      </p>
+                    </div>
+                    <span className={`pill ${statusTone(selected.status)}`}>{statusLabel(selected.status)}</span>
+                  </section>
+
+                  <div className="record-detail-grid" style={{ marginBottom: 14 }}>
+                    <div>
+                      <small>Reason</small>
+                      <strong style={{ fontSize: 12 }}>{selected.reason}</strong>
+                    </div>
+                    <div>
+                      <small>Requested outcome</small>
+                      <strong style={{ fontSize: 12 }}>{selected.requestedOutcome}</strong>
+                    </div>
+                    <div>
+                      <small>Preferred alternatives</small>
+                      <strong style={{ fontSize: 12 }}>{selected.preferredAlternatives || "—"}</strong>
+                    </div>
+                    <div>
+                      <small>Related entity</small>
+                      <strong style={{ fontSize: 12 }}>
+                        {relatedEntityLabel(selected.relatedEntityType)}
+                        {relatedHref ? (
+                          <>
+                            {" · "}
+                            <Link href={relatedHref}>Open record →</Link>
+                          </>
+                        ) : null}
+                      </strong>
+                    </div>
+                    <div>
+                      <small>Created</small>
+                      <strong style={{ fontSize: 12 }}>{formatWhen(selected.createdAt)}</strong>
+                    </div>
+                    <div>
+                      <small>Resolved</small>
+                      <strong style={{ fontSize: 12 }}>{formatWhen(selected.resolvedAt)}</strong>
+                    </div>
+                  </div>
+
+                  <section className="policy-recommendation">
+                    <span>i</span>
+                    <div>
+                      <strong>
+                        Stored policy recommendation
+                        {policyHeadline ? ` · ${policyHeadline}` : ""}
+                      </strong>
+                      <p>{selected.policyRecommendation}</p>
+                      {policyHeadline && isRequestedOutcome(selected.requestedOutcome) ? (
+                        <p style={{ marginTop: 8 }}>
+                          Computed from saved reason ({selected.reason}) via PT-CAN-2026.3 family change
+                          policy — no new rules applied here. Outcome context: {selected.requestedOutcome}.
+                        </p>
+                      ) : null}
+                    </div>
+                  </section>
+
+                  <label className="full-input" style={{ marginTop: 14, display: "block" }}>
+                    Staff notes
+                    <textarea
+                      value={staffNotesDraft}
+                      disabled={savingId === selected.id}
+                      onChange={(event) => setStaffNotesDraft(event.target.value)}
+                      rows={4}
+                      placeholder="Internal review notes for this exception"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ marginTop: 8 }}
+                    disabled={
+                      savingId === selected.id || staffNotesDraft === (selected.staffNotes ?? "")
+                    }
+                    onClick={() => void patchException(selected.id, { staffNotes: staffNotesDraft })}
+                  >
+                    {savingId === selected.id ? "Saving…" : "Save staff notes"}
+                  </button>
+
+                  <h3 style={{ margin: "18px 0 10px", fontSize: 11 }}>Authorized staff outcome</h3>
+                  <div>
+                    <button
+                      type="button"
+                      disabled={savingId === selected.id || selected.status === "under_review"}
+                      onClick={() => void patchException(selected.id, { status: "under_review" })}
+                    >
+                      <span>Under review</span>
+                      <span>→</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingId === selected.id || selected.status === "approved"}
+                      onClick={() => void patchException(selected.id, { status: "approved" })}
+                    >
+                      <span>Approve</span>
+                      <span>→</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingId === selected.id || selected.status === "declined"}
+                      onClick={() => void patchException(selected.id, { status: "declined" })}
+                    >
+                      <span>Decline</span>
+                      <span>→</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingId === selected.id || selected.status === "applied"}
+                      onClick={() => void patchException(selected.id, { status: "applied" })}
+                    >
+                      <span>Applied</span>
+                      <span>→</span>
+                    </button>
+                  </div>
+                </>
+              ) : null}
             </div>
           ) : null}
         </Panel>
