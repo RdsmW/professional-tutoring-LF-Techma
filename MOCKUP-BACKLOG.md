@@ -51,11 +51,11 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 
 ### Phase A - UI cleanup (complete)
 
-- [x] Slim Staff/Family chrome (no fat topbar; Search/Bell in sidebar footer; quieter PageIntro)
+- [x] Slim Staff/Family chrome (no fat topbar; quiet Search/Alerts above user; PageIntro header band)
 - [x] Family Detail full-width stack + notes below; compact Students table
 - [x] Family actions: primary Add Student on Students; Calendar-only change requests; Support topic/message/send
 - [x] Reports catalog to filters to results (no dashboard metrics strip)
-- [x] Staff Integrations tab (status-only Stripe / Zoho / Acuity / QBO - no live sync or charges)
+- [x] Settings tabs: Policy | Prices | History | Integrations (status-only Stripe / Zoho / Acuity / QBO; `/staff/integrations` redirects here)
 
 Deferred to Phase B/C: PaymentIntent charge-at-registration, uploads, Gravity form parity, subscriptions/webhooks, Best Fit, school merge, live Zoho/Acuity/QBO writes.
 

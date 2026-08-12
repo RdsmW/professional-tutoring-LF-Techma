@@ -10,13 +10,13 @@ export function PageIntro({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="view-intro" style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 18 }}>
-      <div>
+    <section className="view-intro page-header-band">
+      <div className="page-header-copy">
         {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
-        <h1 style={{ margin: eyebrow ? "4px 0 8px" : "0 0 8px", font: "700 28px/1.15 Georgia, serif" }}>{title}</h1>
-        {description ? <p style={{ margin: 0, color: "var(--muted)", maxWidth: 720 }}>{description}</p> : null}
+        <h1>{title}</h1>
+        {description ? <p>{description}</p> : null}
       </div>
-      {action}
+      {action ? <div className="page-header-action">{action}</div> : null}
     </section>
   );
 }

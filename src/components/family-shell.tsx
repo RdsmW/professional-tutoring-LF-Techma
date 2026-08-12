@@ -50,7 +50,6 @@ export function FamilyShell({
             </span>
           </div>
           <nav aria-label="Family navigation">
-            <div className="nav-label">Family</div>
             {FAMILY_NAV.map((item) => {
               const active =
                 item.href === "/family"
@@ -102,20 +101,22 @@ export function FamilyShell({
             ) : null}
           </nav>
           <div className="sidebar-footer">
+            <div className="sidebar-chrome-actions">
+              <button type="button" aria-label="Search" title="Search">
+                <AppIcon name="search" size={15} />
+                <span>Search</span>
+              </button>
+              <button type="button" aria-label="Notifications" title="Notifications">
+                <AppIcon name="bell" size={15} />
+                <span>Alerts</span>
+              </button>
+            </div>
             <div className="demo-person">
               <UserButton />
               <span>
                 <strong>{label}</strong>
                 <small>Account</small>
               </span>
-            </div>
-            <div className="sidebar-chrome-actions">
-              <button type="button" aria-label="Search" title="Search">
-                <AppIcon name="search" />
-              </button>
-              <button type="button" aria-label="Notifications" title="Notifications">
-                <AppIcon name="bell" />
-              </button>
             </div>
           </div>
         </aside>

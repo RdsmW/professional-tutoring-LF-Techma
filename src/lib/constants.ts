@@ -17,7 +17,6 @@ export const STAFF_NAV = [
   { href: "/staff/scheduling", label: "Scheduling", icon: "calendar" },
   { href: "/staff/sessions", label: "Sessions", icon: "clock" },
   { href: "/staff/billing", label: "Billing", icon: "billing" },
-  { href: "/staff/integrations", label: "Integrations", icon: "integrations" },
   { href: "/staff/reports", label: "Reports", icon: "reports" },
   { href: "/staff/support", label: "Support", icon: "message" },
   { href: "/staff/settings", label: "Settings", icon: "settings" },

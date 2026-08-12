@@ -53,7 +53,6 @@ export function StaffShell({
           </span>
         </div>
         <nav aria-label="Staff navigation">
-          <div className="nav-label">Workspace</div>
           {STAFF_NAV.map((item) => {
             const active =
               item.href === "/staff"
@@ -96,20 +95,22 @@ export function StaffShell({
           })}
         </nav>
         <div className="sidebar-footer">
+          <div className="sidebar-chrome-actions">
+            <button type="button" aria-label="Search" title="Search">
+              <AppIcon name="search" size={15} />
+              <span>Search</span>
+            </button>
+            <button type="button" aria-label="Notifications" title="Notifications">
+              <AppIcon name="bell" size={15} />
+              <span>Alerts</span>
+            </button>
+          </div>
           <div className="demo-person">
             <UserButton />
             <span>
               <strong>{label}</strong>
               <small>Staff</small>
             </span>
-          </div>
-          <div className="sidebar-chrome-actions">
-            <button type="button" aria-label="Search" title="Search">
-              <AppIcon name="search" />
-            </button>
-            <button type="button" aria-label="Notifications" title="Notifications">
-              <AppIcon name="bell" />
-            </button>
           </div>
         </div>
       </aside>

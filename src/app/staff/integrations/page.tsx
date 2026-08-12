@@ -1,6 +1,5 @@
-import { StaffIntegrationsClient } from "@/components/staff-integrations-client";
-import { isStripeConfigured } from "@/lib/stripe/client";
+import { redirect } from "next/navigation";
 
 export default function StaffIntegrationsPage() {
-  return <StaffIntegrationsClient stripeConfigured={isStripeConfigured()} />;
+  redirect("/staff/settings?tab=integrations");
 }
