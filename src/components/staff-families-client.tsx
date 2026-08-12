@@ -48,9 +48,7 @@ export function StaffFamiliesClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Staff Operations · Families"
         title="Families"
-        description="Each Family account is owned by a parent/guardian. Students are children under the household."
         action={
           <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link href="/staff/families/merges" className="secondary-button" style={{ textDecoration: "none" }}>

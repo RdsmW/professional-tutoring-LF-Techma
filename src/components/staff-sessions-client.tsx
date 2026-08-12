@@ -271,11 +271,7 @@ export function StaffSessionsClient() {
 
   return (
     <>
-      <PageIntro
-        eyebrow="Staff Operations · Sessions"
-        title="Sessions"
-        description="Occurrence records, attendance, and Exceptions live here — Scheduling has no separate exception module."
-      />
+      <PageIntro title="Sessions" />
 
       <section className="segmented">
         {(["Sessions", "Exceptions"] as const).map((item) => (

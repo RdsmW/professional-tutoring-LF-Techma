@@ -50,7 +50,6 @@ export function StaffShell({
           <span className="brand-mark">PT</span>
           <span>
             <strong>{APP_NAME}</strong>
-            <small>Staff Operations</small>
           </span>
         </div>
         <nav aria-label="Staff navigation">
@@ -101,28 +100,20 @@ export function StaffShell({
             <UserButton />
             <span>
               <strong>{label}</strong>
-              <small>Staff account</small>
+              <small>Staff</small>
             </span>
+          </div>
+          <div className="sidebar-chrome-actions">
+            <button type="button" aria-label="Search" title="Search">
+              <AppIcon name="search" />
+            </button>
+            <button type="button" aria-label="Notifications" title="Notifications">
+              <AppIcon name="bell" />
+            </button>
           </div>
         </div>
       </aside>
       <div className="workspace">
-        <header className="topbar">
-          <div>
-            <strong style={{ font: "700 14px Georgia, serif" }}>Staff Operations</strong>
-            <small style={{ display: "block", color: "var(--muted)", fontSize: 10 }}>
-              Live app · Stage 1 foundation
-            </small>
-          </div>
-          <div className="top-actions">
-            <button type="button" aria-label="Search">
-              <AppIcon name="search" />
-            </button>
-            <button type="button" aria-label="Notifications">
-              <AppIcon name="bell" />
-            </button>
-          </div>
-        </header>
         <main className="content">{children}</main>
       </div>
     </div>

@@ -183,9 +183,8 @@ export function StaffSettingsClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Staff administration · Policy"
         title="Cancellation, banked-session & refund policy"
-        description="Configure the policy engine that recommends eligibility. A recommendation never creates a credit or moves money without authorized staff approval."
+        description="Configure eligibility recommendations. A recommendation never creates a credit or moves money without staff approval."
         action={<span className="pill blue">{active?.code ?? DEFAULT_CANCELLATION_POLICY_CODE}</span>}
       />
 

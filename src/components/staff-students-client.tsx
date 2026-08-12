@@ -74,11 +74,7 @@ export function StaffStudentsClient() {
 
   return (
     <>
-      <PageIntro
-        eyebrow="Staff Operations · Students"
-        title="Students"
-        description="School is a student attribute and reporting lookup — not a standalone Schools module."
-      />
+      <PageIntro title="Students" />
       {error ? <p className="form-error">{error}</p> : null}
 
       <Panel title="Student directory" eyebrow="Live database">

@@ -237,7 +237,6 @@ export default function StaffCourseRosterPage() {
         ← Back to Scheduling
       </Link>
       <PageIntro
-        eyebrow="Staff Operations · Scheduling · Courses"
         title={course?.name ?? "Course roster"}
         description={
           course

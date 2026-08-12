@@ -42,9 +42,7 @@ export function StaffReportsClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Decision support"
         title="Reports"
-        description="Every saved definition opens a filterable result set with matching count, metrics, groups, and record drill-down."
         action={<span className="pill blue">{reports.length} saved reports</span>}
       />
 

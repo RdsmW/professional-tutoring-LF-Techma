@@ -153,9 +153,7 @@ export function StaffTutorsClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Staff Operations · Tutors"
         title="Tutors"
-        description="Operational tutor records with capacity and coverage. Best Fit is a staff assist later — parent choice remains final in booking."
         action={
           <button type="button" className="primary-button" onClick={() => setCreating(true)}>
             + Add Tutor

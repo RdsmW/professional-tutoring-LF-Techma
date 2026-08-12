@@ -4,11 +4,7 @@ import { FamilyOnboardingForm } from "@/components/family-onboarding-form";
 export default function FamilyOnboardingPage() {
   return (
     <>
-      <PageIntro
-        eyebrow="Family Portal · Onboarding"
-        title="Complete your family profile"
-        description="First-time families finish profile details before entering the full portal."
-      />
+      <PageIntro title="Complete your family profile" />
       <section className="wizard-shell panel">
         <span className="eyebrow">First-time family setup</span>
         <h2>Family profile</h2>

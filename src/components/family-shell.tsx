@@ -46,7 +46,7 @@ export function FamilyShell({
             <span className="brand-mark">PT</span>
             <span>
               <strong>{APP_NAME}</strong>
-              <small>Family Portal</small>
+              <small>Family</small>
             </span>
           </div>
           <nav aria-label="Family navigation">
@@ -106,28 +106,20 @@ export function FamilyShell({
               <UserButton />
               <span>
                 <strong>{label}</strong>
-                <small>Family account</small>
+                <small>Account</small>
               </span>
+            </div>
+            <div className="sidebar-chrome-actions">
+              <button type="button" aria-label="Search" title="Search">
+                <AppIcon name="search" />
+              </button>
+              <button type="button" aria-label="Notifications" title="Notifications">
+                <AppIcon name="bell" />
+              </button>
             </div>
           </div>
         </aside>
         <div className="workspace">
-          <header className="topbar">
-            <div>
-              <strong style={{ font: "700 14px Georgia, serif" }}>Family Portal</strong>
-              <small style={{ display: "block", color: "var(--muted)", fontSize: 10 }}>
-                Parent owns the Family account · Students are children under it
-              </small>
-            </div>
-            <div className="top-actions">
-              <button type="button" aria-label="Search">
-                <AppIcon name="search" />
-              </button>
-              <button type="button" aria-label="Notifications">
-                <AppIcon name="bell" />
-              </button>
-            </div>
-          </header>
           <main className="content">{children}</main>
         </div>
       </div>

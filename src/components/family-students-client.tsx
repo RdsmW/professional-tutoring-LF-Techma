@@ -226,9 +226,7 @@ export function FamilyStudentsClient({
   return (
     <>
       <PageIntro
-        eyebrow="Children in this Family account"
         title="Students"
-        description="Every child has a clickable detail record with profile, learning needs, schedule, service history, and next actions."
         action={
           <button
             type="button"

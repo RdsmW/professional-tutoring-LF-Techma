@@ -24,12 +24,41 @@
 }
 
 * { box-sizing: border-box; }
-html { background: var(--canvas); }
+html { background: var(--canvas); scrollbar-width: none; }
 body {
   margin: 0;
   background: var(--canvas);
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
+  scrollbar-width: none;
+}
+.content,
+.sidebar nav {
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.content::-webkit-scrollbar,
+.sidebar nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+.schedule-board {
+  scrollbar-width: thin;
+  scrollbar-color: #c5ccd7 transparent;
+}
+.schedule-board::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  display: block;
+}
+.schedule-board::-webkit-scrollbar-thumb {
+  background: #c5ccd7;
+  border-radius: 8px;
+}
+.schedule-board::-webkit-scrollbar-track {
+  background: transparent;
 }
 button, input, select { font: inherit; }
 button { color: inherit; }
@@ -83,11 +112,17 @@ button { color: inherit; }
 .sidebar nav button:hover { background: rgba(255,255,255,.06); color: #fff; }
 .sidebar nav button.active { background: #2c4561; color: #fff; box-shadow: inset 3px 0 0 var(--coral); }
 .sidebar nav button.active > span { color: var(--coral); }
-.sidebar-footer { margin-top: auto; border-top: 1px solid rgba(255,255,255,.12); padding-top: 16px; }
+.sidebar-footer { margin-top: auto; border-top: 1px solid rgba(255,255,255,.12); padding-top: 16px; display: grid; gap: 12px; }
 .demo-person { display: flex; align-items: center; gap: 9px; }
 .demo-person strong, .demo-person small { display: block; }
 .demo-person strong { font-size: 11px; }
 .demo-person small { color: #94a7bb; font-size: 9px; margin-top: 2px; }
+.sidebar-chrome-actions { display: flex; gap: 8px; }
+.sidebar-chrome-actions button {
+  width: 32px; height: 32px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06);
+  border-radius: 50%; cursor: pointer; color: #b8c4d1; display: grid; place-items: center; padding: 0;
+}
+.sidebar-chrome-actions button:hover { background: rgba(255,255,255,.12); color: #fff; }
 .prototype-badge {
   display: block; margin-top: 12px; padding: 7px 8px; background: rgba(233,109,94,.14);
   border: 1px solid rgba(233,109,94,.3); color: #ffc0b7; text-align: center;

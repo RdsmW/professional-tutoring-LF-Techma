@@ -197,11 +197,7 @@ export function FamilyPaymentsClient() {
 
   return (
     <>
-      <PageIntro
-        eyebrow="Family portal"
-        title="Payments & receipts"
-        description="See tutoring and course billing previews without exposing card details."
-      />
+      <PageIntro title="Payments & receipts" />
 
       <div className="hosted-payment" style={{ marginBottom: 16 }}>
         <span className="shield">◇</span>

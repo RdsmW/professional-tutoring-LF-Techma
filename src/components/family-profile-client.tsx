@@ -539,17 +539,6 @@ export function FamilyProfileClient() {
               })}
             </div>
 
-            <div className="privacy-callout compact">
-              <span>i</span>
-              <div>
-                <strong>Guardian access is individual</strong>
-                <p>
-                  Additional guardians receive their own invitation and password. Permissions can
-                  differ; no adult shares another guardian’s credentials.
-                </p>
-              </div>
-            </div>
-
             <div className="profile-actions profile-actions-equal">
               <button type="button" className="family-primary" onClick={openEdit}>
                 Edit my profile

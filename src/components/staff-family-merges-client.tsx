@@ -151,9 +151,8 @@ export function StaffFamilyMergesClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Staff Operations · Families"
         title="Identity merge queue"
-        description="Queue duplicate households, then merge guardians and students into the target (source archived)."
+        description="Queue duplicate households, then merge into the target (source archived)."
         action={
           <Link href="/staff/families" className="secondary-button" style={{ textDecoration: "none" }}>
             ← Families

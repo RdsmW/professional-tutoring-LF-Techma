@@ -179,9 +179,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         ← Tutors
       </Link>
       <PageIntro
-        eyebrow="Staff · Tutor Detail"
         title={tutor.displayName}
-        description="Profile, capacity, subjects, and active workload."
         action={<span className="pill">{tutor.active ? "Active" : "Archived"}</span>}
       />
       {error ? <p className="form-error">{error}</p> : null}

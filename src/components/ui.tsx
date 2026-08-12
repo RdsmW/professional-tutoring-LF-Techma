@@ -4,17 +4,17 @@ export function PageIntro({
   description,
   action,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  description: string;
+  description?: string;
   action?: React.ReactNode;
 }) {
   return (
     <section className="view-intro" style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 18 }}>
       <div>
-        <span className="eyebrow">{eyebrow}</span>
-        <h1 style={{ margin: "4px 0 8px", font: "700 28px/1.15 Georgia, serif" }}>{title}</h1>
-        <p style={{ margin: 0, color: "var(--muted)", maxWidth: 720 }}>{description}</p>
+        {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
+        <h1 style={{ margin: eyebrow ? "4px 0 8px" : "0 0 8px", font: "700 28px/1.15 Georgia, serif" }}>{title}</h1>
+        {description ? <p style={{ margin: 0, color: "var(--muted)", maxWidth: 720 }}>{description}</p> : null}
       </div>
       {action}
     </section>
@@ -24,8 +24,8 @@ export function PageIntro({
 export function ComingStageNote({ feature }: { feature: string }) {
   return (
     <div className="family-boundary" style={{ marginTop: 16 }}>
-      <span>Stage 2</span>
-      {feature} will match the clickable mockup end-to-end. This Stage 1 screen keeps the same layout and navigation.
+      <span>Later</span>
+      {feature}
     </div>
   );
 }

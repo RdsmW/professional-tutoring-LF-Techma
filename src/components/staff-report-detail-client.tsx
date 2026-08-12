@@ -99,9 +99,7 @@ export function StaffReportDetailClient({ reportId }: { reportId: string }) {
         ← Saved reports
       </Link>
       <PageIntro
-        eyebrow="Saved Report Detail"
         title={report?.name ?? "Report"}
-        description="Counts, groups, and rows derive from the same applied criteria."
         action={<span className="pill blue">{visibleRows.length} records</span>}
       />
 

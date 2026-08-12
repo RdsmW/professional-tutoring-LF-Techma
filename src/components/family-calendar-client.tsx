@@ -543,9 +543,7 @@ export function FamilyCalendarClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Family portal"
         title="Calendar & changes"
-        description="Confirmed tutoring and course enrollments appear here. Changes remain governed by the approved policy."
         action={
           <Link
             href="/family/book-tutoring"

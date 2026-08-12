@@ -152,7 +152,6 @@ export function StaffBillingClient() {
           ← Billing records
         </button>
         <PageIntro
-          eyebrow="Staff Operations · Billing"
           title="Billing detail"
           description="Manual ledger updates only — no Stripe charges from this screen."
           action={<span className={`pill ${statusTone(selected.status)}`}>{selected.statusLabel}</span>}
@@ -230,9 +229,8 @@ export function StaffBillingClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Staff Operations · Billing"
         title="Billing"
-        description="Payment records are a manual staff ledger. Card capture stays on Stripe; this screen never charges."
+        description="Manual staff ledger — this screen never charges cards."
       />
       <section className="billing-summary">
         <article>

@@ -112,7 +112,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         ← Students
       </Link>
       <PageIntro
-        eyebrow="Staff · Student Detail"
         title={student.displayName}
         description={`${student.gradeLabel || "Grade pending"} · ${student.schoolName || "School pending"}`}
         action={<span className="pill">{student.lifecycle}</span>}

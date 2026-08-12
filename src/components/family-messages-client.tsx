@@ -311,9 +311,7 @@ export function FamilyMessagesClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Family messages & support"
         title="How can we help?"
-        description="Create one in-app request linked to the right student. Scheduling changes stay on Calendar."
         action={
           <button
             type="button"

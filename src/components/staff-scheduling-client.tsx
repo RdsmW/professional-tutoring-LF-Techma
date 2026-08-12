@@ -490,9 +490,7 @@ export function StaffSchedulingClient() {
   return (
     <>
       <PageIntro
-        eyebrow="Staff Operations · Scheduling"
         title="Scheduling"
-        description="Sunday–Saturday week board for tutoring, with Courses nested here (not a top-level Staff menu)."
         action={
           mode === "Week" ? (
             <button type="button" className="primary-button" onClick={() => void openCreateBooking()}>

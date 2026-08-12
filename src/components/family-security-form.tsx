@@ -284,18 +284,6 @@ export function FamilySecurityForm({
           Use secure password reset instead
         </button>
 
-        <div className="privacy-callout">
-          <span>i</span>
-          <div>
-            <strong>Production security requirements</strong>
-            <p>
-              Authenticated re-verification, rate limits, strong hashing, single-use expiring reset
-              tokens, session invalidation, audit events, and no password display/export are
-              mandatory.
-            </p>
-          </div>
-        </div>
-
         <div className="wizard-footer">
           <button type="button" className="wizard-back" onClick={onBack}>
             Cancel

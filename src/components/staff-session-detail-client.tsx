@@ -164,7 +164,6 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
         ← Sessions
       </Link>
       <PageIntro
-        eyebrow="Staff · Session Detail"
         title={session.student.displayName}
         description={`${session.subject?.name || "Subject pending"} · ${formatSlot(session.slot)}`}
         action={<span className={`pill ${statusTone(session.status)}`}>{statusLabel(session.status)}</span>}

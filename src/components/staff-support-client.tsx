@@ -156,9 +156,7 @@ export function StaffSupportClient() {
           ← Support inbox
         </button>
         <PageIntro
-          eyebrow="Role-restricted staff workspace"
           title="Support Inbox"
-          description="One underlying in-app case record; no email, SMS, or Outlook message is sent."
           action={<span className={`pill ${statusTone(selected.status)}`}>{selected.statusLabel}</span>}
         />
         <section className="panel support-case-detail">
@@ -249,11 +247,7 @@ export function StaffSupportClient() {
 
   return (
     <>
-      <PageIntro
-        eyebrow="Staff Operations · Support"
-        title="Support inbox"
-        description="Family Messages / Support cases route here for assign, reply, and resolve."
-      />
+      <PageIntro title="Support inbox" />
       {error ? <p className="form-error">{error}</p> : null}
       {loading ? <p style={{ fontSize: 11, color: "var(--muted)" }}>Loading inbox…</p> : null}
       {!loading && cases.length === 0 ? (

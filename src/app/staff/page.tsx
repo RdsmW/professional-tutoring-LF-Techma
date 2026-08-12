@@ -296,37 +296,11 @@ export default async function StaffDashboardPage() {
             <span className="signal-dot" />
             {data.weekBarsLive
               ? "Bars reflect open vs booked seats on active availability slots."
-              : "Stage 1: bars fill when availability slots exist in the database."}
+              : "Bars fill when availability slots exist in the database."}
           </div>
         </section>
       </div>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <span className="eyebrow">Integration control</span>
-            <h3>Reconciliation, not silent sync</h3>
-          </div>
-          <span className="pill blue">Stage 1 boundary</span>
-        </div>
-        <div className="integration-strip">
-          {[
-            ["Zoho CRM", "General inquiry system", "No duplicate lead module", "green"],
-            ["Acuity", "Schedule destination", "Configuration observed", "green"],
-            ["Stripe", "Payment processor", "No live connection", "amber"],
-            ["QuickBooks", "Accounting record", "No live connection", "amber"],
-          ].map(([name, purpose, status, tone]) => (
-            <div className="integration-card" key={name}>
-              <span>{name.slice(0, 1)}</span>
-              <div>
-                <strong>{name}</strong>
-                <small>{purpose}</small>
-              </div>
-              <span className={`pill ${tone}`}>{status}</span>
-            </div>
-          ))}
-        </div>
-      </section>
     </>
   );
 }
