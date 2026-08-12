@@ -8,6 +8,7 @@ export type IconName =
   | "calendar"
   | "clock"
   | "billing"
+  | "integrations"
   | "reports"
   | "settings"
   | "home"
@@ -98,6 +99,12 @@ const drawings: Record<IconName, ReactNode> = {
     <>
       <rect x="2.5" y="5" width="19" height="14" rx="2" />
       <path d="M2.5 10h19M7 15h3" />
+    </>
+  ),
+  integrations: (
+    <>
+      <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L10.7 5.23" />
+      <path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07L13.3 18.77" />
     </>
   ),
   reports: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
