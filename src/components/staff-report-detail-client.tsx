@@ -40,7 +40,6 @@ export function StaffReportDetailClient({ reportId }: { reportId: string }) {
   const [appliedDate, setAppliedDate] = useState<DateFilter>("all");
   const [appliedService, setAppliedService] = useState<ServiceFilter>("all");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [resultsRefreshed, setResultsRefreshed] = useState(false);
   const [report, setReport] = useState<ReportResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +76,6 @@ export function StaffReportDetailClient({ reportId }: { reportId: string }) {
     setAppliedDate("all");
     setAppliedService("all");
     setSelectedGroup(null);
-    setResultsRefreshed(false);
     void load("all", "all");
   }
 
@@ -85,7 +83,6 @@ export function StaffReportDetailClient({ reportId }: { reportId: string }) {
     setAppliedDate(draftDate);
     setAppliedService(draftService);
     setSelectedGroup(null);
-    setResultsRefreshed(true);
     void load(draftDate, draftService);
   }
 
@@ -167,24 +164,7 @@ export function StaffReportDetailClient({ reportId }: { reportId: string }) {
         <small>{visibleRows.length} matching records</small>
       </section>
 
-      <section className="family-summary-grid">
-        {(report?.metrics ?? []).map((metric) => (
-          <article key={metric.label} className="panel">
-            <small>{metric.label}</small>
-            <strong>{loading ? "…" : metric.value}</strong>
-            <span>{metric.detail}</span>
-          </article>
-        ))}
-        {report ? (
-          <article className="panel">
-            <small>Result state</small>
-            <strong>{resultsRefreshed ? "Applied view" : "Default all"}</strong>
-            <span>{loading ? "Loading…" : "Live query"}</span>
-          </article>
-        ) : null}
-      </section>
-
-      <Panel title={report?.name ?? "Results"} eyebrow="Drill down by total">
+      <Panel title="Groups">
         {(report?.groups ?? []).length === 0 ? (
           <p style={{ color: "var(--muted)", margin: 0 }}>{loading ? "Loading groups…" : "No groups for this view."}</p>
         ) : (
@@ -213,7 +193,7 @@ export function StaffReportDetailClient({ reportId }: { reportId: string }) {
                 <small style={{ color: "var(--muted)" }}>{report.columns}</small>
               </span>
               <b>{group.count}</b>
-              <span>{selectedGroup === group.name ? "Show all filtered records" : "Drill into records →"}</span>
+              <span>{selectedGroup === group.name ? "Show all" : "Open rows →"}</span>
             </button>
           ))
         )}
@@ -222,8 +202,7 @@ export function StaffReportDetailClient({ reportId }: { reportId: string }) {
       <section className="panel filtered-report-table">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">Filtered record detail</span>
-            <h3>{visibleRows.length} matching rows</h3>
+            <h3 style={{ margin: 0 }}>{visibleRows.length} rows</h3>
           </div>
           {selectedGroup ? (
             <button type="button" className="text-button" onClick={() => setSelectedGroup(null)}>
@@ -261,9 +240,9 @@ export function StaffReportDetailClient({ reportId }: { reportId: string }) {
           <div className="empty-action compact-empty">
             <span className="empty-symbol">∅</span>
             <h3>No records match</h3>
-            <p>Adjust the applied date/service filters or clear the group.</p>
+            <p>Adjust the date/service filters or clear the group.</p>
             <button type="button" className="primary-button" onClick={resetFilters}>
-              Reset report
+              Reset
             </button>
           </div>
         ) : null}

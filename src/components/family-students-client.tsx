@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { AddStudentWizard } from "@/components/add-student-wizard";
 import {
   FamilyStudentDetail,

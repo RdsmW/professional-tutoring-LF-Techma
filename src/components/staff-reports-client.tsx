@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
-import type { ReportCatalogItem, ReportMetric } from "@/lib/reports/types";
+import type { ReportCatalogItem } from "@/lib/reports/types";
 
 export function StaffReportsClient() {
   const [reports, setReports] = useState<ReportCatalogItem[]>([]);
-  const [metrics, setMetrics] = useState<ReportMetric[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +24,6 @@ export function StaffReportsClient() {
         }
         if (!cancelled) {
           setReports(data.reports ?? []);
-          setMetrics(data.metrics ?? []);
         }
       } catch {
         if (!cancelled) setError("Unable to load saved reports.");
@@ -48,25 +46,7 @@ export function StaffReportsClient() {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <section className="report-metrics">
-        {(metrics.length
-          ? metrics
-          : [
-              { label: "Active students", value: loading ? "…" : "0", detail: "Open the report for filters" },
-              { label: "Tutor records", value: loading ? "…" : "0", detail: "Derived weekly metrics" },
-              { label: "Attendance rows", value: loading ? "…" : "0", detail: "Bookings as sessions" },
-              { label: "Billing records", value: loading ? "…" : "0", detail: "Ledger only · not posted" },
-            ]
-        ).map((metric) => (
-          <article key={metric.label}>
-            <small>{metric.label}</small>
-            <strong>{loading && !metrics.length ? "…" : metric.value}</strong>
-            <span>{metric.detail}</span>
-          </article>
-        ))}
-      </section>
-
-      <Panel title="Saved report definitions" eyebrow="Staff workspace">
+      <Panel title="Saved reports">
         <div className="report-definition-list">
           <div className="report-definition-head">
             <span>Saved report</span>
@@ -92,7 +72,7 @@ export function StaffReportsClient() {
               <strong>{report.name}</strong>
               <span>{report.summary}</span>
               <span className="pill blue">{report.count}</span>
-              <b>Open report →</b>
+              <b>Open →</b>
             </Link>
           ))}
           {!loading && reports.length === 0 ? (
