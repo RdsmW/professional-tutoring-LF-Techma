@@ -4,83 +4,47 @@ import Link from "next/link";
 import { useFamilyPortal } from "@/components/family-portal-context";
 
 export function FamilyHomeHero() {
-  const { householdName, householdStatus } = useFamilyPortal();
-  const pending = householdStatus === "pending";
+  const { householdName } = useFamilyPortal();
 
   return (
-    <>
-      <section className="family-hero">
-        <div>
-          <span className="eyebrow">Separate adult accounts · Shared household</span>
-          <h1 style={{ margin: "6px 0 10px", font: "700 32px/1.15 Georgia, serif" }}>
-            {householdName ? `Welcome to the ${householdName} account.` : "Welcome to your family account."}
-          </h1>
-          <p>
-            Each guardian signs in separately to the same household with their own permissions. Add
-            and manage children, then choose tutoring or a defined cohort course.
-          </p>
-          <div className="hero-actions" style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {pending ? (
-              <Link
-                href="/family/onboarding"
-                className="primary-button family-primary"
-                style={{
-                  textDecoration: "none",
-                  display: "inline-block",
-                  padding: "10px 14px",
-                  background: "var(--coral)",
-                  color: "#fff",
-                  fontWeight: 800,
-                  fontSize: 11,
-                }}
-              >
-                Complete onboarding
-              </Link>
-            ) : null}
-            <Link
-              href="/family/students?add=1"
-              className="primary-button family-primary"
-              style={{
-                textDecoration: "none",
-                display: "inline-block",
-                padding: "10px 14px",
-                background: "var(--coral)",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 11,
-              }}
-            >
-              + Add student
-            </Link>
-            <Link
-              href="/family/book-tutoring"
-              className="secondary-button"
-              style={{
-                textDecoration: "none",
-                display: "inline-block",
-                padding: "10px 14px",
-                border: "1px solid var(--line)",
-                fontWeight: 800,
-                fontSize: 11,
-              }}
-            >
-              Book Tutoring
-            </Link>
-          </div>
+    <section className="family-hero">
+      <div>
+        <h1 style={{ margin: "0 0 10px", font: "700 32px/1.15 Georgia, serif" }}>
+          {householdName ? `Welcome to the ${householdName} account.` : "Welcome to your family account."}
+        </h1>
+        <p>Manage children, then book tutoring or enroll in a course.</p>
+        <div className="hero-actions" style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link
+            href="/family/students"
+            className="primary-button family-primary"
+            style={{
+              textDecoration: "none",
+              display: "inline-block",
+              padding: "10px 14px",
+              background: "var(--coral)",
+              color: "#fff",
+              fontWeight: 800,
+              fontSize: 11,
+            }}
+          >
+            Students
+          </Link>
+          <Link
+            href="/family/book-tutoring"
+            className="secondary-button"
+            style={{
+              textDecoration: "none",
+              display: "inline-block",
+              padding: "10px 14px",
+              border: "1px solid var(--line)",
+              fontWeight: 800,
+              fontSize: 11,
+            }}
+          >
+            Book Tutoring
+          </Link>
         </div>
-      </section>
-
-      {pending ? (
-        <section className="recommendation-banner" style={{ marginBottom: 16 }}>
-          <span>i</span>
-          <div>
-            <strong>Onboarding still pending</strong>
-            <p>
-              Finish your family profile so staff can place students and unlock the full portal journey.
-            </p>
-          </div>
-        </section>
-      ) : null}
-    </>
+      </div>
+    </section>
   );
 }

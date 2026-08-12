@@ -409,19 +409,14 @@ export function FamilyProfileClient() {
     <>
       <section className="view-intro">
         <div>
-          <span className="eyebrow">Separate adult accounts · shared household</span>
           <h2>Family profile</h2>
-          <p>
-            Manage guardian access, billing ownership, and household details; student records remain
-            the children beneath this shared family account.
-          </p>
         </div>
         <div className="hero-actions">
           <button type="button" className="secondary-button" onClick={openEdit} disabled={!profile}>
             Edit my profile
           </button>
-          <Link href="/family/students?add=1" className="family-primary" style={{ textDecoration: "none" }}>
-            + Add student
+          <Link href="/family/students" className="secondary-button" style={{ textDecoration: "none" }}>
+            Students
           </Link>
         </div>
       </section>
@@ -446,7 +441,7 @@ export function FamilyProfileClient() {
               <div className="form-step">
                 <span>✓</span>
                 <div>
-                  <strong>Initial family onboarding complete</strong>
+                  <strong>Family profile active</strong>
                   <small>Full Family Portal access is available.</small>
                 </div>
               </div>
@@ -455,11 +450,7 @@ export function FamilyProfileClient() {
                 <span>○</span>
                 <div>
                   <strong>Family onboarding in progress</strong>
-                  <small>
-                    <Link href="/family/onboarding" style={{ color: "var(--blue)", fontWeight: 800 }}>
-                      Complete onboarding to unlock the portal →
-                    </Link>
-                  </small>
+                  <small>Finish setup from the sidebar when ready.</small>
                 </div>
               </div>
             )}
@@ -547,7 +538,7 @@ export function FamilyProfileClient() {
                 Account & security
               </button>
               <Link href="/family/students" className="secondary-button" style={{ textDecoration: "none", textAlign: "center" }}>
-                Manage students
+                Students
               </Link>
             </div>
           </article>
@@ -565,13 +556,8 @@ export function FamilyProfileClient() {
               </div>
             ))}
             <Link href="/family/students" className="text-button" style={{ display: "block", marginTop: 10 }}>
-              Manage students →
+              Students →
             </Link>
-            {!isActive ? (
-              <Link href="/family/onboarding" className="text-button" style={{ display: "block" }}>
-                Complete onboarding →
-              </Link>
-            ) : null}
             <p className="profile-invite-note">
               Inviting another guardian is handled by staff for now.
             </p>

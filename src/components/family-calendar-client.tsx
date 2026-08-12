@@ -370,16 +370,6 @@ export function FamilyCalendarClient() {
                 <p>{recommendation}</p>
               </div>
             </section>
-            <div className="privacy-callout">
-              <span>i</span>
-              <div>
-                <strong>Recommendation is not approval</strong>
-                <p>
-                  Authorized staff must approve a banked credit, refund workflow, alternate exception, or denial.
-                  Stripe refunds and live calendar mutations are later controlled steps.
-                </p>
-              </div>
-            </div>
           </div>
         ) : null}
 
@@ -587,17 +577,6 @@ export function FamilyCalendarClient() {
             </button>
           ))
         )}
-      </section>
-
-      <section className="recommendation-banner">
-        <span>i</span>
-        <div>
-          <strong>Policy-guided changes</strong>
-          <p>
-            PT-CAN-2026.3 uses a 24-hour notice window and reason/outcome rules. Staff approval is always
-            required before a banked credit or refund. Open a booking or enrollment, then request a change.
-          </p>
-        </div>
       </section>
     </>
   );

@@ -270,15 +270,7 @@ export function FamilyStudentsClient({
                     <span>Needs not listed yet</span>
                   )}
                 </div>
-                <b>Open Student Detail →</b>
-              </button>
-              <button
-                type="button"
-                className="card-edit-action"
-                aria-label={`Edit ${student.displayName} profile`}
-                onClick={() => void openEdit(student.id)}
-              >
-                Edit profile
+                <b>Open →</b>
               </button>
             </article>
           );
@@ -292,20 +284,10 @@ export function FamilyStudentsClient({
           }}
         >
           <span>＋</span>
-          <h3>Add another student</h3>
-          <p>Create another child profile under this Family account.</p>
+          <h3>Add student</h3>
+          <p>Create a child profile under this household.</p>
         </button>
       </section>
-
-      {students.length === 0 ? (
-        <p style={{ marginTop: 14, fontSize: 12, color: "var(--muted)" }}>
-          No students yet.{" "}
-          <Link href="/family/onboarding" style={{ color: "var(--blue)", fontWeight: 700 }}>
-            Finish onboarding
-          </Link>{" "}
-          if your household is still pending, then add the first child.
-        </p>
-      ) : null}
     </>
   );
 }

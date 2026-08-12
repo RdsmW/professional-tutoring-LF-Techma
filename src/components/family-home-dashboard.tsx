@@ -128,7 +128,7 @@ export function FamilyHomeDashboard() {
           <strong>
             {students.length} child profile{students.length === 1 ? "" : "s"}
           </strong>
-          <Link href="/family/students">Manage students →</Link>
+          <Link href="/family/students">Students →</Link>
         </article>
         <article>
           <small>Next session</small>
@@ -190,9 +190,9 @@ export function FamilyHomeDashboard() {
           </div>
           {students.length === 0 ? (
             <div className="compact-empty">
-              <p>No students yet. Add a child profile to start booking or enrollment.</p>
-              <Link href="/family/students?add=1" className="family-primary" style={{ textDecoration: "none", display: "inline-block", marginTop: 10 }}>
-                + Add student
+              <p>No students yet.</p>
+              <Link href="/family/students" className="text-button" style={{ display: "inline-block", marginTop: 10 }}>
+                Go to Students →
               </Link>
             </div>
           ) : (

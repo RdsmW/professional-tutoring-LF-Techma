@@ -191,10 +191,6 @@ export function FamilyMessagesClient() {
             placeholder="Describe what staff should review"
           />
         </label>
-        <div className="boundary-note">
-          <strong>Attachment</strong>
-          <span>Attachments are not available in this release; describe any files in the message.</span>
-        </div>
         {error ? <div className="validation-hint">{error}</div> : null}
         <div className="wizard-footer">
           <button type="button" className="wizard-back" onClick={() => setMode("list")}>
@@ -208,13 +204,6 @@ export function FamilyMessagesClient() {
           >
             {saving ? "Submitting…" : "Submit support request"}
           </button>
-        </div>
-        <div className="privacy-callout">
-          <span>i</span>
-          <div>
-            <strong>In-app only</strong>
-            <p>Email, SMS, Outlook, and external notifications are future integrations and are not live.</p>
-          </div>
         </div>
       </section>
     );
@@ -335,28 +324,19 @@ export function FamilyMessagesClient() {
         }
       />
 
-      <Panel title="Need a scheduling change?" eyebrow="Calendar bridge">
-        <p style={{ margin: "0 0 12px", fontSize: 11, maxWidth: 640 }}>
-          Cancellation, make-up, and refund review requests stay on Calendar &amp; Changes so they stay linked
-          to a specific booking or enrollment.
-        </p>
-        <Link
-          href="/family/calendar"
-          className="family-primary"
-          style={{ textDecoration: "none", display: "inline-block", padding: "10px 14px" }}
-        >
-          Open Calendar &amp; changes
+      <p style={{ margin: "0 0 16px", fontSize: 12, color: "var(--muted)" }}>
+        Scheduling changes stay on{" "}
+        <Link href="/family/calendar" style={{ color: "var(--blue)", fontWeight: 700 }}>
+          Calendar
         </Link>
-        <p style={{ margin: "12px 0 0", fontSize: 9, color: "var(--muted)" }}>
-          Open a booking or enrollment there, then choose Request cancellation / make-up / refund review.
-        </p>
-      </Panel>
+        .
+      </p>
 
       {error ? <p className="form-error" style={{ marginBottom: 12 }}>{error}</p> : null}
       {loading ? <p style={{ fontSize: 11, color: "var(--muted)" }}>Loading cases…</p> : null}
 
       {!loading && cases.length === 0 ? (
-        <Panel title="Your cases" eyebrow="Support">
+        <Panel title="Your cases">
           <div className="empty-action">
             <div className="empty-symbol">✉</div>
             <p>No support requests yet.</p>
@@ -407,11 +387,6 @@ export function FamilyMessagesClient() {
           </button>
         </section>
       ))}
-
-      <section className="boundary-note">
-        <strong>Notification boundary</strong>
-        <span>In-app status works here. Email, SMS, Outlook, and external delivery are future-only and not live.</span>
-      </section>
     </>
   );
 }
