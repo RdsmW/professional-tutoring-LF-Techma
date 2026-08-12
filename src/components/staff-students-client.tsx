@@ -77,8 +77,12 @@ export function StaffStudentsClient() {
       <PageIntro title="Students" />
       {error ? <p className="form-error">{error}</p> : null}
 
-      <Panel title="Student directory" eyebrow="Live database">
-        <form className="student-filter-panel" onSubmit={applyFilters} style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr auto auto" }}>
+      <Panel title="Student directory">
+        <form
+          className="student-filter-panel"
+          onSubmit={applyFilters}
+          style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr auto auto" }}
+        >
           <label className="student-search">
             Search name
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Student name" />
@@ -113,34 +117,39 @@ export function StaffStudentsClient() {
         {students.length === 0 && !loading ? (
           <p style={{ color: "var(--muted)" }}>No students match these filters.</p>
         ) : (
-          <div className="student-grid">
+          <div className="table-panel students-table compact-table">
+            <div
+              className="table-head"
+              style={{ gridTemplateColumns: "1.4fr 1.2fr 1.2fr 0.7fr 0.8fr 0.6fr" }}
+            >
+              <span>Name</span>
+              <span>Household</span>
+              <span>School</span>
+              <span>Grade</span>
+              <span>Lifecycle</span>
+              <span />
+            </div>
             {students.map((row) => (
-              <Link key={row.id} href={`/staff/students/${row.id}`} className="student-card" style={{ textDecoration: "none", color: "inherit" }}>
-                <div className="student-card-top">
-                  <span className="pill">{row.lifecycle}</span>
-                </div>
-                <h3>{row.displayName}</h3>
-                <p>{row.schoolName ?? "School pending"}</p>
-                <div className="mini-fields">
-                  <span>
-                    <small>Grade</small>
-                    <strong>{row.gradeLabel ?? "—"}</strong>
-                  </span>
-                  <span>
-                    <small>Household</small>
-                    <strong>{row.householdDisplayName}</strong>
-                  </span>
-                </div>
-                <span className="card-action">
-                  Open detail <span>→</span>
-                </span>
+              <Link
+                key={row.id}
+                href={`/staff/students/${row.id}`}
+                className="table-row"
+                style={{
+                  gridTemplateColumns: "1.4fr 1.2fr 1.2fr 0.7fr 0.8fr 0.6fr",
+                  textDecoration: "none",
+                  color: "inherit",
+                }}
+              >
+                <strong>{row.displayName}</strong>
+                <span>{row.householdDisplayName}</span>
+                <span>{row.schoolName ?? "—"}</span>
+                <span>{row.gradeLabel ?? "—"}</span>
+                <span className="pill">{row.lifecycle}</span>
+                <span className="table-open">Open →</span>
               </Link>
             ))}
           </div>
         )}
-        <p style={{ marginTop: 14, fontSize: 10, color: "var(--muted)" }}>
-          Best Fit assist is deferred to a later stage.
-        </p>
       </Panel>
     </>
   );

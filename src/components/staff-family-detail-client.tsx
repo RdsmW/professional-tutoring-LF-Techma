@@ -159,11 +159,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const address = [family.addressLine1, family.addressLine2, family.city, family.state, family.postalCode]
     .filter(Boolean)
     .join(", ");
-  const nextAction = family.guardians.some((g) => !g.linked)
-    ? "Complete guardian invite"
-    : family.students.length === 0
-      ? "Add first student"
-      : "Review service activity";
+  const billingCue = family.cardOnFile
+    ? `${family.cardBrand || "Card"} ···· ${family.cardLast4 || "????"}`
+    : "No card on file";
 
   return (
     <>
@@ -174,11 +172,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       <section className="family-record-hero">
         <span className="avatar navy">{initials(family.displayName)}</span>
         <div>
-          <span className="eyebrow">Staff · Family Detail</span>
           <h2>{family.displayName}</h2>
           <p>
-            Next action: {nextAction}
-            {family.billingOwnerName ? ` · Billing: ${family.billingOwnerName}` : ""}
+            {[family.billingOwnerName ? `Billing: ${family.billingOwnerName}` : null, billingCue]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
         <span className="pill">{family.status}</span>
@@ -190,8 +188,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 11, marginBottom: 12 }}>{savedMessage}</p>
       ) : null}
 
-      <div className="family-detail-layout">
-        <Panel title="Household summary" eyebrow="Account">
+      <div className="family-detail-layout family-detail-stack">
+        <Panel title="Household summary">
           <div className="family-detail-grid profile-detail-grid">
             <span>
               <small>Status</small>
@@ -207,11 +205,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             </span>
             <span>
               <small>Card on file</small>
-              <strong>
-                {family.cardOnFile
-                  ? `${family.cardBrand || "Card"} ···· ${family.cardLast4 || "????"}`
-                  : "Not on file"}
-              </strong>
+              <strong>{billingCue}</strong>
             </span>
             <span>
               <small>Address</small>
@@ -224,7 +218,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </div>
         </Panel>
 
-        <Panel title="Guardians" eyebrow="Adults">
+        <Panel title="Guardians">
           <div className="guardian-access-preview">
             {family.guardians.map((g) => {
               const perms = [
@@ -248,11 +242,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                       <br />
                       {perms.join(" · ")}
                     </small>
-                    {g.invitePath ? (
-                      <small>
-                        Accept path: <code>{g.invitePath}</code>
-                      </small>
-                    ) : null}
                     {!g.linked ? (
                       <button
                         type="button"
@@ -260,7 +249,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                         style={{ marginTop: 4, padding: 0 }}
                         onClick={() => void refreshInvite(g.id)}
                       >
-                        {g.invitePath ? "Regenerate invite →" : "Create invite →"}
+                        {g.invitePath ? "Regenerate invite" : "Create invite"}
                       </button>
                     ) : null}
                   </span>
@@ -271,16 +260,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               );
             })}
           </div>
-          <div className="privacy-callout compact">
-            <span>i</span>
-            <div>
-              <strong>Guardian access is individual</strong>
-              <p>Invite links are token paths for now — no outbound email send from this screen.</p>
-            </div>
-          </div>
         </Panel>
 
-        <Panel title="Staff notes" eyebrow="Household">
+        <Panel title="Staff notes">
           <form onSubmit={saveNotes}>
             <label style={{ display: "block", fontSize: 9, fontWeight: 800, color: "var(--muted)" }}>
               Internal notes
@@ -307,7 +289,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </Panel>
       </div>
 
-      <Panel title="Students" eyebrow="Children">
+      <Panel title="Students">
         {family.students.length === 0 ? (
           <p style={{ color: "var(--muted)", fontSize: 11 }}>No students yet.</p>
         ) : (
@@ -329,7 +311,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       </Panel>
 
       <div className="profile-layout" style={{ marginTop: 14 }}>
-        <Panel title="Bookings" eyebrow="Service activity">
+        <Panel title="Bookings">
           {family.activity.bookings.length === 0 ? (
             <p style={{ color: "var(--muted)", fontSize: 11 }}>No tutoring bookings yet.</p>
           ) : (
@@ -345,7 +327,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             ))
           )}
         </Panel>
-        <Panel title="Course enrollments" eyebrow="Service activity">
+        <Panel title="Course enrollments">
           {family.activity.enrollments.length === 0 ? (
             <p style={{ color: "var(--muted)", fontSize: 11 }}>No course enrollments yet.</p>
           ) : (
