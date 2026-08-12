@@ -7,6 +7,8 @@ import { UserButton } from "@clerk/nextjs";
 import { AppIcon } from "@/components/app-icon";
 import { BootstrapSession } from "@/components/bootstrap-session";
 import { APP_NAME, STAFF_NAV } from "@/lib/constants";
+import { staffUserButtonAppearance } from "@/lib/ui/clerk-appearance";
+import { isPlaceholderDisplayName, useNavCollapsed } from "@/lib/ui/nav-collapse";
 
 export function StaffShell({
   children,
@@ -18,6 +20,8 @@ export function StaffShell({
   const pathname = usePathname();
   const [label, setLabel] = useState(personName);
   const [openSupportCount, setOpenSupportCount] = useState(0);
+  const { collapsed, toggleCollapsed } = useNavCollapsed("pt-staff-nav-collapsed");
+  const fullName = isPlaceholderDisplayName(label) ? null : label;
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +43,7 @@ export function StaffShell({
   }, [pathname]);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${collapsed ? " is-nav-collapsed" : ""}`}>
       <BootstrapSession
         onComplete={(result) => {
           if (result.displayName) setLabel(result.displayName);
@@ -48,9 +52,19 @@ export function StaffShell({
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">PT</span>
-          <span>
+          <span className="brand-copy">
             <strong>{APP_NAME}</strong>
           </span>
+          <button
+            type="button"
+            className="nav-collapse-toggle"
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+            title={collapsed ? "Expand navigation" : "Collapse navigation"}
+            aria-expanded={!collapsed}
+            onClick={toggleCollapsed}
+          >
+            <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
+          </button>
         </div>
         <nav aria-label="Staff navigation">
           {STAFF_NAV.map((item) => {
@@ -64,27 +78,13 @@ export function StaffShell({
                 key={item.href}
                 href={item.href}
                 className={active ? "active" : undefined}
-                style={{
-                  minHeight: 38,
-                  border: 0,
-                  background: active ? "#2c4561" : "transparent",
-                  color: active ? "#fff" : "#b8c4d1",
-                  borderRadius: 4,
-                  display: "grid",
-                  gridTemplateColumns: "23px 1fr auto",
-                  alignItems: "center",
-                  textAlign: "left",
-                  padding: "0 10px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  boxShadow: active ? "inset 3px 0 0 var(--coral)" : undefined,
-                }}
+                title={item.label}
+                aria-label={item.label}
               >
-                <span style={{ color: active ? "var(--coral)" : "#8ea3b9", display: "grid", placeItems: "center" }}>
+                <span className="nav-icon">
                   <AppIcon name={item.icon} />
                 </span>
-                {item.label}
+                <span className="nav-text">{item.label}</span>
                 {showBadge ? (
                   <b aria-label={`${openSupportCount} open support case${openSupportCount === 1 ? "" : "s"}`}>
                     {openSupportCount}
@@ -98,17 +98,17 @@ export function StaffShell({
           <div className="sidebar-chrome-actions">
             <button type="button" aria-label="Search" title="Search">
               <AppIcon name="search" size={15} />
-              <span>Search</span>
+              <span className="chrome-label">Search</span>
             </button>
             <button type="button" aria-label="Notifications" title="Notifications">
               <AppIcon name="bell" size={15} />
-              <span>Alerts</span>
+              <span className="chrome-label">Alerts</span>
             </button>
           </div>
           <div className="demo-person">
-            <UserButton />
-            <span>
-              <strong>{label}</strong>
+            <UserButton appearance={staffUserButtonAppearance()} />
+            <span className="person-copy">
+              <strong title={fullName ?? undefined}>{fullName ?? "Signed in"}</strong>
               <small>Staff</small>
             </span>
           </div>
