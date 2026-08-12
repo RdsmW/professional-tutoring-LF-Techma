@@ -49,6 +49,16 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Cancellation policy versions (append-only; seed PT-CAN-2026.3; Settings UI; change-request recommendations) — apply `drizzle/0006_policy_versions.sql` (`cancellation_policy_versions`, not agreement `policy_versions`)
 - [x] Price books + immutable snapshots on family book/enroll (surcharge/late/intake locked) — apply `drizzle/0007_price_books.sql`
 
+### Phase A - UI cleanup (complete)
+
+- [x] Slim Staff/Family chrome (no fat topbar; Search/Bell in sidebar footer; quieter PageIntro)
+- [x] Family Detail full-width stack + notes below; compact Students table
+- [x] Family actions: primary Add Student on Students; Calendar-only change requests; Support topic/message/send
+- [x] Reports catalog to filters to results (no dashboard metrics strip)
+- [x] Staff Integrations tab (status-only Stripe / Zoho / Acuity / QBO - no live sync or charges)
+
+Deferred to Phase B/C: PaymentIntent charge-at-registration, uploads, Gravity form parity, subscriptions/webhooks, Best Fit, school merge, live Zoho/Acuity/QBO writes.
+
 ### QA note â€” Playwright auth smoke
 
 Authenticated suites in `e2e/smoke.spec.ts` run only when these are set in `.env.local`:
