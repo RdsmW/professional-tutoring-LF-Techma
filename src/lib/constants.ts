@@ -1,6 +1,14 @@
 export const APP_TIMEZONE = "America/New_York";
 export const APP_NAME = "Professional Tutoring";
 
+/** Academic-year window until a terms table exists. Burke, VA = America/New_York. */
+export const CURRENT_TERM = {
+  id: "academic-2026-27",
+  label: "Academic 2026–27",
+  startYmd: "2026-09-08",
+  endYmd: "2027-06-10",
+} as const;
+
 export const STAFF_NAV = [
   { href: "/staff", label: "Dashboard", icon: "dashboard" },
   { href: "/staff/families", label: "Families", icon: "families" },

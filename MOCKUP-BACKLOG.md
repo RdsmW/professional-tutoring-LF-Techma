@@ -45,7 +45,7 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Session Detail + attendance (bookings columns; apply `drizzle/0003_booking_attendance.sql` on Supabase)
 - [x] Exception queue with policy traces (full change_request fields + staff notes + status actions)
 - [x] Billing Detail + controlled actions (manual ledger status/notes; no Stripe charges)
-- [x] Reports live summary queries (active families, lifecycle, tutor capacity, unpaid billing, course fill) + CSV export polish (per-panel + download-all) â€” school suggestion admin + controlled merge still open
+- [x] Reports saved views (catalog + detail, date/service filters, groups, CSV) for active / tutors / attendance / courses / revenue — waitlist + school rollup next; school suggestion admin + controlled merge still open
 
 ### QA note â€” Playwright auth smoke
 
