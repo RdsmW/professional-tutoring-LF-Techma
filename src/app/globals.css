@@ -327,6 +327,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .privacy-callout strong{font-size:9px}
 .privacy-callout p{margin:3px 0 0;font-size:8px}
 .privacy-callout.compact{margin-top:18px}
+.policy-version-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;background:var(--navy);color:#fff;padding:16px}
+.policy-version-strip small,.policy-version-strip strong{display:block}
+.policy-version-strip small{font-size:7px;text-transform:uppercase;color:#a9b8c8}
+.policy-version-strip strong{font-size:12px;margin-top:6px}
 .family-mode .family-secondary{
   border:1.5px solid var(--navy);
   background:transparent;

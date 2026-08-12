@@ -1,4 +1,10 @@
-/** Deterministic PT-CAN-2026.3-style recommendations for family change requests. */
+/** Deterministic cancellation recommendations. Rules come from the active policy version. */
+
+import {
+  DEFAULT_CANCELLATION_POLICY_CODE,
+  DEFAULT_CANCELLATION_RULES,
+  type CancellationPolicyRules,
+} from "@/lib/policy/rules";
 
 export const CHANGE_REASONS = [
   "Illness",
@@ -37,12 +43,21 @@ export function isRequestedOutcome(value: string): value is RequestedOutcome {
   return (REQUESTED_OUTCOMES as readonly string[]).includes(value);
 }
 
-export function evaluateChangePolicy(reason: ChangeReason): string {
+function defaultOutcomeHeadline(rules: CancellationPolicyRules) {
+  if (rules.defaultEligibleOutcome === "refund_review") return "Eligible for refund review";
+  if (rules.defaultEligibleOutcome === "reschedule_only") return "Eligible for reschedule only";
+  return "Eligible for banked-credit review";
+}
+
+export function evaluateChangePolicy(
+  reason: ChangeReason,
+  rules: CancellationPolicyRules = DEFAULT_CANCELLATION_RULES,
+): string {
   if (reason === "Tutor cancelled") {
     return "Eligible for replacement session or refund review";
   }
   if (reason === "Illness" || reason === "School conflict") {
-    return "Eligible for banked-credit review";
+    return defaultOutcomeHeadline(rules);
   }
   return "Staff exception review required";
 }
@@ -50,9 +65,15 @@ export function evaluateChangePolicy(reason: ChangeReason): string {
 export function policyRecommendationDetail(
   reason: ChangeReason,
   requestedOutcome: RequestedOutcome,
+  rules: CancellationPolicyRules = DEFAULT_CANCELLATION_RULES,
+  versionCode: string = DEFAULT_CANCELLATION_POLICY_CODE,
 ): string {
-  const headline = evaluateChangePolicy(reason);
-  return `${headline}. Provisional notice assumption: ≥24 hours (session occurrence timing is not modeled yet). Reason: ${reason}. Requested outcome: ${requestedOutcome}. Eligible banked credits expire after 90 days. Partial credit and exceptions require staff review.`;
+  const headline = evaluateChangePolicy(reason, rules);
+  const expiry =
+    rules.bankedExpiryMode === "end_of_term" || rules.bankedExpiryDays == null
+      ? "Eligible banked credits expire at end of service term"
+      : `Eligible banked credits expire after ${rules.bankedExpiryDays} days`;
+  return `${headline}. Provisional notice assumption: ≥${rules.noticeHours} hours (session occurrence timing is not modeled yet). Reason: ${reason}. Requested outcome: ${requestedOutcome}. ${expiry}. Partial credit and exceptions require staff review. Policy ${versionCode}.`;
 }
 
 export function requiresAlternatives(changeType: ChangeType): boolean {

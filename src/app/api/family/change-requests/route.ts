@@ -10,6 +10,7 @@ import {
   policyRecommendationDetail,
   requiresAlternatives,
 } from "@/lib/family/change-policy";
+import { loadActiveCancellationPolicy } from "@/lib/policy/cancellation";
 
 type ChangeBody = {
   relatedEntityType?: string;
@@ -94,7 +95,13 @@ export async function POST(request: Request) {
       studentId = enrollment.studentId;
     }
 
-    const recommendation = policyRecommendationDetail(reasonRaw, requestedOutcomeRaw);
+    const policy = await loadActiveCancellationPolicy();
+    const recommendation = policyRecommendationDetail(
+      reasonRaw,
+      requestedOutcomeRaw,
+      policy.rules,
+      policy.code,
+    );
     const now = new Date();
 
     const [created] = await database
@@ -110,6 +117,7 @@ export async function POST(request: Request) {
         requestedOutcome: requestedOutcomeRaw,
         preferredAlternatives: preferredAlternatives || null,
         policyRecommendation: recommendation,
+        cancellationPolicyVersionId: policy.id,
         status: "submitted",
         updatedAt: now,
       })

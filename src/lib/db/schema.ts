@@ -9,6 +9,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import type { CancellationPolicyRules } from "@/lib/policy/rules";
 
 export const householdStatusEnum = pgEnum("household_status", [
   "active",
@@ -318,6 +319,7 @@ export const changeRequests = pgTable("change_requests", {
   requestedOutcome: text("requested_outcome").notNull(),
   preferredAlternatives: text("preferred_alternatives"),
   policyRecommendation: text("policy_recommendation").notNull(),
+  cancellationPolicyVersionId: uuid("cancellation_policy_version_id"),
   status: changeRequestStatusEnum("status").notNull().default("submitted"),
   staffNotes: text("staff_notes"),
   resolvedByStaffId: uuid("resolved_by_staff_id"),
@@ -366,6 +368,19 @@ export const supportCaseMessages = pgTable("support_case_messages", {
   authorGuardianId: uuid("author_guardian_id"),
   authorStaffId: uuid("author_staff_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const cancellationPolicyVersions = pgTable("cancellation_policy_versions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: text("code").notNull(),
+  kind: text("kind").notNull().default("cancellation"),
+  effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull(),
+  status: text("status").notNull().default("active"),
+  rules: jsonb("rules").$type<CancellationPolicyRules>().notNull(),
+  createdByStaffId: uuid("created_by_staff_id"),
+  reason: text("reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 /** Staff identity merge queue: queued | merged | dismissed */

@@ -11,6 +11,7 @@ import {
   subjects,
   tutors,
 } from "@/lib/db/schema";
+import { loadActiveCancellationPolicy } from "@/lib/policy/cancellation";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -125,9 +126,15 @@ export async function GET() {
       return bTime - aTime;
     });
 
+    const policy = await loadActiveCancellationPolicy();
+
     return NextResponse.json({
       ok: true,
       householdName: context.household.displayName,
+      policy: {
+        code: policy.code,
+        rules: policy.rules,
+      },
       items: items.map(({ createdAt: _createdAt, ...item }) => item),
       changeRequests: changeRows.map((row) => ({
         id: row.id,

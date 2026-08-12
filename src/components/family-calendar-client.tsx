@@ -16,6 +16,11 @@ import {
   type ChangeType,
   type RequestedOutcome,
 } from "@/lib/family/change-policy";
+import {
+  DEFAULT_CANCELLATION_POLICY_CODE,
+  DEFAULT_CANCELLATION_RULES,
+  type CancellationPolicyRules,
+} from "@/lib/policy/rules";
 
 type CalendarItem = {
   id: string;
@@ -79,6 +84,8 @@ export function FamilyCalendarClient() {
   const [preferredAlternatives, setPreferredAlternatives] = useState("");
   const [saving, setSaving] = useState(false);
   const [submittedRequest, setSubmittedRequest] = useState<ChangeRequest | null>(null);
+  const [policyRules, setPolicyRules] = useState<CancellationPolicyRules>(DEFAULT_CANCELLATION_RULES);
+  const [policyCode, setPolicyCode] = useState(DEFAULT_CANCELLATION_POLICY_CODE);
   const deepLinkHandled = useRef(false);
 
   const selected = items.find((item) => item.id === selectedId) ?? null;
@@ -108,6 +115,8 @@ export function FamilyCalendarClient() {
       }
       setItems(data.items ?? []);
       setChangeRequests(data.changeRequests ?? []);
+      if (data.policy?.rules) setPolicyRules(data.policy.rules);
+      if (data.policy?.code) setPolicyCode(data.policy.code);
     } catch {
       setError("Unable to load calendar.");
     } finally {
@@ -240,9 +249,9 @@ export function FamilyCalendarClient() {
   if (mode === "change" && selected) {
     const recommendation =
       changeReason && requestedOutcome
-        ? policyRecommendationDetail(changeReason, requestedOutcome)
+        ? policyRecommendationDetail(changeReason, requestedOutcome, policyRules, policyCode)
         : changeReason
-          ? evaluateChangePolicy(changeReason)
+          ? evaluateChangePolicy(changeReason, policyRules)
           : "";
 
     return (
