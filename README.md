@@ -39,6 +39,7 @@ Run additive SQL in the Supabase SQL editor (or `psql`) against the `professiona
 - **`drizzle/0004_tutor_subjects_unique.sql`** — unique index on `tutor_subjects (tutor_id, subject_id)`
 - **`drizzle/0005_identity_merge_requests.sql`** — required for Staff identity merge queue (`identity_merge_requests` table)
 - **`drizzle/0006_policy_versions.sql`** — `cancellation_policy_versions` + `change_requests.cancellation_policy_version_id` (does not touch agreement `policy_versions`)
+- **`drizzle/0007_price_books.sql`** — `price_books` / `price_book_lines` + `price_snapshots.price_book_id`
 
 Until `0003` is applied, session detail attendance save/load will fail against Postgres.
 Until `0005` is applied, `/staff/families/merges` and merge-queue APIs will fail against Postgres. You can apply with:
@@ -46,6 +47,7 @@ Until `0005` is applied, `/staff/families/merges` and merge-queue APIs will fail
 ```bash
 npx tsx scripts/apply-identity-merge-requests.mts
 npx tsx scripts/apply-policy-versions.mts
+npx tsx scripts/apply-price-books.mts
 ```
 
 (loads `DATABASE_URL` from `.env.local`)

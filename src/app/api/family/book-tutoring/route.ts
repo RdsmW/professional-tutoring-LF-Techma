@@ -16,6 +16,8 @@ import { catalogSubjectToDbCode } from "@/lib/booking/subject-map";
 import { isValidOptionId } from "@/lib/forms/options";
 import { FORM_META } from "@/lib/forms/form-profiles";
 import { resolveFamilyPaymentMethod } from "@/lib/family/resolve-payment-method";
+import { buildQuote } from "@/lib/pricing/quote";
+import { insertPriceSnapshot } from "@/lib/pricing/snapshot";
 
 type BookBody = {
   studentId?: string;
@@ -162,6 +164,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Selected slot is no longer available." }, { status: 409 });
     }
 
+    const quote = await buildQuote({
+      program: formId === "summer_tutoring" ? "summer_tutoring" : "academic_tutoring",
+      planCode: paymentPlanId,
+    });
+    const snapshot = await insertPriceSnapshot(quote);
     const now = new Date();
     const [requestRow] = await database
       .insert(tutoringRequests)
@@ -201,6 +208,7 @@ export async function POST(request: Request) {
         slotId,
         status: "pending_payment",
         seatsClaimed: 1,
+        priceSnapshotId: snapshot.id,
         updatedAt: now,
       })
       .returning();
@@ -218,10 +226,10 @@ export async function POST(request: Request) {
       relatedEntityType: "booking",
       relatedEntityId: booking.id,
       status: "pending",
-      amountCents: 0,
+      amountCents: snapshot.amountCents,
       methodLabel: payment.value.methodLabel,
       stripeCustomerId: payment.value.customerId,
-      notes: `Payment plan: ${paymentPlanId}`,
+      notes: `Payment plan: ${paymentPlanId}${quote.assumedPackage ? ` · assumed package ${quote.packageCode}` : ""}`,
       updatedAt: now,
     });
 

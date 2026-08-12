@@ -47,6 +47,7 @@ Source of truth for UX: `../professional-tutoring-mockup` + `PROTOTYPE-COVERAGE.
 - [x] Billing Detail + controlled actions (manual ledger status/notes; no Stripe charges)
 - [x] Reports saved views (catalog + detail, date/service filters, groups, CSV) for all seven definitions including waitlist aging and school rollup — school suggestion admin + controlled student merge still open
 - [x] Cancellation policy versions (append-only; seed PT-CAN-2026.3; Settings UI; change-request recommendations) — apply `drizzle/0006_policy_versions.sql` (`cancellation_policy_versions`, not agreement `policy_versions`)
+- [x] Price books + immutable snapshots on family book/enroll (surcharge/late/intake locked) — apply `drizzle/0007_price_books.sql`
 
 ### QA note â€” Playwright auth smoke
 

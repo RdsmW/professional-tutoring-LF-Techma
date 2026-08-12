@@ -173,6 +173,58 @@ export const courseOfferings = pgTable("course_offerings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const priceBooks = pgTable("price_books", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull(),
+  status: text("status").notNull().default("active"),
+  reason: text("reason"),
+  createdByStaffId: uuid("created_by_staff_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const priceBookLines = pgTable("price_book_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  priceBookId: uuid("price_book_id")
+    .notNull()
+    .references(() => priceBooks.id),
+  program: text("program").notNull(),
+  rateTier: text("rate_tier"),
+  packageCode: text("package_code"),
+  planCode: text("plan_code"),
+  amountCents: integer("amount_cents").notNull().default(0),
+  registrationFeeCents: integer("registration_fee_cents").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type PriceQuoteBreakdown = {
+  program: string;
+  planCode: string;
+  packageCode: string | null;
+  rateTier: string | null;
+  lines: Array<{ code: string; label: string; amountCents: number }>;
+  subtotalCents: number;
+  discountCents: number;
+  registrationFeeCents: number;
+  totalCents: number;
+  surchargeBps: number;
+  assumedPackage: boolean;
+};
+
+export const priceSnapshots = pgTable("price_snapshots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  label: text("label").notNull(),
+  currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+  amountCents: integer("amount_cents").notNull(),
+  planLabel: text("plan_label"),
+  feeBreakdown: jsonb("fee_breakdown").$type<PriceQuoteBreakdown>(),
+  sourceCatalogId: text("source_catalog_id"),
+  priceBookId: uuid("price_book_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const enrollmentStatusEnum = pgEnum("enrollment_status", [
   "draft",
   "submitted",

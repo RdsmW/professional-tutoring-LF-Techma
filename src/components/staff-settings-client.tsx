@@ -28,6 +28,25 @@ type ActivePolicy = {
   reason: string | null;
 };
 
+type PriceLine = {
+  id: string;
+  program: string;
+  rateTier: string | null;
+  packageCode: string | null;
+  amountCents: number;
+  registrationFeeCents: number;
+};
+
+type PriceBook = {
+  id: string | null;
+  code: string;
+  name: string;
+  status: string;
+  effectiveFrom: string;
+  reason: string | null;
+  lines: PriceLine[];
+};
+
 export function StaffSettingsClient() {
   const [active, setActive] = useState<ActivePolicy | null>(null);
   const [versions, setVersions] = useState<PolicyVersion[]>([]);
@@ -42,6 +61,12 @@ export function StaffSettingsClient() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [priceBook, setPriceBook] = useState<PriceBook | null>(null);
+  const [priceCode, setPriceCode] = useState("PT-PRICE-2026.2");
+  const [priceReason, setPriceReason] = useState("");
+  const [priceSaving, setPriceSaving] = useState(false);
+  const [priceSaved, setPriceSaved] = useState(false);
+  const [priceNote, setPriceNote] = useState<string | null>(null);
 
   const applyActive = useCallback((next: ActivePolicy) => {
     setActive(next);
@@ -71,6 +96,13 @@ export function StaffSettingsClient() {
       }
       applyActive(data.active);
       setVersions(data.versions ?? []);
+      const prices = await fetch("/api/staff/settings/prices");
+      const priceData = await prices.json();
+      if (prices.ok && priceData.ok) {
+        setPriceBook(priceData.book);
+        setPriceNote(priceData.locked?.note ?? null);
+        if (priceData.book?.code) setPriceCode(`${priceData.book.code}-next`);
+      }
     } catch {
       setError("Unable to load policy versions.");
     } finally {
@@ -112,6 +144,37 @@ export function StaffSettingsClient() {
       setError("Unable to save policy version.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function savePriceBook() {
+    if (!priceBook) return;
+    setPriceSaving(true);
+    setError(null);
+    setPriceSaved(false);
+    try {
+      const response = await fetch("/api/staff/settings/prices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: priceCode,
+          name: priceBook.name,
+          reason: priceReason,
+          lines: priceBook.lines,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to save price book.");
+        return;
+      }
+      setPriceReason("");
+      setPriceSaved(true);
+      await reload();
+    } catch {
+      setError("Unable to save price book.");
+    } finally {
+      setPriceSaving(false);
     }
   }
 
@@ -232,6 +295,74 @@ export function StaffSettingsClient() {
           <div className="validation-line">
             <span>✓</span>
             {code} saved as a new version with effective date and audit history
+          </div>
+        ) : null}
+      </Panel>
+
+      <Panel title="Active price book" eyebrow="Catalog rates">
+        <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 0 }}>
+          New family bookings and enrollments snapshot these amounts. Existing $0 ledger rows are not backfilled. Card
+          surcharge, late fees, and intake stay locked at $0.
+        </p>
+        {priceNote ? <p style={{ fontSize: 12 }}>{priceNote}</p> : null}
+        <div className="input-grid">
+          <label>
+            New version code
+            <input value={priceCode} onChange={(event) => setPriceCode(event.target.value)} />
+          </label>
+          <label>
+            Active book
+            <input value={priceBook ? `${priceBook.code} · ${priceBook.status}` : "Catalog fallback"} readOnly />
+          </label>
+        </div>
+        <div className="report-definition-list" style={{ marginTop: 14 }}>
+          <div className="report-definition-head">
+            <span>Program</span>
+            <span>Package</span>
+            <span>Amount</span>
+            <span>Tier</span>
+          </div>
+          {(priceBook?.lines ?? []).map((line) => (
+            <div
+              key={line.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.3fr 1.6fr .5fr .7fr",
+                gap: 12,
+                alignItems: "center",
+                borderTop: "1px solid var(--line)",
+                padding: "13px 15px",
+              }}
+            >
+              <strong>{line.program}</strong>
+              <span>{line.packageCode || "—"}</span>
+              <span>${(line.amountCents / 100).toFixed(2)}</span>
+              <b>{line.rateTier || "—"}</b>
+            </div>
+          ))}
+        </div>
+        <label className="full-input" style={{ display: "block", marginTop: 16 }}>
+          Required audit note / reason
+          <textarea
+            value={priceReason}
+            onChange={(event) => setPriceReason(event.target.value)}
+            placeholder="Why this price book version is replacing the active one"
+          />
+        </label>
+        <div className="wizard-footer" style={{ marginTop: 16 }}>
+          <button
+            type="button"
+            className="family-primary"
+            disabled={priceSaving || !priceReason.trim() || !priceBook}
+            onClick={() => void savePriceBook()}
+          >
+            {priceSaving ? "Saving…" : "Save new price book version"}
+          </button>
+        </div>
+        {priceSaved ? (
+          <div className="validation-line">
+            <span>✓</span>
+            {priceCode} saved as a new price book. Old bookings keep their snapshots.
           </div>
         ) : null}
       </Panel>

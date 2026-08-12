@@ -13,6 +13,8 @@ import {
   slotPreferenceListId,
 } from "@/lib/enrollment/course-map";
 import { resolveFamilyPaymentMethod } from "@/lib/family/resolve-payment-method";
+import { buildQuote } from "@/lib/pricing/quote";
+import { insertPriceSnapshot } from "@/lib/pricing/snapshot";
 
 type EnrollBody = {
   studentId?: string;
@@ -155,6 +157,15 @@ export async function POST(request: Request) {
         ? slotLabels.join("; ")
         : offering.scheduleSummary || "Schedule pending client confirmation";
 
+    const quote = await buildQuote({
+      program: formId,
+      planCode: paymentPlanId,
+      courseTuitionCents: offering.tuitionCents,
+      courseRegistrationFeeCents: offering.registrationFeeCents,
+      courseName: offering.name,
+    });
+    const snapshot = await insertPriceSnapshot(quote);
+
     const [enrollment] = await database
       .insert(courseEnrollments)
       .values({
@@ -164,6 +175,7 @@ export async function POST(request: Request) {
         requestedByGuardianId: context.guardian.id,
         status: "submitted",
         requestedSlotPreference: slotPreferences.length > 0 ? slotPreferences.join(",") : null,
+        priceSnapshotId: snapshot.id,
         referralSource: referralSource || null,
         notes: JSON.stringify({
           formId,
@@ -187,7 +199,7 @@ export async function POST(request: Request) {
       relatedEntityType: "course_enrollment",
       relatedEntityId: enrollment.id,
       status: "pending",
-      amountCents: 0,
+      amountCents: snapshot.amountCents,
       methodLabel: payment.value.methodLabel,
       stripeCustomerId: payment.value.customerId,
       notes: `Payment plan: ${paymentPlanId}`,
