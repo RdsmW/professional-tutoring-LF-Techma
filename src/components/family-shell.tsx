@@ -7,7 +7,8 @@ import { UserButton } from "@clerk/nextjs";
 import { AppIcon } from "@/components/app-icon";
 import { BootstrapSession } from "@/components/bootstrap-session";
 import { FamilyPortalProvider } from "@/components/family-portal-context";
-import { APP_NAME, FAMILY_NAV } from "@/lib/constants";
+import { SidebarBrand } from "@/components/sidebar-brand";
+import { FAMILY_NAV } from "@/lib/constants";
 import { familyUserButtonAppearance } from "@/lib/ui/clerk-appearance";
 import { isPlaceholderDisplayName, useNavCollapsed } from "@/lib/ui/nav-collapse";
 
@@ -46,23 +47,11 @@ export function FamilyShell({
           }}
         />
         <aside className="sidebar">
-          <div className="brand">
-            <span className="brand-mark">PT</span>
-            <span className="brand-copy">
-              <strong>{APP_NAME}</strong>
-              <small>Family</small>
-            </span>
-            <button
-              type="button"
-              className="nav-collapse-toggle"
-              aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
-              title={collapsed ? "Expand navigation" : "Collapse navigation"}
-              aria-expanded={!collapsed}
-              onClick={toggleCollapsed}
-            >
-              <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
-            </button>
-          </div>
+          <SidebarBrand
+            collapsed={collapsed}
+            onToggleCollapsed={toggleCollapsed}
+            portalLabel="Family"
+          />
           <nav aria-label="Family navigation">
             {FAMILY_NAV.map((item) => {
               const active =

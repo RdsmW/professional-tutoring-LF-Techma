@@ -65,7 +65,7 @@ button { color: inherit; }
 
 .app-shell {
   display: grid;
-  grid-template-columns: 254px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100vh;
   transition: grid-template-columns 0.18s ease;
 }
@@ -75,7 +75,7 @@ button { color: inherit; }
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
-  width: 254px;
+  width: 280px;
   background: var(--navy);
   color: #fff;
   display: flex;
@@ -90,10 +90,10 @@ button { color: inherit; }
 }
 .brand {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
   align-items: center;
-  padding: 0 4px 20px;
+  padding: 0 2px 18px;
 }
 .app-shell.is-nav-collapsed .brand {
   grid-template-columns: 1fr;
@@ -101,16 +101,34 @@ button { color: inherit; }
   gap: 8px;
   padding-bottom: 14px;
 }
-.brand-mark {
-  display: grid; place-items: center; width: 42px; height: 42px;
-  border: 1px solid rgba(255,255,255,.26); color: #fff;
-  font-family: Georgia, serif; font-weight: 700; letter-spacing: -.04em;
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  display: block;
+  border-radius: 2px;
 }
 .brand-copy { min-width: 0; }
-.brand strong, .brand small { display: block; }
-.brand strong { font: 700 15px/1.15 Georgia, serif; }
-.brand small { color: #a9b8c9; font-size: 11px; margin-top: 4px; }
+.brand-wordmark,
+.brand strong {
+  display: block;
+  font: 700 12px/1.2 Georgia, "Times New Roman", serif;
+  letter-spacing: -0.015em;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brand small { color: #a9b8c9; font-size: 10px; margin-top: 3px; display: block; }
 .app-shell.is-nav-collapsed .brand-copy { display: none; }
+.app-shell.is-nav-collapsed .brand-lockup { justify-content: center; }
 .nav-collapse-toggle {
   width: 28px;
   height: 28px;
@@ -270,6 +288,58 @@ button { color: inherit; }
 .app-shell.is-nav-collapsed .nav-collapse-toggle {
   width: 100%;
 }
+
+/* Clerk UserButton — force portal chrome (appearance alone can be ignored by injected styles) */
+.pt-user-avatar {
+  width: 32px !important;
+  height: 32px !important;
+}
+.pt-user-popover,
+.cl-userButtonPopoverCard,
+.cl-userButton-popover,
+[class*="cl-userButtonPopoverCard"] {
+  border-radius: 2px !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--shadow) !important;
+  background: #fff !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+.pt-user-popover-footer,
+.cl-userButtonPopoverFooter {
+  background: #f5f6f3 !important;
+  border-top: 1px solid var(--line) !important;
+}
+.pt-user-popover-action,
+.cl-userButtonPopoverActionButton {
+  border-radius: 2px !important;
+}
+.pt-user-popover-action:hover,
+.cl-userButtonPopoverActionButton:hover {
+  background: var(--blue-soft) !important;
+}
+.pt-user-preview-name,
+.cl-userPreviewMainIdentifier {
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-weight: 700 !important;
+  color: var(--ink) !important;
+}
+.pt-user-preview-secondary,
+.cl-userPreviewSecondaryIdentifier {
+  color: var(--muted) !important;
+}
+.pt-user-root-staff .cl-userButtonPopoverActionButton:hover,
+.family-mode .pt-user-root-family .cl-userButtonPopoverActionButton:hover {
+  background: var(--coral-soft) !important;
+}
+.pt-user-root-staff .cl-buttonPrimary,
+.pt-user-root-staff button[data-variant="solid"] {
+  background: var(--coral) !important;
+}
+.family-mode .pt-user-root-family .cl-buttonPrimary,
+.family-mode .pt-user-root-family button[data-variant="solid"] {
+  background: #ca6d52 !important;
+}
+
 .prototype-badge {
   display: block; margin-top: 12px; padding: 7px 8px; background: rgba(233,109,94,.14);
   border: 1px solid rgba(233,109,94,.3); color: #ffc0b7; text-align: center;

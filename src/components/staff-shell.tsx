@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { AppIcon } from "@/components/app-icon";
 import { BootstrapSession } from "@/components/bootstrap-session";
-import { APP_NAME, STAFF_NAV } from "@/lib/constants";
+import { STAFF_NAV } from "@/lib/constants";
+import { SidebarBrand } from "@/components/sidebar-brand";
 import { staffUserButtonAppearance } from "@/lib/ui/clerk-appearance";
 import { isPlaceholderDisplayName, useNavCollapsed } from "@/lib/ui/nav-collapse";
 
@@ -50,22 +51,7 @@ export function StaffShell({
         }}
       />
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">PT</span>
-          <span className="brand-copy">
-            <strong>{APP_NAME}</strong>
-          </span>
-          <button
-            type="button"
-            className="nav-collapse-toggle"
-            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
-            title={collapsed ? "Expand navigation" : "Collapse navigation"}
-            aria-expanded={!collapsed}
-            onClick={toggleCollapsed}
-          >
-            <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
-          </button>
-        </div>
+        <SidebarBrand collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
         <nav aria-label="Staff navigation">
           {STAFF_NAV.map((item) => {
             const active =
