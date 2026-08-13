@@ -65,7 +65,7 @@ export type ReportResult = ReportDefinition & {
 };
 
 export type ReportCatalogItem = ReportDefinition & {
-  count: number;
+  count?: number | null;
 };
 
 export function isReportId(value: string): value is ReportId {

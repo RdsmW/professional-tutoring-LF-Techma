@@ -1,21 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
 import { StaffNewFamilyWizard } from "@/components/staff-new-family-wizard";
+import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 
-type FamilyRow = {
-  id: string;
-  displayName: string;
-  status: string;
-  studentCount: number;
-  guardianCount: number;
-};
-
-export function StaffFamiliesClient() {
-  const [families, setFamilies] = useState<FamilyRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export function StaffFamiliesClient({
+  initialFamilies = [],
+}: {
+  initialFamilies?: StaffFamilyListRow[];
+}) {
+  const [families, setFamilies] = useState<StaffFamilyListRow[]>(initialFamilies);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -36,10 +33,6 @@ export function StaffFamiliesClient() {
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
 
   if (creating) {
     return <StaffNewFamilyWizard onCancel={() => setCreating(false)} />;

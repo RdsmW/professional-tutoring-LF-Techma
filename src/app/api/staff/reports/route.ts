@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
     }
 
-    const catalog = await listReportCatalog();
+    const catalog = listReportCatalog();
     return NextResponse.json({ ok: true, ...catalog });
   } catch (error) {
     console.warn("[staff/reports] GET soft-fail", error);

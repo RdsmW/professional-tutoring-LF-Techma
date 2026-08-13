@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { requireDb } from "@/lib/db";
 import { guardians, households, students } from "@/lib/db/schema";
+import { listStaffFamilies } from "@/lib/staff/families";
 import { getStaffContext } from "@/lib/staff/session";
 
 type NewFamilyBody = {
@@ -38,22 +39,11 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
     }
 
-    const database = requireDb();
-    const rows = await database.select().from(households).orderBy(desc(households.updatedAt));
-    const studentRows = await database.select().from(students);
-    const guardianRows = await database.select().from(guardians);
+    const families = await listStaffFamilies();
 
     return NextResponse.json({
       ok: true,
-      families: rows.map((row) => ({
-        id: row.id,
-        displayName: row.displayName,
-        status: row.status,
-        primaryPhone: row.primaryPhone,
-        studentCount: studentRows.filter((s) => s.householdId === row.id).length,
-        guardianCount: guardianRows.filter((g) => g.householdId === row.id).length,
-        updatedAt: row.updatedAt.toISOString(),
-      })),
+      families,
     });
   } catch (error) {
     console.warn("[staff/families] GET soft-fail", error);
