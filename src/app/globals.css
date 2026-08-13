@@ -65,7 +65,7 @@ button { color: inherit; }
 
 .app-shell {
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   min-height: 100vh;
   transition: grid-template-columns 0.18s ease;
 }
@@ -75,7 +75,7 @@ button { color: inherit; }
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
-  width: 248px;
+  width: 220px;
   background: var(--navy);
   color: #fff;
   display: flex;
@@ -119,12 +119,12 @@ button { color: inherit; }
 .brand-wordmark,
 .brand strong {
   display: block;
-  font: 700 12px/1.2 Georgia, "Times New Roman", serif;
+  font: 700 12px/1.25 Georgia, "Times New Roman", serif;
   letter-spacing: -0.015em;
   color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
 }
 .brand small { color: #a9b8c9; font-size: 10px; margin-top: 3px; display: block; }
 .app-shell.is-nav-collapsed .brand-copy { display: none; }
@@ -166,7 +166,7 @@ button { color: inherit; }
   align-items: center;
   text-align: left;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -227,7 +227,7 @@ button { color: inherit; }
 .sidebar nav button {
   min-height: 34px; border: 0; background: transparent; color: #b8c4d1; border-radius: 4px;
   display: grid; grid-template-columns: 26px 1fr auto; align-items: center; text-align: left;
-  padding: 0 8px; cursor: pointer; font-size: 12px; font-weight: 600;
+  padding: 0 8px; cursor: pointer; font-size: 13px; font-weight: 600;
 }
 .sidebar nav button > span { font-size: 16px; color: #8ea3b9; }
 .sidebar nav button b {

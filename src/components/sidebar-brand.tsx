@@ -1,7 +1,5 @@
 import Image from "next/image";
 
-const WORDMARK = "rofessional Tutoring, LLC";
-
 export function SidebarBrand({
   collapsed,
   onToggleCollapsed,
@@ -23,7 +21,11 @@ export function SidebarBrand({
           priority
         />
         <span className="brand-copy">
-          <strong className="brand-wordmark">{WORDMARK}</strong>
+          <strong className="brand-wordmark">
+            rofessional
+            <br />
+            Tutoring, LLC
+          </strong>
           {portalLabel ? <small>{portalLabel}</small> : null}
         </span>
       </div>
