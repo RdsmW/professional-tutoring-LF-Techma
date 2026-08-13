@@ -1,23 +1,18 @@
 import { SignUp } from "@clerk/nextjs";
+import { AuthShell } from "@/components/auth-shell";
+import { authClerkAppearance } from "@/lib/ui/clerk-appearance";
 
 export default function SignUpPage() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "var(--canvas)",
-        padding: 24,
-      }}
-    >
+    <AuthShell title="Create account">
       <SignUp
         routing="path"
         path="/sign-up"
         signInUrl="/sign-in"
         fallbackRedirectUrl="/post-login"
         forceRedirectUrl="/post-login"
+        appearance={authClerkAppearance()}
       />
-    </main>
+    </AuthShell>
   );
 }

@@ -66,3 +66,34 @@ export function familyUserButtonAppearance(): ClerkAppearance {
     },
   };
 }
+
+/** Clerk SignIn / SignUp — website gold primary, minimal card chrome. */
+export function authClerkAppearance(): ClerkAppearance {
+  return {
+    variables: {
+      colorPrimary: "#E2A61C",
+      colorPrimaryForeground: "#ffffff",
+      colorBackground: "transparent",
+      colorForeground: "#2A2A2A",
+      colorMutedForeground: "#697486",
+      colorMuted: "#F4F4F4",
+      colorBorder: "#e3e6e2",
+      colorInput: "#ffffff",
+      colorInputForeground: "#2A2A2A",
+      colorNeutral: "#010345",
+      colorShadow: "transparent",
+      borderRadius: "4px",
+      fontFamily: '"PT Sans", Helvetica, Arial, sans-serif',
+      fontFamilyButtons: '"PT Sans", Helvetica, Arial, sans-serif',
+    },
+    elements: {
+      rootBox: "pt-auth-clerk-root",
+      card: "pt-auth-clerk-card",
+      headerTitle: "pt-auth-clerk-header-title",
+      headerSubtitle: "pt-auth-clerk-header-subtitle",
+      socialButtonsBlockButton: "pt-auth-clerk-social",
+      formButtonPrimary: "pt-auth-clerk-primary",
+      footerActionLink: "pt-auth-clerk-footer-link",
+    },
+  };
+}
