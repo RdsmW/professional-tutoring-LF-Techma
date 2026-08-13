@@ -28,8 +28,18 @@ export function useNavCollapsed(storageKey: string) {
   return { collapsed, toggleCollapsed };
 }
 
+const PLACEHOLDER_DISPLAY_NAMES = new Set([
+  "staff",
+  "staff member",
+  "family",
+  "parent",
+  "guardian",
+  "parent guardian",
+]);
+
 export function isPlaceholderDisplayName(name: string | null | undefined) {
   if (!name) return true;
   const trimmed = name.trim();
-  return trimmed === "" || trimmed === "Staff" || trimmed === "Family";
+  if (!trimmed) return true;
+  return PLACEHOLDER_DISPLAY_NAMES.has(trimmed.toLowerCase());
 }

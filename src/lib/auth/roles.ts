@@ -30,8 +30,10 @@ export async function ensureFamilyGuardian() {
     user.primaryEmailAddress?.emailAddress ??
     user.emailAddresses[0]?.emailAddress ??
     `${clerkUserId}@example.local`;
-  const firstName = user.firstName ?? "Parent";
-  const lastName = user.lastName ?? "Guardian";
+  const clerkFirst = user.firstName?.trim() || null;
+  const clerkLast = user.lastName?.trim() || null;
+  const firstName = clerkFirst || "Parent";
+  const lastName = clerkLast || "Guardian";
 
   const [existing] = await database
     .select()
@@ -39,7 +41,20 @@ export async function ensureFamilyGuardian() {
     .where(eq(guardians.clerkUserId, clerkUserId))
     .limit(1);
 
-  if (existing) return existing;
+  if (existing) {
+    const updates: Partial<typeof guardians.$inferInsert> = {};
+    if (clerkFirst && clerkFirst !== existing.firstName) updates.firstName = clerkFirst;
+    if (clerkLast && clerkLast !== existing.lastName) updates.lastName = clerkLast;
+    if (email && email !== existing.email) updates.email = email;
+    if (Object.keys(updates).length === 0) return existing;
+
+    const [updated] = await database
+      .update(guardians)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(guardians.id, existing.id))
+      .returning();
+    return updated ?? existing;
+  }
 
   const [household] = await database
     .insert(households)
@@ -80,7 +95,8 @@ export async function ensureStaffProfile() {
     user.primaryEmailAddress?.emailAddress ??
     user.emailAddresses[0]?.emailAddress ??
     `${clerkUserId}@example.local`;
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Staff Member";
+  const clerkFullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  const fullName = clerkFullName || "Staff Member";
 
   const [existing] = await database
     .select()
@@ -88,7 +104,19 @@ export async function ensureStaffProfile() {
     .where(eq(staffProfiles.clerkUserId, clerkUserId))
     .limit(1);
 
-  if (existing) return existing;
+  if (existing) {
+    const updates: Partial<typeof staffProfiles.$inferInsert> = {};
+    if (clerkFullName && clerkFullName !== existing.fullName) updates.fullName = clerkFullName;
+    if (email && email !== existing.email) updates.email = email;
+    if (Object.keys(updates).length === 0) return existing;
+
+    const [updated] = await database
+      .update(staffProfiles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(staffProfiles.id, existing.id))
+      .returning();
+    return updated ?? existing;
+  }
 
   const [created] = await database
     .insert(staffProfiles)

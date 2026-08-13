@@ -1,4 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { navPngSrc, prefersNavPng } from "@/lib/ui/nav-png-icons";
 
 export type IconName =
   | "dashboard"
@@ -20,7 +24,7 @@ export type IconName =
   | "search"
   | "bell";
 
-/** Stroke icons matched to the clickable mockup `Icon` component. */
+/** Stroke icons matched to the clickable mockup `Icon` component; PNG when present. */
 export function AppIcon({
   name,
   title,
@@ -31,6 +35,26 @@ export function AppIcon({
   size?: number;
 }) {
   const icon = (name in drawings ? name : "dashboard") as IconName;
+  const [pngFailed, setPngFailed] = useState(false);
+  const tryPng = prefersNavPng(icon) && !pngFailed;
+
+  if (tryPng) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- local public PNG allowlist
+      <img
+        className="app-icon-img"
+        src={navPngSrc(icon)}
+        width={size}
+        height={size}
+        alt=""
+        title={title}
+        aria-hidden={title ? undefined : true}
+        role={title ? "img" : undefined}
+        onError={() => setPngFailed(true)}
+      />
+    );
+  }
+
   const drawing = drawings[icon];
 
   return (
