@@ -1,5 +1,6 @@
-import { StaffSupportClient } from "@/components/staff-support-client";
+import { redirect } from "next/navigation";
 
+/** Support UI temporarily hidden; restore StaffSupportClient when re-enabled. */
 export default function StaffSupportPage() {
-  return <StaffSupportClient />;
+  redirect("/staff");
 }

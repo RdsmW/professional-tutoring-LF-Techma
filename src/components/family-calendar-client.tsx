@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { PageIntro } from "@/components/ui";
 import { useFamilyPortal } from "@/components/family-portal-context";
 import {
@@ -68,7 +68,6 @@ function dateBlock(item: CalendarItem) {
 }
 
 export function FamilyCalendarClient() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { householdName } = useFamilyPortal();
   const [mode, setMode] = useState<Mode>("list");
@@ -392,9 +391,6 @@ export function FamilyCalendarClient() {
                 }}
               >
                 Return to calendar
-              </button>
-              <button type="button" className="secondary-button" onClick={() => router.push("/family/messages")}>
-                Open support
               </button>
             </div>
           </div>

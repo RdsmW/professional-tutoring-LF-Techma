@@ -18,7 +18,7 @@ export const STAFF_NAV = [
   { href: "/staff/sessions", label: "Sessions", icon: "clock" },
   { href: "/staff/billing", label: "Billing", icon: "billing" },
   { href: "/staff/reports", label: "Reports", icon: "reports" },
-  { href: "/staff/support", label: "Support", icon: "message" },
+  // Support temporarily hidden from nav; /staff/support redirects to Dashboard.
   { href: "/staff/settings", label: "Settings", icon: "settings" },
 ] as const;
 
@@ -29,7 +29,7 @@ export const FAMILY_NAV = [
   { href: "/family/enroll-courses", label: "Enroll in Courses", icon: "course" },
   { href: "/family/calendar", label: "Calendar & Changes", icon: "calendar" },
   { href: "/family/payments", label: "Payments & Receipts", icon: "receipt" },
-  { href: "/family/messages", label: "Messages / Support", icon: "message" },
+  // Messages / Support temporarily hidden; /family/messages redirects to Home.
   { href: "/family/profile", label: "Profile", icon: "profile" },
 ] as const;
 

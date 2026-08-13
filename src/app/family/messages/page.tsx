@@ -1,5 +1,6 @@
-import { FamilyMessagesClient } from "@/components/family-messages-client";
+import { redirect } from "next/navigation";
 
+/** Messages / Support UI temporarily hidden; restore FamilyMessagesClient when re-enabled. */
 export default function FamilyMessagesPage() {
-  return <FamilyMessagesClient />;
+  redirect("/family");
 }
