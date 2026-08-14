@@ -89,6 +89,7 @@ export function authClerkAppearance(): ClerkAppearance {
     },
     elements: {
       rootBox: "pt-auth-clerk-root",
+      cardBox: "pt-auth-clerk-cardbox",
       card: "pt-auth-clerk-card",
       header: "pt-auth-clerk-header",
       headerTitle: "pt-auth-clerk-header-title",
