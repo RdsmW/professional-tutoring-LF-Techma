@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { StaffDirectoryFilters, StaffRowActions } from "@/components/staff-row-actions";
@@ -87,7 +88,14 @@ export function StaffGuardiansClient() {
 
   return (
     <>
-      <PageIntro title="Guardians" />
+      <PageIntro
+        title="Guardians"
+        action={
+          <Link href="/staff/families?newGuardian=1" className="primary-button" style={{ textDecoration: "none" }}>
+            + New Guardian
+          </Link>
+        }
+      />
       {error ? (
         <p className="form-error">
           {error}
@@ -126,10 +134,10 @@ export function StaffGuardiansClient() {
               ))}
             </select>
           </label>
-          <button type="submit" className="secondary-button" style={{ height: 36, alignSelf: "end" }}>
+          <button type="submit" className="filter-btn">
             Filter
           </button>
-          <button type="button" className="secondary-button" style={{ height: 36, alignSelf: "end" }} onClick={clearFilters}>
+          <button type="button" className="clear-btn" onClick={clearFilters}>
             Clear
           </button>
         </form>
@@ -146,7 +154,7 @@ export function StaffGuardiansClient() {
               <span>Email</span>
               <span>Family</span>
               <span className="staff-dir-col-status">Status</span>
-              <span className="staff-dir-col-actions">Actions</span>
+              <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
@@ -174,11 +182,12 @@ export function StaffGuardiansClient() {
                   </span>
                   <span className="staff-dir-col-actions">
                     <StaffRowActions
-                      label={`Actions for ${fullName}`}
+                      label="Row actions"
                       actions={[
                         {
                           id: "edit",
                           label: "Edit",
+                          tone: "edit",
                           onSelect: () =>
                             router.push(`/staff/families/${row.household.id}?guardianId=${row.id}`),
                         },

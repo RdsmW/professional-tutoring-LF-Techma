@@ -24,7 +24,7 @@ export function StaffReportsClient({
             <span>Saved report</span>
             <span>Summary</span>
             <span>Records</span>
-            <span className="staff-dir-col-actions">Actions</span>
+            <span className="staff-dir-col-actions" aria-label="Actions" />
           </div>
           {reports.map((report) => (
             <div key={report.id} className="staff-reports-row staff-reports-cols">

@@ -342,15 +342,10 @@ export function StaffFamiliesClient({
               ))}
             </select>
           </label>
-          <button type="submit" className="secondary-button" style={{ height: 36, alignSelf: "end" }}>
+          <button type="submit" className="filter-btn">
             Filter
           </button>
-          <button
-            type="button"
-            className="secondary-button"
-            style={{ height: 36, alignSelf: "end" }}
-            onClick={clearFilters}
-          >
+          <button type="button" className="clear-btn" onClick={clearFilters}>
             Clear
           </button>
         </form>
@@ -367,7 +362,7 @@ export function StaffFamiliesClient({
               <span>Students</span>
               <span>Guardians</span>
               <span className="staff-dir-col-status">Status</span>
-              <span className="staff-dir-col-actions">Actions</span>
+              <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {families.map((row) => (
               <div
@@ -391,7 +386,7 @@ export function StaffFamiliesClient({
                 </span>
                 <span className="staff-dir-col-actions">
                   <StaffRowActions
-                    label={`Actions for ${row.displayName}`}
+                    label="Row actions"
                     actions={lifecycleActions({
                       isArchived: row.status === "archived",
                       canDelete: Boolean(row.canDelete),

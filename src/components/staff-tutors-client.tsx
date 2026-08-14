@@ -283,15 +283,10 @@ export function StaffTutorsClient() {
               ))}
             </select>
           </label>
-          <button type="submit" className="secondary-button" style={{ height: 36, alignSelf: "end" }}>
+          <button type="submit" className="filter-btn">
             Filter
           </button>
-          <button
-            type="button"
-            className="secondary-button"
-            style={{ height: 36, alignSelf: "end" }}
-            onClick={clearFilters}
-          >
+          <button type="button" className="clear-btn" onClick={clearFilters}>
             Clear
           </button>
         </form>
@@ -307,7 +302,7 @@ export function StaffTutorsClient() {
               <span>Name</span>
               <span>Email</span>
               <span className="staff-dir-col-status">Status</span>
-              <span className="staff-dir-col-actions">Actions</span>
+              <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {tutors.map((row) => (
               <div
@@ -332,7 +327,7 @@ export function StaffTutorsClient() {
                 </span>
                 <span className="staff-dir-col-actions">
                   <StaffRowActions
-                    label={`Actions for ${row.displayName}`}
+                    label="Row actions"
                     actions={lifecycleActions({
                       isArchived: !row.active,
                       canDelete: Boolean(row.canDelete),

@@ -122,6 +122,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteEditDraft, setNoteEditDraft] = useState("");
+  const [savingNoteEdit, setSavingNoteEdit] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [editingHousehold, setEditingHousehold] = useState(false);
   const [householdForm, setHouseholdForm] = useState<HouseholdEdit | null>(null);
@@ -130,6 +133,21 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [guardianForm, setGuardianForm] = useState<GuardianRow | null>(null);
   const [savingGuardian, setSavingGuardian] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
+
+  const softReload = useCallback(async () => {
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${familyId}`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to load family.");
+        return;
+      }
+      setFamily(data.family);
+    } catch {
+      setError("Unable to load family.");
+    }
+  }, [familyId]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -148,6 +166,18 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       setLoading(false);
     }
   }, [familyId]);
+
+  useEffect(() => {
+    if (!editingGuardianId) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setEditingGuardianId(null);
+        setGuardianForm(null);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [editingGuardianId]);
 
   useEffect(() => {
     void reload();
@@ -179,7 +209,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         return;
       }
       setInviteMessage(`Invite link: ${window.location.origin}${data.invitePath}`);
-      await reload();
+      await softReload();
     } catch {
       setError("Unable to refresh invite.");
     }
@@ -198,17 +228,71 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         body: JSON.stringify({ body: noteDraft }),
       });
       const data = await response.json();
-      if (!response.ok || !data.ok) {
+      if (!response.ok || !data.ok || !data.note) {
         setError(data.error || "Unable to add note.");
         return;
       }
+      const nextNote = data.note as NoteRow;
+      setFamily((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: [nextNote, ...prev.notes],
+            }
+          : prev,
+      );
       setNoteDraft("");
       setSavedMessage("Note added.");
-      await reload();
     } catch {
       setError("Unable to add note.");
     } finally {
       setSavingNotes(false);
+    }
+  }
+
+  function startEditNote(note: NoteRow) {
+    setEditingNoteId(note.id);
+    setNoteEditDraft(note.body);
+    setError(null);
+  }
+
+  function cancelEditNote() {
+    setEditingNoteId(null);
+    setNoteEditDraft("");
+  }
+
+  async function saveNoteEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editingNoteId || !noteEditDraft.trim() || savingNoteEdit) return;
+    setSavingNoteEdit(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${familyId}/notes/${editingNoteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: noteEditDraft }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok || !data.note) {
+        setError(data.error || "Unable to update note.");
+        return;
+      }
+      const nextNote = data.note as NoteRow;
+      setFamily((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: prev.notes.map((note) => (note.id === nextNote.id ? nextNote : note)),
+            }
+          : prev,
+      );
+      setEditingNoteId(null);
+      setNoteEditDraft("");
+      setSavedMessage("Note updated.");
+    } catch {
+      setError("Unable to update note.");
+    } finally {
+      setSavingNoteEdit(false);
     }
   }
 
@@ -281,7 +365,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       }
       setEditingHousehold(false);
       setSavedMessage("Household updated.");
-      await reload();
+      await softReload();
     } catch {
       setError("Unable to save household.");
     } finally {
@@ -293,6 +377,12 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     setGuardianForm({ ...guardian });
     setEditingGuardianId(guardian.id);
     setSavedMessage(null);
+    setError(null);
+  }
+
+  function closeGuardianEdit() {
+    setEditingGuardianId(null);
+    setGuardianForm(null);
   }
 
   async function saveGuardian(event: React.FormEvent) {
@@ -331,10 +421,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         setError(data.error || "Unable to save guardian.");
         return;
       }
-      setEditingGuardianId(null);
-      setGuardianForm(null);
+      closeGuardianEdit();
       setSavedMessage("Guardian updated.");
-      await reload();
+      await softReload();
     } catch {
       setError("Unable to save guardian.");
     } finally {
@@ -358,7 +447,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         return;
       }
       setSavedMessage(status === "archived" ? "Family archived." : "Family restored.");
-      await reload();
+      await softReload();
     } catch {
       setError("Unable to update status.");
     } finally {
@@ -414,13 +503,13 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           ← Families
         </Link>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" className="primary-button" onClick={openHouseholdEdit}>
+          <button type="button" className="action-btn action-btn-edit" onClick={openHouseholdEdit}>
             Edit
           </button>
           {isArchived ? (
             <button
               type="button"
-              className="secondary-button"
+              className="action-btn action-btn-restore"
               disabled={lifecycleBusy}
               onClick={() => void setStatus("active")}
             >
@@ -429,7 +518,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           ) : family.canDelete ? (
             <button
               type="button"
-              className="danger-button"
+              className="action-btn action-btn-delete"
               disabled={lifecycleBusy}
               onClick={() => void deleteFamily()}
             >
@@ -438,7 +527,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           ) : (
             <button
               type="button"
-              className="secondary-button"
+              className="action-btn action-btn-archive"
               disabled={lifecycleBusy}
               onClick={() => void setStatus("archived")}
             >
@@ -635,93 +724,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               );
             })}
           </div>
-
-          {editingGuardianId && guardianForm ? (
-            <form
-              onSubmit={saveGuardian}
-              className="input-grid"
-              style={{ marginTop: 14, gap: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}
-            >
-              <label>
-                First name
-                <input
-                  value={guardianForm.firstName}
-                  onChange={(e) => setGuardianForm({ ...guardianForm, firstName: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Last name
-                <input
-                  value={guardianForm.lastName}
-                  onChange={(e) => setGuardianForm({ ...guardianForm, lastName: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Email
-                <input
-                  type="email"
-                  value={guardianForm.email}
-                  onChange={(e) => setGuardianForm({ ...guardianForm, email: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Phone
-                <input
-                  type="tel"
-                  value={guardianForm.phone || ""}
-                  onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
-                />
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={guardianForm.isBillingOwner}
-                  onChange={(e) =>
-                    setGuardianForm({ ...guardianForm, isBillingOwner: e.target.checked })
-                  }
-                />
-                Billing owner
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={guardianForm.canManageStudents}
-                  onChange={(e) =>
-                    setGuardianForm({ ...guardianForm, canManageStudents: e.target.checked })
-                  }
-                />
-                Can manage students
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={guardianForm.canRequestServices}
-                  onChange={(e) =>
-                    setGuardianForm({ ...guardianForm, canRequestServices: e.target.checked })
-                  }
-                />
-                Can request services
-              </label>
-              <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
-                <button type="submit" className="primary-button" disabled={savingGuardian}>
-                  {savingGuardian ? "Saving…" : "Save guardian"}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => {
-                    setEditingGuardianId(null);
-                    setGuardianForm(null);
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : null}
         </Panel>
       </div>
 
@@ -804,59 +806,200 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </Panel>
       </div>
 
-      <Panel title="Staff notes">
-        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 10 }}>
-          Append-only internal notes. Not visible in the family portal.
-        </p>
-        {family.notes.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 14 }}>No notes yet.</p>
-        ) : (
-          <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
-            {family.notes.map((note) => (
-              <article
-                key={note.id}
+      <div className="family-notes-layout">
+        <Panel title="Add note">
+          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 10 }}>
+            Internal notes only. Not visible in the family portal.
+          </p>
+          <form onSubmit={addNote}>
+            <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--muted)" }}>
+              Note
+              <textarea
+                value={noteDraft}
+                onChange={(event) => setNoteDraft(event.target.value)}
+                rows={4}
                 style={{
-                  borderTop: "1px solid var(--line)",
-                  paddingTop: 10,
+                  display: "block",
+                  width: "100%",
+                  marginTop: 6,
+                  border: "1px solid var(--line)",
+                  background: "#fbfcfa",
+                  padding: 11,
+                  fontSize: 14,
+                  fontFamily: "inherit",
                 }}
-              >
-                <small style={{ color: "var(--muted)", fontSize: 14, fontWeight: 700 }}>
-                  {note.authorDisplayName} · {formatWhen(note.createdAt)}
-                </small>
-                <p style={{ margin: "4px 0 0", fontSize: 14, whiteSpace: "pre-wrap" }}>{note.body}</p>
-              </article>
-            ))}
-          </div>
-        )}
-        <form onSubmit={addNote}>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--muted)" }}>
-            Add note
-            <textarea
-              value={noteDraft}
-              onChange={(event) => setNoteDraft(event.target.value)}
-              rows={4}
-              style={{
-                display: "block",
-                width: "100%",
-                marginTop: 6,
-                border: "1px solid var(--line)",
-                background: "#fbfcfa",
-                padding: 11,
-                fontSize: 14,
-                fontFamily: "inherit",
-              }}
-            />
-          </label>
-          <button
-            type="submit"
-            className="secondary-button"
-            style={{ marginTop: 10 }}
-            disabled={savingNotes || !noteDraft.trim()}
+              />
+            </label>
+            <button
+              type="submit"
+              className="primary-button"
+              style={{ marginTop: 10 }}
+              disabled={savingNotes || !noteDraft.trim()}
+            >
+              {savingNotes ? "Adding…" : "Add note"}
+            </button>
+          </form>
+        </Panel>
+
+        <Panel title="Notes">
+          {family.notes.length === 0 ? (
+            <p style={{ color: "var(--muted)", fontSize: 14 }}>No notes yet.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className="family-notes-table">
+                <thead>
+                  <tr>
+                    <th className="family-notes-col-content">Content</th>
+                    <th className="family-notes-col-who">Who</th>
+                    <th className="family-notes-col-when">When</th>
+                    <th className="family-notes-col-edit">Edit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {family.notes.map((note) => (
+                    <tr key={note.id}>
+                      <td className="family-notes-col-content">
+                        {editingNoteId === note.id ? (
+                          <form className="family-notes-edit-inline" onSubmit={saveNoteEdit}>
+                            <textarea
+                              value={noteEditDraft}
+                              onChange={(event) => setNoteEditDraft(event.target.value)}
+                              rows={3}
+                            />
+                            <div className="family-notes-edit-actions">
+                              <button type="submit" className="primary-button" disabled={savingNoteEdit || !noteEditDraft.trim()}>
+                                {savingNoteEdit ? "Saving…" : "Save"}
+                              </button>
+                              <button type="button" className="secondary-button" onClick={cancelEditNote}>
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <span style={{ whiteSpace: "pre-wrap" }}>{note.body}</span>
+                        )}
+                      </td>
+                      <td className="family-notes-col-who">{note.authorDisplayName}</td>
+                      <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
+                      <td className="family-notes-col-edit">
+                        {editingNoteId === note.id ? null : (
+                          <button
+                            type="button"
+                            className="action-btn action-btn-edit"
+                            style={{ padding: "8px 12px" }}
+                            onClick={() => startEditNote(note)}
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      {editingGuardianId && guardianForm ? (
+        <div
+          className="staff-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeGuardianEdit();
+          }}
+        >
+          <div
+            className="staff-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guardian-edit-title"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") closeGuardianEdit();
+            }}
           >
-            {savingNotes ? "Adding…" : "Add note"}
-          </button>
-        </form>
-      </Panel>
+            <h3 id="guardian-edit-title">
+              Edit guardian · {guardianForm.firstName} {guardianForm.lastName}
+            </h3>
+            <form onSubmit={saveGuardian} className="input-grid" style={{ gap: 12 }}>
+              <label>
+                First name
+                <input
+                  value={guardianForm.firstName}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, firstName: e.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                Last name
+                <input
+                  value={guardianForm.lastName}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, lastName: e.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={guardianForm.email}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, email: e.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                Phone
+                <input
+                  type="tel"
+                  value={guardianForm.phone || ""}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
+                />
+              </label>
+              <div className="guardian-perm-row">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={guardianForm.isBillingOwner}
+                    onChange={(e) =>
+                      setGuardianForm({ ...guardianForm, isBillingOwner: e.target.checked })
+                    }
+                  />
+                  Billing owner
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={guardianForm.canManageStudents}
+                    onChange={(e) =>
+                      setGuardianForm({ ...guardianForm, canManageStudents: e.target.checked })
+                    }
+                  />
+                  Can manage students
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={guardianForm.canRequestServices}
+                    onChange={(e) =>
+                      setGuardianForm({ ...guardianForm, canRequestServices: e.target.checked })
+                    }
+                  />
+                  Can request services
+                </label>
+              </div>
+              <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
+                <button type="submit" className="primary-button" disabled={savingGuardian}>
+                  {savingGuardian ? "Saving…" : "Save guardian"}
+                </button>
+                <button type="button" className="secondary-button" onClick={closeGuardianEdit}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

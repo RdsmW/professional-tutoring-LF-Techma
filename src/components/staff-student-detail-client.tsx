@@ -280,13 +280,13 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           ← Students
         </Link>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" className="primary-button" onClick={openEdit}>
+          <button type="button" className="action-btn action-btn-edit" onClick={openEdit}>
             Edit
           </button>
           {isArchived ? (
             <button
               type="button"
-              className="secondary-button"
+              className="action-btn action-btn-restore"
               disabled={lifecycleBusy}
               onClick={() => void setLifecycleStatus("active")}
             >
@@ -295,7 +295,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           ) : student.canDelete ? (
             <button
               type="button"
-              className="danger-button"
+              className="action-btn action-btn-delete"
               disabled={lifecycleBusy}
               onClick={() => void deleteStudent()}
             >
@@ -304,7 +304,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           ) : (
             <button
               type="button"
-              className="secondary-button"
+              className="action-btn action-btn-archive"
               disabled={lifecycleBusy}
               onClick={() => void setLifecycleStatus("archived")}
             >

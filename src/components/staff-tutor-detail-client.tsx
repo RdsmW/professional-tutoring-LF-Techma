@@ -239,7 +239,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             type="button"
-            className="primary-button"
+            className="action-btn action-btn-edit"
             onClick={() => {
               setProfileForm({
                 displayName: tutor.displayName,
@@ -256,7 +256,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           {!tutor.active ? (
             <button
               type="button"
-              className="secondary-button"
+              className="action-btn action-btn-restore"
               disabled={togglingActive}
               onClick={() => void patchTutor({ active: true }, "active")}
             >
@@ -265,7 +265,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           ) : tutor.canDelete ? (
             <button
               type="button"
-              className="danger-button"
+              className="action-btn action-btn-delete"
               disabled={togglingActive}
               onClick={() => void deleteTutor()}
             >
@@ -274,7 +274,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           ) : (
             <button
               type="button"
-              className="secondary-button"
+              className="action-btn action-btn-archive"
               disabled={togglingActive}
               onClick={() => void patchTutor({ active: false }, "active")}
             >

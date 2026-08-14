@@ -2,24 +2,41 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
+export type StaffRowActionTone = "edit" | "restore" | "archive" | "danger" | "default";
+
 export type StaffRowAction = {
   id: string;
   label: string;
   onSelect: () => void;
-  tone?: "default" | "danger";
+  tone?: StaffRowActionTone;
   disabled?: boolean;
 };
 
 type StaffRowActionsProps = {
-  label: string;
+  label?: string;
   actions: StaffRowAction[];
 };
 
+function toneClass(tone: StaffRowActionTone | undefined) {
+  switch (tone) {
+    case "edit":
+      return "staff-row-actions-item staff-row-actions-item-edit";
+    case "restore":
+      return "staff-row-actions-item staff-row-actions-item-restore";
+    case "archive":
+      return "staff-row-actions-item staff-row-actions-item-archive";
+    case "danger":
+      return "staff-row-actions-item staff-row-actions-item-danger";
+    default:
+      return "staff-row-actions-item";
+  }
+}
+
 /**
- * Lightweight ⋯ menu for directory rows.
+ * Lightweight vertical ⋮ menu for directory rows.
  * Escape / outside click close; focus returns to the trigger.
  */
-export function StaffRowActions({ label, actions }: StaffRowActionsProps) {
+export function StaffRowActions({ label = "Row actions", actions }: StaffRowActionsProps) {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -75,6 +92,7 @@ export function StaffRowActions({ label, actions }: StaffRowActionsProps) {
         type="button"
         className="staff-row-actions-trigger"
         aria-label={label}
+        title="Actions"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -85,7 +103,9 @@ export function StaffRowActions({ label, actions }: StaffRowActionsProps) {
         }}
         onKeyDown={onTriggerKeyDown}
       >
-        ⋯
+        <span className="staff-row-actions-kebab" aria-hidden="true">
+          ⋮
+        </span>
       </button>
       {open ? (
         <div id={menuId} className="staff-row-actions-menu" role="menu">
@@ -94,11 +114,7 @@ export function StaffRowActions({ label, actions }: StaffRowActionsProps) {
               key={action.id}
               type="button"
               role="menuitem"
-              className={
-                action.tone === "danger"
-                  ? "staff-row-actions-item staff-row-actions-item-danger"
-                  : "staff-row-actions-item"
-              }
+              className={toneClass(action.tone)}
               disabled={action.disabled}
               onClick={(event) => {
                 event.preventDefault();
@@ -127,10 +143,16 @@ export function lifecycleActions(options: {
 }): StaffRowAction[] {
   const { isArchived, canDelete, onEdit, onArchive, onRestore, onDelete, busy } = options;
   const actions: StaffRowAction[] = [
-    { id: "edit", label: "Edit", onSelect: onEdit, disabled: busy },
+    { id: "edit", label: "Edit", onSelect: onEdit, tone: "edit", disabled: busy },
   ];
   if (isArchived) {
-    actions.push({ id: "restore", label: "Restore", onSelect: onRestore, disabled: busy });
+    actions.push({
+      id: "restore",
+      label: "Restore",
+      onSelect: onRestore,
+      tone: "restore",
+      disabled: busy,
+    });
   } else if (canDelete) {
     actions.push({
       id: "delete",
@@ -140,7 +162,13 @@ export function lifecycleActions(options: {
       disabled: busy,
     });
   } else {
-    actions.push({ id: "archive", label: "Archive", onSelect: onArchive, disabled: busy });
+    actions.push({
+      id: "archive",
+      label: "Archive",
+      onSelect: onArchive,
+      tone: "archive",
+      disabled: busy,
+    });
   }
   return actions;
 }
