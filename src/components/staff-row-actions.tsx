@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 
 export type StaffRowActionTone = "edit" | "restore" | "archive" | "danger" | "default";
 
@@ -15,6 +25,11 @@ export type StaffRowAction = {
 type StaffRowActionsProps = {
   label?: string;
   actions: StaffRowAction[];
+};
+
+type MenuPosition = {
+  top: number;
+  left: number;
 };
 
 function toneClass(tone: StaffRowActionTone | undefined) {
@@ -34,21 +49,71 @@ function toneClass(tone: StaffRowActionTone | undefined) {
 
 /**
  * Lightweight vertical ⋮ menu for directory rows.
+ * Menu portals to document.body (fixed) so table overflow cannot clip it.
  * Escape / outside click close; focus returns to the trigger.
  */
 export function StaffRowActions({ label = "Row actions", actions }: StaffRowActionsProps) {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState<MenuPosition | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPosition(null);
+      return;
+    }
+
+    function placeMenu() {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const menu = menuRef.current;
+      const gap = 4;
+      const pad = 8;
+      const menuHeight = menu?.offsetHeight ?? Math.max(44, actions.length * 42 + 14);
+      const menuWidth = menu?.offsetWidth ?? 148;
+      const spaceBelow = window.innerHeight - rect.bottom - gap;
+      const spaceAbove = rect.top - gap;
+      const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+      let top = openUp ? rect.top - gap - menuHeight : rect.bottom + gap;
+      top = Math.max(pad, Math.min(top, window.innerHeight - menuHeight - pad));
+
+      let left = rect.right - menuWidth;
+      left = Math.max(pad, Math.min(left, window.innerWidth - menuWidth - pad));
+
+      setPosition({ top, left });
+    }
+
+    placeMenu();
+    const frame = window.requestAnimationFrame(placeMenu);
+
+    window.addEventListener("resize", placeMenu);
+    // Capture scroll from nested overflow containers (table panels, content).
+    window.addEventListener("scroll", placeMenu, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+    };
+  }, [open, actions.length]);
 
   useEffect(() => {
     if (!open) return;
 
     function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
     }
 
     function onKeyDown(event: globalThis.KeyboardEvent) {
@@ -85,6 +150,41 @@ export function StaffRowActions({ label = "Row actions", actions }: StaffRowActi
     action.onSelect();
   }
 
+  const menuStyle: CSSProperties | undefined = position
+    ? { top: position.top, left: position.left }
+    : { top: -9999, left: -9999, visibility: "hidden" };
+
+  const menu =
+    open && mounted
+      ? createPortal(
+          <div
+            ref={menuRef}
+            id={menuId}
+            className="staff-row-actions-menu staff-row-actions-menu-portal"
+            role="menu"
+            style={menuStyle}
+          >
+            {actions.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                role="menuitem"
+                className={toneClass(action.tone)}
+                disabled={action.disabled}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  runAction(action);
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className="staff-row-actions" ref={rootRef} onClick={(event) => event.stopPropagation()}>
       <button
@@ -107,26 +207,7 @@ export function StaffRowActions({ label = "Row actions", actions }: StaffRowActi
           ⋮
         </span>
       </button>
-      {open ? (
-        <div id={menuId} className="staff-row-actions-menu" role="menu">
-          {actions.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              role="menuitem"
-              className={toneClass(action.tone)}
-              disabled={action.disabled}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                runAction(action);
-              }}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {menu}
     </div>
   );
 }

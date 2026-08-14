@@ -50,7 +50,6 @@ export function FamilyShell({
           <SidebarBrand
             collapsed={collapsed}
             onToggleCollapsed={toggleCollapsed}
-            portalLabel="Family"
           />
           <nav aria-label="Family navigation">
             {FAMILY_NAV.map((item) => {
@@ -99,7 +98,7 @@ export function FamilyShell({
               <UserButton appearance={familyUserButtonAppearance()} />
               <span className="person-copy">
                 <strong title={fullName ?? undefined}>{fullName ?? "Signed in"}</strong>
-                <small>Account</small>
+                <small title={householdName ?? undefined}>{householdName || "Household"}</small>
               </span>
             </div>
           </div>
