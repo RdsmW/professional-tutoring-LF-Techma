@@ -122,6 +122,30 @@ export async function GET(
       Number(bookingCount?.value ?? 0) === 0 &&
       Number(enrollmentCount?.value ?? 0) === 0;
 
+    const studentIds = studentRows.map((s) => s.id);
+    const studentBookingCounts =
+      studentIds.length > 0
+        ? await database
+            .select({ studentId: bookings.studentId, value: count() })
+            .from(bookings)
+            .where(inArray(bookings.studentId, studentIds))
+            .groupBy(bookings.studentId)
+        : [];
+    const studentEnrollmentCounts =
+      studentIds.length > 0
+        ? await database
+            .select({ studentId: courseEnrollments.studentId, value: count() })
+            .from(courseEnrollments)
+            .where(inArray(courseEnrollments.studentId, studentIds))
+            .groupBy(courseEnrollments.studentId)
+        : [];
+    const bookingCountByStudent = new Map(
+      studentBookingCounts.map((row) => [row.studentId, Number(row.value ?? 0)]),
+    );
+    const enrollmentCountByStudent = new Map(
+      studentEnrollmentCounts.map((row) => [row.studentId, Number(row.value ?? 0)]),
+    );
+
     return NextResponse.json({
       ok: true,
       family: {
@@ -167,6 +191,9 @@ export async function GET(
           gradeLabel: s.gradeLabel,
           schoolName: s.schoolName,
           lifecycle: s.lifecycle,
+          canDelete:
+            (bookingCountByStudent.get(s.id) ?? 0) === 0 &&
+            (enrollmentCountByStudent.get(s.id) ?? 0) === 0,
         })),
         activity: {
           bookings: bookingRows.map((row) => ({

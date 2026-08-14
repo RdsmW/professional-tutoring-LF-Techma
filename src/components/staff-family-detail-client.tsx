@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Panel } from "@/components/ui";
+import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -28,6 +29,15 @@ type GuardianRow = {
   linked: boolean;
 };
 
+type StudentRow = {
+  id: string;
+  displayName: string;
+  gradeLabel: string | null;
+  schoolName: string | null;
+  lifecycle: string;
+  canDelete: boolean;
+};
+
 type FamilyDetail = {
   id: string;
   displayName: string;
@@ -46,13 +56,7 @@ type FamilyDetail = {
   canDelete: boolean;
   notes: NoteRow[];
   guardians: GuardianRow[];
-  students: Array<{
-    id: string;
-    displayName: string;
-    gradeLabel: string | null;
-    schoolName: string | null;
-    lifecycle: string;
-  }>;
+  students: StudentRow[];
   activity: {
     bookings: Array<{
       id: string;
@@ -107,6 +111,16 @@ function formatDate(value: string) {
   } catch {
     return "—";
   }
+}
+
+function guardianLinkLabel(g: GuardianRow) {
+  if (g.linked) return "Linked";
+  if (g.invitePending) return "Invite pending";
+  return "Unlinked";
+}
+
+function yesNo(value: boolean) {
+  return value ? "Yes" : "No";
 }
 
 const PREVIEW_LIMIT = 3;
@@ -170,8 +184,8 @@ function FamilyListModal({
       >
         <div className="family-list-modal-header">
           <h3 id="family-list-modal-title">{title}</h3>
-          <button type="button" className="secondary-button" onClick={onClose}>
-            Close
+          <button type="button" className="staff-modal-close" aria-label="Close" onClick={onClose}>
+            ×
           </button>
         </div>
         <div className="family-list-modal-body">{children}</div>
@@ -204,6 +218,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [guardianForm, setGuardianForm] = useState<GuardianRow | null>(null);
   const [savingGuardian, setSavingGuardian] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  const [studentBusyId, setStudentBusyId] = useState<string | null>(null);
   const [listModal, setListModal] = useState<FamilyListModalKind | null>(null);
 
   const softReload = useCallback(async () => {
@@ -548,6 +563,51 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     }
   }
 
+  async function setStudentLifecycle(studentId: string, nextLifecycle: string) {
+    if (studentBusyId) return;
+    setStudentBusyId(studentId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/students/${studentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lifecycle: nextLifecycle }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update student.");
+        return;
+      }
+      setSavedMessage(nextLifecycle === "archived" ? "Student archived." : "Student restored.");
+      await softReload();
+    } catch {
+      setError("Unable to update student.");
+    } finally {
+      setStudentBusyId(null);
+    }
+  }
+
+  async function deleteStudent(studentId: string) {
+    if (studentBusyId) return;
+    if (!window.confirm("Permanently delete this student? This cannot be undone.")) return;
+    setStudentBusyId(studentId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/students/${studentId}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to delete student.");
+        return;
+      }
+      setSavedMessage("Student deleted.");
+      await softReload();
+    } catch {
+      setError("Unable to delete student.");
+    } finally {
+      setStudentBusyId(null);
+    }
+  }
+
   if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading family…</p>;
   if (error && !family) return <p className="form-error">{error}</p>;
   if (!family) return null;
@@ -566,70 +626,103 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const previewBookings = family.activity.bookings.slice(0, PREVIEW_LIMIT);
   const previewNotes = family.notes.slice(0, PREVIEW_LIMIT);
 
-  function renderGuardianArticle(g: GuardianRow) {
-    const perms = [
-      g.linked ? "Own login" : g.invitePending ? "Invite pending" : "Not linked",
-      g.isBillingOwner ? "Billing owner" : "No billing",
-      g.canManageStudents ? "Manage students" : null,
-      g.canRequestServices ? "Request services" : null,
-    ].filter(Boolean);
+  const householdActions = lifecycleActions({
+    isArchived,
+    canDelete: family.canDelete,
+    busy: lifecycleBusy,
+    onEdit: openHouseholdEdit,
+    onArchive: () => void setStatus("archived"),
+    onRestore: () => void setStatus("active"),
+    onDelete: () => void deleteFamily(),
+  }).map((action) =>
+    action.id === "edit" ? { ...action, label: "Edit household" } : action,
+  );
+
+  function guardianActions(g: GuardianRow): StaffRowAction[] {
+    const actions: StaffRowAction[] = [
+      {
+        id: "edit",
+        label: "Edit",
+        tone: "edit",
+        onSelect: () => openGuardianEdit(g),
+      },
+    ];
+    if (!g.linked) {
+      actions.push({
+        id: "invite",
+        label: g.invitePath ? "Regenerate invite" : "Create invite",
+        onSelect: () => void refreshInvite(g.id),
+      });
+    }
+    return actions;
+  }
+
+  function renderGuardiansTable(rows: GuardianRow[]) {
     return (
-      <article key={g.id}>
-        <span className="mini-avatar">{initials(`${g.firstName} ${g.lastName}`)}</span>
-        <span>
-          <strong>
-            {g.firstName} {g.lastName}
-          </strong>
-          <small>
-            {g.email}
-            {g.phone ? ` · ${g.phone}` : ""}
-            <br />
-            {perms.join(" · ")}
-          </small>
-          <span style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="text-button"
-              style={{ padding: 0 }}
-              onClick={() => openGuardianEdit(g)}
-            >
-              Edit
-            </button>
-            {!g.linked ? (
-              <button
-                type="button"
-                className="text-button"
-                style={{ padding: 0 }}
-                onClick={() => void refreshInvite(g.id)}
-              >
-                {g.invitePath ? "Regenerate invite" : "Create invite"}
-              </button>
-            ) : null}
-          </span>
-        </span>
-        <span
-          className={`pill ${statusTone(g.linked ? "active" : g.invitePending ? "invite_pending" : "unlinked")}`}
-        >
-          {formatStatusLabel(g.linked ? "active" : g.invitePending ? "invite_pending" : "unlinked")}
-        </span>
-      </article>
+      <div className="table-panel staff-dir-table family-detail-table">
+        <div className="table-head family-detail-cols-guardians">
+          <span>Name</span>
+          <span>Email</span>
+          <span className="family-detail-col-flag">Billing owner</span>
+          <span className="family-detail-col-flag">Manage students</span>
+          <span className="family-detail-col-flag">Request services</span>
+          <span className="staff-dir-col-actions" aria-label="Actions" />
+        </div>
+        {rows.map((g) => (
+          <div key={g.id} className="table-row family-detail-cols-guardians family-detail-table-row">
+            <span>
+              <strong>
+                {g.firstName} {g.lastName}
+              </strong>
+              <small className="family-guardian-link-status">{guardianLinkLabel(g)}</small>
+            </span>
+            <span>{g.email}</span>
+            <span className="family-detail-col-flag">{yesNo(g.isBillingOwner)}</span>
+            <span className="family-detail-col-flag">{yesNo(g.canManageStudents)}</span>
+            <span className="family-detail-col-flag">{yesNo(g.canRequestServices)}</span>
+            <span className="staff-dir-col-actions">
+              <StaffRowActions label="Guardian actions" actions={guardianActions(g)} />
+            </span>
+          </div>
+        ))}
+      </div>
     );
   }
 
-  function renderStudentRow(s: FamilyDetail["students"][number]) {
+  function renderStudentsTable(rows: StudentRow[]) {
     return (
-      <div key={s.id} className="staff-detail-list-row">
-        <span className="mini-avatar">{initials(s.displayName)}</span>
-        <span>
-          <strong>{s.displayName}</strong>
-          <small>
-            {s.gradeLabel || "Grade pending"} · {s.schoolName || "School pending"} ·{" "}
-            {formatStatusLabel(s.lifecycle)}
-          </small>
-        </span>
-        <Link href={`/staff/students/${s.id}`} className="secondary-button staff-open-control">
-          Open
-        </Link>
+      <div className="table-panel staff-dir-table family-detail-table">
+        <div className="table-head family-detail-cols-students">
+          <span>Name</span>
+          <span>Grade</span>
+          <span>School</span>
+          <span className="staff-dir-col-status">Status</span>
+          <span className="staff-dir-col-actions" aria-label="Actions" />
+        </div>
+        {rows.map((s) => (
+          <div key={s.id} className="table-row family-detail-cols-students family-detail-table-row">
+            <strong>{s.displayName}</strong>
+            <span>{s.gradeLabel || "—"}</span>
+            <span>{s.schoolName || "—"}</span>
+            <span className="staff-dir-col-status">
+              <span className={`pill ${statusTone(s.lifecycle)}`}>{formatStatusLabel(s.lifecycle)}</span>
+            </span>
+            <span className="staff-dir-col-actions">
+              <StaffRowActions
+                label="Student actions"
+                actions={lifecycleActions({
+                  isArchived: s.lifecycle === "archived",
+                  canDelete: Boolean(s.canDelete),
+                  busy: studentBusyId === s.id,
+                  onEdit: () => router.push(`/staff/students/${s.id}?edit=1`),
+                  onArchive: () => void setStudentLifecycle(s.id, "archived"),
+                  onRestore: () => void setStudentLifecycle(s.id, "active"),
+                  onDelete: () => void deleteStudent(s.id),
+                })}
+              />
+            </span>
+          </div>
+        ))}
       </div>
     );
   }
@@ -740,52 +833,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-          marginBottom: 12,
-        }}
-      >
+      <div className="family-detail-topbar">
         <Link href="/staff/families" className="page-back">
           ← Families
         </Link>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" className="action-btn action-btn-edit" onClick={openHouseholdEdit}>
-            Edit
-          </button>
-          {isArchived ? (
-            <button
-              type="button"
-              className="action-btn action-btn-restore"
-              disabled={lifecycleBusy}
-              onClick={() => void setStatus("active")}
-            >
-              Restore
-            </button>
-          ) : family.canDelete ? (
-            <button
-              type="button"
-              className="action-btn action-btn-delete"
-              disabled={lifecycleBusy}
-              onClick={() => void deleteFamily()}
-            >
-              Delete
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="action-btn action-btn-archive"
-              disabled={lifecycleBusy}
-              onClick={() => void setStatus("archived")}
-            >
-              Archive
-            </button>
-          )}
-        </div>
       </div>
 
       <section className="family-record-hero">
@@ -896,55 +947,67 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       ) : null}
 
       <div className="family-detail-layout family-detail-stack">
-        <Panel title="Household summary">
-          <div className="family-detail-grid profile-detail-grid">
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Household summary</h2>
+            <StaffRowActions label="Household actions" actions={householdActions} />
+          </div>
+          <div className="family-household-dense">
+            <span>
+              <small>Household</small>
+              <strong>{family.displayName}</strong>
+            </span>
             <span>
               <small>Status</small>
-              <strong>{family.status}</strong>
+              <strong>
+                <span className={`pill ${statusTone(family.status)}`}>
+                  {formatStatusLabel(family.status)}
+                </span>
+              </strong>
+            </span>
+            <span>
+              <small>Phone</small>
+              <strong>{family.primaryPhone || "—"}</strong>
             </span>
             <span>
               <small>Billing owner</small>
               <strong>{family.billingOwnerName || "—"}</strong>
             </span>
             <span>
-              <small>Primary phone</small>
-              <strong>{family.primaryPhone || "—"}</strong>
-            </span>
-            <span>
               <small>Card on file</small>
               <strong>{billingCue}</strong>
             </span>
-            <span>
+            <span className="family-household-dense-wide">
               <small>Address</small>
               <strong>{address || "—"}</strong>
-            </span>
-            <span>
-              <small>Students</small>
-              <strong>{family.students.length}</strong>
             </span>
           </div>
         </Panel>
 
-        <Panel title="Guardians" className="family-equal-panel">
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Guardians</h2>
+          </div>
           <FamilyListPreview
             total={family.guardians.length}
             empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No guardians yet.</p>}
             onViewMore={() => setListModal("guardians")}
           >
-            <div className="guardian-access-preview family-preview-guardians">
-              {previewGuardians.map(renderGuardianArticle)}
-            </div>
+            {renderGuardiansTable(previewGuardians)}
           </FamilyListPreview>
         </Panel>
       </div>
 
-      <Panel title="Students" className="family-equal-panel">
+      <Panel className="family-equal-panel family-students-band">
+        <div className="family-panel-heading">
+          <h2>Students</h2>
+        </div>
         <FamilyListPreview
           total={family.students.length}
           empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No students yet.</p>}
           onViewMore={() => setListModal("students")}
         >
-          <div className="staff-detail-list">{previewStudents.map(renderStudentRow)}</div>
+          {renderStudentsTable(previewStudents)}
         </FamilyListPreview>
       </Panel>
 
@@ -984,14 +1047,15 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                   rows={3}
                 />
               </label>
-              <button
-                type="submit"
-                className="primary-button"
-                style={{ marginTop: 8 }}
-                disabled={savingNotes || !noteDraft.trim()}
-              >
-                {savingNotes ? "Adding…" : "Add note"}
-              </button>
+              <div className="family-add-note-footer">
+                <button
+                  type="submit"
+                  className="primary-button family-add-note-btn"
+                  disabled={savingNotes || !noteDraft.trim()}
+                >
+                  {savingNotes ? "Adding…" : "Add note"}
+                </button>
+              </div>
             </form>
           </div>
         </Panel>
@@ -1009,14 +1073,12 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
       {listModal === "guardians" ? (
         <FamilyListModal title="Guardians" onClose={() => setListModal(null)}>
-          <div className="guardian-access-preview family-preview-guardians">
-            {family.guardians.map(renderGuardianArticle)}
-          </div>
+          {renderGuardiansTable(family.guardians)}
         </FamilyListModal>
       ) : null}
       {listModal === "students" ? (
         <FamilyListModal title="Students" onClose={() => setListModal(null)}>
-          <div className="staff-detail-list">{family.students.map(renderStudentRow)}</div>
+          {renderStudentsTable(family.students)}
         </FamilyListModal>
       ) : null}
       {listModal === "enrollments" ? (
@@ -1052,9 +1114,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               if (event.key === "Escape") closeGuardianEdit();
             }}
           >
-            <h3 id="guardian-edit-title">
-              Edit guardian · {guardianForm.firstName} {guardianForm.lastName}
-            </h3>
+            <div className="family-list-modal-header">
+              <h3 id="guardian-edit-title">
+                Edit guardian · {guardianForm.firstName} {guardianForm.lastName}
+              </h3>
+              <button
+                type="button"
+                className="staff-modal-close"
+                aria-label="Close"
+                onClick={closeGuardianEdit}
+              >
+                ×
+              </button>
+            </div>
             <form onSubmit={saveGuardian} className="staff-modal-form">
               <div className="input-grid staff-modal-fields">
                 <label>
