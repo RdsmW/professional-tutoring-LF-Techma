@@ -109,6 +109,77 @@ function formatDate(value: string) {
   }
 }
 
+const PREVIEW_LIMIT = 3;
+
+type FamilyListModalKind = "guardians" | "students" | "enrollments" | "bookings" | "notes";
+
+function FamilyListPreview({
+  total,
+  empty,
+  onViewMore,
+  children,
+}: {
+  total: number;
+  empty: React.ReactNode;
+  onViewMore: () => void;
+  children: React.ReactNode;
+}) {
+  if (total === 0) return <>{empty}</>;
+  return (
+    <div className="family-list-preview-shell">
+      <div className="family-list-preview">{children}</div>
+      {total > PREVIEW_LIMIT ? (
+        <button type="button" className="text-button family-view-more" onClick={onViewMore}>
+          View more
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function FamilyListModal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="staff-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="staff-modal family-list-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="family-list-modal-title"
+      >
+        <div className="family-list-modal-header">
+          <h3 id="family-list-modal-title">{title}</h3>
+          <button type="button" className="secondary-button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <div className="family-list-modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -133,6 +204,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [guardianForm, setGuardianForm] = useState<GuardianRow | null>(null);
   const [savingGuardian, setSavingGuardian] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  const [listModal, setListModal] = useState<FamilyListModalKind | null>(null);
 
   const softReload = useCallback(async () => {
     setError(null);
@@ -374,6 +446,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   }
 
   function openGuardianEdit(guardian: GuardianRow) {
+    setListModal(null);
     setGuardianForm({ ...guardian });
     setEditingGuardianId(guardian.id);
     setSavedMessage(null);
@@ -486,6 +559,184 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     ? `${(family.cardBrand || "Card").toUpperCase()} ···· ${family.cardLast4}`
     : "No card on file";
   const isArchived = family.status === "archived";
+
+  const previewGuardians = family.guardians.slice(0, PREVIEW_LIMIT);
+  const previewStudents = family.students.slice(0, PREVIEW_LIMIT);
+  const previewEnrollments = family.activity.enrollments.slice(0, PREVIEW_LIMIT);
+  const previewBookings = family.activity.bookings.slice(0, PREVIEW_LIMIT);
+  const previewNotes = family.notes.slice(0, PREVIEW_LIMIT);
+
+  function renderGuardianArticle(g: GuardianRow) {
+    const perms = [
+      g.linked ? "Own login" : g.invitePending ? "Invite pending" : "Not linked",
+      g.isBillingOwner ? "Billing owner" : "No billing",
+      g.canManageStudents ? "Manage students" : null,
+      g.canRequestServices ? "Request services" : null,
+    ].filter(Boolean);
+    return (
+      <article key={g.id}>
+        <span className="mini-avatar">{initials(`${g.firstName} ${g.lastName}`)}</span>
+        <span>
+          <strong>
+            {g.firstName} {g.lastName}
+          </strong>
+          <small>
+            {g.email}
+            {g.phone ? ` · ${g.phone}` : ""}
+            <br />
+            {perms.join(" · ")}
+          </small>
+          <span style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="text-button"
+              style={{ padding: 0 }}
+              onClick={() => openGuardianEdit(g)}
+            >
+              Edit
+            </button>
+            {!g.linked ? (
+              <button
+                type="button"
+                className="text-button"
+                style={{ padding: 0 }}
+                onClick={() => void refreshInvite(g.id)}
+              >
+                {g.invitePath ? "Regenerate invite" : "Create invite"}
+              </button>
+            ) : null}
+          </span>
+        </span>
+        <span
+          className={`pill ${statusTone(g.linked ? "active" : g.invitePending ? "invite_pending" : "unlinked")}`}
+        >
+          {formatStatusLabel(g.linked ? "active" : g.invitePending ? "invite_pending" : "unlinked")}
+        </span>
+      </article>
+    );
+  }
+
+  function renderStudentRow(s: FamilyDetail["students"][number]) {
+    return (
+      <div key={s.id} className="staff-detail-list-row">
+        <span className="mini-avatar">{initials(s.displayName)}</span>
+        <span>
+          <strong>{s.displayName}</strong>
+          <small>
+            {s.gradeLabel || "Grade pending"} · {s.schoolName || "School pending"} ·{" "}
+            {formatStatusLabel(s.lifecycle)}
+          </small>
+        </span>
+        <Link href={`/staff/students/${s.id}`} className="secondary-button staff-open-control">
+          Open
+        </Link>
+      </div>
+    );
+  }
+
+  function renderEnrollmentRow(row: FamilyDetail["activity"]["enrollments"][number]) {
+    return (
+      <div key={row.id} className="staff-detail-list-row">
+        <span>
+          <strong>
+            {row.studentName} · {row.courseName}
+          </strong>
+          <small>
+            {formatStatusLabel(row.status)} · {formatDate(row.createdAt)}
+          </small>
+        </span>
+        <Link
+          href={`/staff/families/${familyId}/enrollments/${row.id}`}
+          className="secondary-button staff-open-control"
+        >
+          Open
+        </Link>
+      </div>
+    );
+  }
+
+  function renderBookingRow(row: FamilyDetail["activity"]["bookings"][number]) {
+    return (
+      <div key={row.id} className="staff-detail-list-row">
+        <span>
+          <strong>
+            {row.studentName} · {row.tutorName}
+          </strong>
+          <small>
+            {formatStatusLabel(row.status)} · {formatDate(row.createdAt)}
+          </small>
+        </span>
+        <Link
+          href={`/staff/families/${familyId}/bookings/${row.id}`}
+          className="secondary-button staff-open-control"
+        >
+          Open
+        </Link>
+      </div>
+    );
+  }
+
+  function renderNotesTable(notes: NoteRow[]) {
+    return (
+      <div className="family-notes-table-wrap">
+        <table className="family-notes-table">
+          <thead>
+            <tr>
+              <th className="family-notes-col-content">Note</th>
+              <th className="family-notes-col-who">Creator</th>
+              <th className="family-notes-col-when">Creation Date</th>
+              <th className="family-notes-col-edit" aria-label="Actions" />
+            </tr>
+          </thead>
+          <tbody>
+            {notes.map((note) => (
+              <tr key={note.id}>
+                <td className="family-notes-col-content">
+                  {editingNoteId === note.id ? (
+                    <form className="family-notes-edit-inline" onSubmit={saveNoteEdit}>
+                      <textarea
+                        value={noteEditDraft}
+                        onChange={(event) => setNoteEditDraft(event.target.value)}
+                        rows={3}
+                      />
+                      <div className="family-notes-edit-actions">
+                        <button
+                          type="submit"
+                          className="primary-button"
+                          disabled={savingNoteEdit || !noteEditDraft.trim()}
+                        >
+                          {savingNoteEdit ? "Saving…" : "Save"}
+                        </button>
+                        <button type="button" className="secondary-button" onClick={cancelEditNote}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <span style={{ whiteSpace: "pre-wrap" }}>{note.body}</span>
+                  )}
+                </td>
+                <td className="family-notes-col-who">{note.authorDisplayName}</td>
+                <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
+                <td className="family-notes-col-edit">
+                  {editingNoteId === note.id ? null : (
+                    <button
+                      type="button"
+                      className="action-btn action-btn-edit"
+                      style={{ padding: "8px 12px" }}
+                      onClick={() => startEditNote(note)}
+                    >
+                      Edit
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -674,233 +925,115 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </div>
         </Panel>
 
-        <Panel title="Guardians">
-          <div className="guardian-access-preview">
-            {family.guardians.map((g) => {
-              const perms = [
-                g.linked ? "Own login" : g.invitePending ? "Invite pending" : "Not linked",
-                g.isBillingOwner ? "Billing owner" : "No billing",
-                g.canManageStudents ? "Manage students" : null,
-                g.canRequestServices ? "Request services" : null,
-              ].filter(Boolean);
-              return (
-                <article key={g.id}>
-                  <span className="mini-avatar">{initials(`${g.firstName} ${g.lastName}`)}</span>
-                  <span>
-                    <strong>
-                      {g.firstName} {g.lastName}
-                    </strong>
-                    <small>
-                      {g.email}
-                      {g.phone ? ` · ${g.phone}` : ""}
-                      <br />
-                      {perms.join(" · ")}
-                    </small>
-                    <span style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        className="text-button"
-                        style={{ padding: 0 }}
-                        onClick={() => openGuardianEdit(g)}
-                      >
-                        Edit
-                      </button>
-                      {!g.linked ? (
-                        <button
-                          type="button"
-                          className="text-button"
-                          style={{ padding: 0 }}
-                          onClick={() => void refreshInvite(g.id)}
-                        >
-                          {g.invitePath ? "Regenerate invite" : "Create invite"}
-                        </button>
-                      ) : null}
-                    </span>
-                  </span>
-                  <span className={`pill ${statusTone(g.linked ? "active" : g.invitePending ? "invite_pending" : "unlinked")}`}>
-                    {formatStatusLabel(g.linked ? "active" : g.invitePending ? "invite_pending" : "unlinked")}
-                  </span>
-                </article>
-              );
-            })}
-          </div>
+        <Panel title="Guardians" className="family-equal-panel">
+          <FamilyListPreview
+            total={family.guardians.length}
+            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No guardians yet.</p>}
+            onViewMore={() => setListModal("guardians")}
+          >
+            <div className="guardian-access-preview family-preview-guardians">
+              {previewGuardians.map(renderGuardianArticle)}
+            </div>
+          </FamilyListPreview>
         </Panel>
       </div>
 
-      <Panel title="Students">
-        {family.students.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 14 }}>No students yet.</p>
-        ) : (
-          <div className="staff-detail-list">
-            {family.students.map((s) => (
-              <div key={s.id} className="staff-detail-list-row">
-                <span className="mini-avatar">{initials(s.displayName)}</span>
-                <span>
-                  <strong>{s.displayName}</strong>
-                  <small>
-                    {s.gradeLabel || "Grade pending"} · {s.schoolName || "School pending"} ·{" "}
-                    {formatStatusLabel(s.lifecycle)}
-                  </small>
-                </span>
-                <Link href={`/staff/students/${s.id}`} className="secondary-button staff-open-control">
-                  Open
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
+      <Panel title="Students" className="family-equal-panel">
+        <FamilyListPreview
+          total={family.students.length}
+          empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No students yet.</p>}
+          onViewMore={() => setListModal("students")}
+        >
+          <div className="staff-detail-list">{previewStudents.map(renderStudentRow)}</div>
+        </FamilyListPreview>
       </Panel>
 
       <div className="family-activity-band">
-        <Panel title="Course enrollments">
-          {family.activity.enrollments.length === 0 ? (
-            <p style={{ color: "var(--muted)", fontSize: 14 }}>No course enrollments yet.</p>
-          ) : (
-            <div className="staff-detail-list">
-              {family.activity.enrollments.map((row) => (
-                <div key={row.id} className="staff-detail-list-row">
-                  <span>
-                    <strong>
-                      {row.studentName} · {row.courseName}
-                    </strong>
-                    <small>
-                      {formatStatusLabel(row.status)} · {formatDate(row.createdAt)}
-                    </small>
-                  </span>
-                  <Link
-                    href={`/staff/families/${familyId}/enrollments/${row.id}`}
-                    className="secondary-button staff-open-control"
-                  >
-                    Open
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
+        <Panel title="Course enrollments" className="family-equal-panel">
+          <FamilyListPreview
+            total={family.activity.enrollments.length}
+            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No course enrollments yet.</p>}
+            onViewMore={() => setListModal("enrollments")}
+          >
+            <div className="staff-detail-list">{previewEnrollments.map(renderEnrollmentRow)}</div>
+          </FamilyListPreview>
         </Panel>
-        <Panel title="Bookings">
-          {family.activity.bookings.length === 0 ? (
-            <p style={{ color: "var(--muted)", fontSize: 14 }}>No tutoring bookings yet.</p>
-          ) : (
-            <div className="staff-detail-list">
-              {family.activity.bookings.map((row) => (
-                <div key={row.id} className="staff-detail-list-row">
-                  <span>
-                    <strong>
-                      {row.studentName} · {row.tutorName}
-                    </strong>
-                    <small>
-                      {formatStatusLabel(row.status)} · {formatDate(row.createdAt)}
-                    </small>
-                  </span>
-                  <Link
-                    href={`/staff/families/${familyId}/bookings/${row.id}`}
-                    className="secondary-button staff-open-control"
-                  >
-                    Open
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
+        <Panel title="Bookings" className="family-equal-panel">
+          <FamilyListPreview
+            total={family.activity.bookings.length}
+            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No tutoring bookings yet.</p>}
+            onViewMore={() => setListModal("bookings")}
+          >
+            <div className="staff-detail-list">{previewBookings.map(renderBookingRow)}</div>
+          </FamilyListPreview>
         </Panel>
       </div>
 
       <div className="family-notes-layout">
-        <Panel title="Add note" className="family-notes-panel">
-          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 8 }}>
-            Internal notes only. Not visible in the family portal.
-          </p>
-          <form onSubmit={addNote}>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--muted)" }}>
-              Note
-              <textarea
-                value={noteDraft}
-                onChange={(event) => setNoteDraft(event.target.value)}
-                rows={3}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  marginTop: 6,
-                  border: "1px solid var(--line)",
-                  background: "#fbfcfa",
-                  padding: 10,
-                  fontSize: 14,
-                  fontFamily: "inherit",
-                }}
-              />
-            </label>
-            <button
-              type="submit"
-              className="primary-button"
-              style={{ marginTop: 8 }}
-              disabled={savingNotes || !noteDraft.trim()}
-            >
-              {savingNotes ? "Adding…" : "Add note"}
-            </button>
-          </form>
+        <Panel title="Add note" className="family-notes-panel family-equal-panel">
+          <div className="family-add-note-stretch">
+            <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 8 }}>
+              Internal notes only. Not visible in the family portal.
+            </p>
+            <form onSubmit={addNote}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--muted)" }}>
+                Note
+                <textarea
+                  value={noteDraft}
+                  onChange={(event) => setNoteDraft(event.target.value)}
+                  rows={3}
+                />
+              </label>
+              <button
+                type="submit"
+                className="primary-button"
+                style={{ marginTop: 8 }}
+                disabled={savingNotes || !noteDraft.trim()}
+              >
+                {savingNotes ? "Adding…" : "Add note"}
+              </button>
+            </form>
+          </div>
         </Panel>
 
-        <Panel title="Notes" className="family-notes-panel">
-          {family.notes.length === 0 ? (
-            <p style={{ color: "var(--muted)", fontSize: 14 }}>No notes yet.</p>
-          ) : (
-            <div className="family-notes-table-wrap">
-              <table className="family-notes-table">
-                <thead>
-                  <tr>
-                    <th className="family-notes-col-content">Note</th>
-                    <th className="family-notes-col-who">Creator</th>
-                    <th className="family-notes-col-when">Creation Date</th>
-                    <th className="family-notes-col-edit" aria-label="Actions" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {family.notes.map((note) => (
-                    <tr key={note.id}>
-                      <td className="family-notes-col-content">
-                        {editingNoteId === note.id ? (
-                          <form className="family-notes-edit-inline" onSubmit={saveNoteEdit}>
-                            <textarea
-                              value={noteEditDraft}
-                              onChange={(event) => setNoteEditDraft(event.target.value)}
-                              rows={3}
-                            />
-                            <div className="family-notes-edit-actions">
-                              <button type="submit" className="primary-button" disabled={savingNoteEdit || !noteEditDraft.trim()}>
-                                {savingNoteEdit ? "Saving…" : "Save"}
-                              </button>
-                              <button type="button" className="secondary-button" onClick={cancelEditNote}>
-                                Cancel
-                              </button>
-                            </div>
-                          </form>
-                        ) : (
-                          <span style={{ whiteSpace: "pre-wrap" }}>{note.body}</span>
-                        )}
-                      </td>
-                      <td className="family-notes-col-who">{note.authorDisplayName}</td>
-                      <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
-                      <td className="family-notes-col-edit">
-                        {editingNoteId === note.id ? null : (
-                          <button
-                            type="button"
-                            className="action-btn action-btn-edit"
-                            style={{ padding: "8px 12px" }}
-                            onClick={() => startEditNote(note)}
-                          >
-                            Edit
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <Panel title="Notes" className="family-notes-panel family-equal-panel">
+          <FamilyListPreview
+            total={family.notes.length}
+            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No notes yet.</p>}
+            onViewMore={() => setListModal("notes")}
+          >
+            {renderNotesTable(previewNotes)}
+          </FamilyListPreview>
         </Panel>
       </div>
+
+      {listModal === "guardians" ? (
+        <FamilyListModal title="Guardians" onClose={() => setListModal(null)}>
+          <div className="guardian-access-preview family-preview-guardians">
+            {family.guardians.map(renderGuardianArticle)}
+          </div>
+        </FamilyListModal>
+      ) : null}
+      {listModal === "students" ? (
+        <FamilyListModal title="Students" onClose={() => setListModal(null)}>
+          <div className="staff-detail-list">{family.students.map(renderStudentRow)}</div>
+        </FamilyListModal>
+      ) : null}
+      {listModal === "enrollments" ? (
+        <FamilyListModal title="Course enrollments" onClose={() => setListModal(null)}>
+          <div className="staff-detail-list">{family.activity.enrollments.map(renderEnrollmentRow)}</div>
+        </FamilyListModal>
+      ) : null}
+      {listModal === "bookings" ? (
+        <FamilyListModal title="Bookings" onClose={() => setListModal(null)}>
+          <div className="staff-detail-list">{family.activity.bookings.map(renderBookingRow)}</div>
+        </FamilyListModal>
+      ) : null}
+      {listModal === "notes" ? (
+        <FamilyListModal title="Notes" onClose={() => setListModal(null)}>
+          {renderNotesTable(family.notes)}
+        </FamilyListModal>
+      ) : null}
 
       {editingGuardianId && guardianForm ? (
         <div
