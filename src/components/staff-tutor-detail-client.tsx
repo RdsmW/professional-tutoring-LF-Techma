@@ -169,7 +169,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     }
   }
 
-  if (loading) return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading tutor…</p>;
+  if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading tutor…</p>;
   if (error && !tutor) return <p className="form-error">{error}</p>;
   if (!tutor) return null;
 
@@ -183,7 +183,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         action={<span className="pill">{tutor.active ? "Active" : "Archived"}</span>}
       />
       {error ? <p className="form-error">{error}</p> : null}
-      {message ? <p style={{ fontSize: 11, marginBottom: 12 }}>{message}</p> : null}
+      {message ? <p style={{ fontSize: 14, marginBottom: 12 }}>{message}</p> : null}
 
       <div className="profile-layout">
         <Panel title="Profile" eyebrow="Tutor">
@@ -222,7 +222,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           </button>
         </Panel>
 
-        <Panel title="Capacity" eyebrow="Seats">
+        <Panel title="Capacity">
           <label>
             Max seats per slot
             <input
@@ -260,7 +260,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         </button>
       </Panel>
 
-      <Panel title="Subjects" eyebrow="Coverage">
+      <Panel title="Subjects">
         <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap", marginBottom: 12 }}>
           <label style={{ flex: "1 1 220px", margin: 0 }}>
             Assign subject
@@ -292,7 +292,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         </div>
 
         {tutor.subjects.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 11 }}>No subjects linked yet.</p>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>No subjects linked yet.</p>
         ) : (
           tutor.subjects.map((subject) => (
             <div
@@ -308,7 +308,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             >
               <div>
                 <strong>{subject.name}</strong>
-                <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--muted)" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--muted)" }}>
                   {subject.code}
                   {subject.priority ? ` · priority ${subject.priority}` : ""}
                 </p>

@@ -161,7 +161,7 @@ export function StaffFamilyMergesClient() {
       />
 
       {error ? <p className="form-error">{error}</p> : null}
-      {message ? <p style={{ color: "var(--blue)", fontSize: 12, marginBottom: 10 }}>{message}</p> : null}
+      {message ? <p style={{ color: "var(--blue)", fontSize: 14, marginBottom: 10 }}>{message}</p> : null}
 
       <Panel title="Add to queue" eyebrow="Flag duplicate">
         <div className="input-grid">
@@ -208,9 +208,9 @@ export function StaffFamilyMergesClient() {
         </div>
       </Panel>
 
-      <Panel title="Queue" eyebrow="Live database">
+      <Panel title="Queue">
         <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
-          <label style={{ fontSize: 12, color: "var(--muted)" }}>
+          <label style={{ fontSize: 14, color: "var(--muted)" }}>
             Status{" "}
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="queued">queued</option>
@@ -219,7 +219,7 @@ export function StaffFamilyMergesClient() {
               <option value="all">all</option>
             </select>
           </label>
-          {loading ? <span style={{ color: "var(--muted)", fontSize: 12 }}>Loading…</span> : null}
+          {loading ? <span style={{ color: "var(--muted)", fontSize: 14 }}>Loading…</span> : null}
         </div>
 
         {requests.length === 0 && !loading ? (
@@ -243,14 +243,14 @@ export function StaffFamilyMergesClient() {
                   <Link
                     href={`/staff/families/${row.sourceHouseholdId}`}
                     className="secondary-button"
-                    style={{ textDecoration: "none", fontSize: 11 }}
+                    style={{ textDecoration: "none", fontSize: 14 }}
                   >
                     Open source
                   </Link>
                   <Link
                     href={`/staff/families/${row.targetHouseholdId}`}
                     className="secondary-button"
-                    style={{ textDecoration: "none", fontSize: 11 }}
+                    style={{ textDecoration: "none", fontSize: 14 }}
                   >
                     Open target
                   </Link>
@@ -259,7 +259,7 @@ export function StaffFamilyMergesClient() {
                       <button
                         type="button"
                         className="primary-button"
-                        style={{ fontSize: 11 }}
+                        style={{ fontSize: 14 }}
                         disabled={actingId === row.id}
                         onClick={() => void runMerge(row.id)}
                       >
@@ -268,7 +268,7 @@ export function StaffFamilyMergesClient() {
                       <button
                         type="button"
                         className="secondary-button"
-                        style={{ fontSize: 11 }}
+                        style={{ fontSize: 14 }}
                         disabled={actingId === row.id}
                         onClick={() => void runDismiss(row.id)}
                       >

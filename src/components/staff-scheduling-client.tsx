@@ -367,7 +367,7 @@ export function StaffSchedulingClient() {
         </p>
         <form className="wizard-stage" onSubmit={submitBooking}>
           {optionsLoading ? (
-            <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading options…</p>
+            <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading options…</p>
           ) : (
             <div className="input-grid">
               <label>
@@ -516,8 +516,8 @@ export function StaffSchedulingClient() {
 
       {mode === "Week" ? (
         <>
-          <Panel title="Weekly calendar" eyebrow="Live bookings">
-            {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading bookings…</p> : null}
+          <Panel title="Weekly calendar">
+            {loading ? <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading bookings…</p> : null}
             <div className="schedule-board">
               <div className="schedule-corner">
                 <strong>Time</strong>
@@ -598,12 +598,12 @@ export function StaffSchedulingClient() {
                     </span>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {row.studentId ? (
-                        <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
+                        <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 14 }}>
                           Student →
                         </Link>
                       ) : null}
                       {row.householdId ? (
-                        <Link href={`/staff/families/${row.householdId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
+                        <Link href={`/staff/families/${row.householdId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 14 }}>
                           Household →
                         </Link>
                       ) : null}
@@ -617,7 +617,7 @@ export function StaffSchedulingClient() {
       ) : (
         <>
           <Panel title="SAT/ACT courses" eyebrow="Nested under Scheduling">
-            {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading courses…</p> : null}
+            {loading ? <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading courses…</p> : null}
             {courses.length === 0 && !loading ? (
               <p style={{ color: "var(--muted)" }}>No course offerings yet.</p>
             ) : (
@@ -663,7 +663,7 @@ export function StaffSchedulingClient() {
                       </button>
                       <Link
                         href={`/staff/scheduling/courses/${course.id}`}
-                        style={{ display: "block", marginTop: 8, color: "var(--muted)", fontSize: 8, fontWeight: 700 }}
+                        style={{ display: "block", marginTop: 8, color: "var(--muted)", fontSize: 14, fontWeight: 700 }}
                       >
                         Open full roster page
                       </Link>
@@ -686,7 +686,7 @@ export function StaffSchedulingClient() {
               }
             >
               {rosterLoading ? (
-                <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading roster…</p>
+                <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading roster…</p>
               ) : roster.length === 0 ? (
                 <p style={{ color: "var(--muted)" }}>No enrollments for this course.</p>
               ) : (
@@ -702,14 +702,14 @@ export function StaffSchedulingClient() {
                       <span className="pill" style={{ marginRight: 10 }}>
                         {row.status}
                       </span>
-                      <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
+                      <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 14 }}>
                         Student →
                       </Link>
                     </div>
                   ))}
                 </div>
               )}
-              <p style={{ marginTop: 12, fontSize: 10, color: "var(--muted)" }}>
+              <p style={{ marginTop: 12, fontSize: 14, color: "var(--muted)" }}>
                 Add enrollments and change status on the{" "}
                 <Link href={`/staff/scheduling/courses/${rosterCourseId}`} style={{ color: "var(--blue)", fontWeight: 800 }}>
                   full roster page

@@ -59,7 +59,7 @@ export function FamilyEnrollmentDetailClient({ enrollmentId }: { enrollmentId: s
     })();
   }, [enrollmentId]);
 
-  if (loading) return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading enrollment…</p>;
+  if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading enrollment…</p>;
   if (error || !enrollment) return <p className="form-error">{error || "Enrollment not found."}</p>;
 
   return (

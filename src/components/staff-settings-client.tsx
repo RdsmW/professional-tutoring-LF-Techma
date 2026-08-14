@@ -355,11 +355,11 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
 
       {tab === "prices" ? (
         <Panel title="Active price book">
-          <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 0 }}>
+          <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 0 }}>
             New family bookings and enrollments snapshot these amounts. Existing ledger rows are not backfilled. Card
             surcharge, late fees, and intake stay locked at $0.
           </p>
-          {priceNote ? <p style={{ fontSize: 12 }}>{priceNote}</p> : null}
+          {priceNote ? <p style={{ fontSize: 14 }}>{priceNote}</p> : null}
           <div className="input-grid">
             <label>
               New version code

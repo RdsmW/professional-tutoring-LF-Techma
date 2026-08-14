@@ -163,7 +163,7 @@ export function FamilySecurityForm({
   }
 
   if (!isLoaded) {
-    return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading account security…</p>;
+    return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading account security…</p>;
   }
 
   if (pendingEmail) {
@@ -174,7 +174,7 @@ export function FamilySecurityForm({
         </button>
         <span className="eyebrow">Account & security</span>
         <h2>Verify sign-in email</h2>
-        <p style={{ maxWidth: 640, fontSize: 11, color: "var(--muted)" }}>
+        <p style={{ maxWidth: 640, fontSize: 14, color: "var(--muted)" }}>
           Enter the code sent to <strong>{pendingEmail.emailAddress}</strong> before the new sign-in
           email takes effect.
         </p>
@@ -219,7 +219,7 @@ export function FamilySecurityForm({
       </button>
       <span className="eyebrow">Account & security</span>
       <h2>Sign-in and password</h2>
-      <p style={{ maxWidth: 720, fontSize: 11, color: "var(--muted)" }}>
+      <p style={{ maxWidth: 720, fontSize: 14, color: "var(--muted)" }}>
         Update your individual adult credentials here. Password values are never displayed after
         submission or exported from this screen.
       </p>
@@ -277,7 +277,7 @@ export function FamilySecurityForm({
         ) : null}
         {error ? <div className="validation-hint">{error}</div> : null}
         {resetMessage ? (
-          <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 11, marginTop: 10 }}>{resetMessage}</p>
+          <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 14, marginTop: 10 }}>{resetMessage}</p>
         ) : null}
 
         <button type="button" className="text-button" onClick={() => void startPasswordReset()}>

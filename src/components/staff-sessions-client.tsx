@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import {
   evaluateChangePolicy,
@@ -103,6 +104,7 @@ function policyTraceHeadline(reason: string) {
 }
 
 export function StaffSessionsClient() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<"Sessions" | "Exceptions">("Sessions");
 
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -173,6 +175,13 @@ export function StaffSessionsClient() {
   useEffect(() => {
     if (mode === "Exceptions") void reloadExceptions();
   }, [mode, reloadExceptions]);
+
+  useEffect(() => {
+    const exceptionId = searchParams.get("exceptionId");
+    if (!exceptionId) return;
+    setMode("Exceptions");
+    setSelectedId(exceptionId);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -319,7 +328,7 @@ export function StaffSessionsClient() {
             </button>
           </form>
 
-          {sessionsLoading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading sessions…</p> : null}
+          {sessionsLoading ? <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading sessions…</p> : null}
           {!sessionsLoading && sessions.length === 0 ? (
             <div className="empty-action compact-empty">
               <div className="empty-symbol">◎</div>
@@ -387,7 +396,7 @@ export function StaffSessionsClient() {
             </button>
           </form>
 
-          {exceptionsLoading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading exceptions…</p> : null}
+          {exceptionsLoading ? <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading exceptions…</p> : null}
           {!exceptionsLoading && exceptions.length === 0 ? (
             <div className="empty-action compact-empty">
               <div className="empty-symbol">!</div>
@@ -422,7 +431,7 @@ export function StaffSessionsClient() {
           {selectedId ? (
             <div className="exception-actions" style={{ marginTop: 18 }}>
               {detailLoading && !selected ? (
-                <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading policy trace…</p>
+                <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading policy trace…</p>
               ) : null}
 
               {selected ? (
@@ -450,19 +459,19 @@ export function StaffSessionsClient() {
                   <div className="record-detail-grid" style={{ marginBottom: 14 }}>
                     <div>
                       <small>Reason</small>
-                      <strong style={{ fontSize: 12 }}>{selected.reason}</strong>
+                      <strong style={{ fontSize: 14 }}>{selected.reason}</strong>
                     </div>
                     <div>
                       <small>Requested outcome</small>
-                      <strong style={{ fontSize: 12 }}>{selected.requestedOutcome}</strong>
+                      <strong style={{ fontSize: 14 }}>{selected.requestedOutcome}</strong>
                     </div>
                     <div>
                       <small>Preferred alternatives</small>
-                      <strong style={{ fontSize: 12 }}>{selected.preferredAlternatives || "—"}</strong>
+                      <strong style={{ fontSize: 14 }}>{selected.preferredAlternatives || "—"}</strong>
                     </div>
                     <div>
                       <small>Related entity</small>
-                      <strong style={{ fontSize: 12 }}>
+                      <strong style={{ fontSize: 14 }}>
                         {relatedEntityLabel(selected.relatedEntityType)}
                         {relatedHref ? (
                           <>
@@ -474,11 +483,11 @@ export function StaffSessionsClient() {
                     </div>
                     <div>
                       <small>Created</small>
-                      <strong style={{ fontSize: 12 }}>{formatWhen(selected.createdAt)}</strong>
+                      <strong style={{ fontSize: 14 }}>{formatWhen(selected.createdAt)}</strong>
                     </div>
                     <div>
                       <small>Resolved</small>
-                      <strong style={{ fontSize: 12 }}>{formatWhen(selected.resolvedAt)}</strong>
+                      <strong style={{ fontSize: 14 }}>{formatWhen(selected.resolvedAt)}</strong>
                     </div>
                   </div>
 
@@ -521,7 +530,7 @@ export function StaffSessionsClient() {
                     {savingId === selected.id ? "Saving…" : "Save staff notes"}
                   </button>
 
-                  <h3 style={{ margin: "18px 0 10px", fontSize: 11 }}>Authorized staff outcome</h3>
+                  <h3 style={{ margin: "18px 0 10px", fontSize: 14 }}>Authorized staff outcome</h3>
                   <div>
                     <button
                       type="button"

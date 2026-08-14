@@ -60,7 +60,7 @@ export function FamilyBookingDetailClient({ bookingId }: { bookingId: string }) 
     })();
   }, [bookingId]);
 
-  if (loading) return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading booking…</p>;
+  if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading booking…</p>;
   if (error || !booking) return <p className="form-error">{error || "Booking not found."}</p>;
 
   return (

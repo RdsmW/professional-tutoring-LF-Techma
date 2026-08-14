@@ -565,7 +565,7 @@ export function EnrollCoursesWizard() {
       {step === 6 ? (
         <div className="wizard-stage">
           <h3>Review enrollment</h3>
-          <p style={{ margin: "0 0 4px", fontSize: 11, color: "var(--muted)" }}>
+          <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--muted)" }}>
             You’re about to submit this enrollment.
           </p>
           <div className="review-groups">

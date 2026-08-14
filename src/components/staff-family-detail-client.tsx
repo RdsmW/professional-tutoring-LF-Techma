@@ -350,7 +350,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     }
   }
 
-  if (loading) return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading family…</p>;
+  if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading family…</p>;
   if (error && !family) return <p className="form-error">{error}</p>;
   if (!family) return null;
 
@@ -417,9 +417,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       </div>
 
       {error ? <p className="form-error">{error}</p> : null}
-      {inviteMessage ? <p style={{ fontSize: 11, marginBottom: 12 }}>{inviteMessage}</p> : null}
+      {inviteMessage ? <p style={{ fontSize: 14, marginBottom: 12 }}>{inviteMessage}</p> : null}
       {savedMessage ? (
-        <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 11, marginBottom: 12 }}>{savedMessage}</p>
+        <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 14, marginBottom: 12 }}>{savedMessage}</p>
       ) : null}
 
       {editingHousehold && householdForm ? (
@@ -680,7 +680,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
       <Panel title="Students">
         {family.students.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 11 }}>No students yet.</p>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>No students yet.</p>
         ) : (
           <div className="linked-student-list">
             {family.students.map((s) => (
@@ -702,7 +702,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       <div className="profile-layout" style={{ marginTop: 14 }}>
         <Panel title="Course enrollments">
           {family.activity.enrollments.length === 0 ? (
-            <p style={{ color: "var(--muted)", fontSize: 11 }}>No course enrollments yet.</p>
+            <p style={{ color: "var(--muted)", fontSize: 14 }}>No course enrollments yet.</p>
           ) : (
             family.activity.enrollments.map((row) => (
               <Link
@@ -716,10 +716,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                   color: "inherit",
                 }}
               >
-                <strong style={{ fontSize: 11 }}>
+                <strong style={{ fontSize: 14 }}>
                   {row.studentName} · {row.courseName}
                 </strong>
-                <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--muted)" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--muted)" }}>
                   {row.status} · {formatDate(row.createdAt)} · Open →
                 </p>
               </Link>
@@ -728,7 +728,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </Panel>
         <Panel title="Bookings">
           {family.activity.bookings.length === 0 ? (
-            <p style={{ color: "var(--muted)", fontSize: 11 }}>No tutoring bookings yet.</p>
+            <p style={{ color: "var(--muted)", fontSize: 14 }}>No tutoring bookings yet.</p>
           ) : (
             family.activity.bookings.map((row) => (
               <Link
@@ -742,10 +742,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                   color: "inherit",
                 }}
               >
-                <strong style={{ fontSize: 11 }}>
+                <strong style={{ fontSize: 14 }}>
                   {row.studentName} · {row.tutorName}
                 </strong>
-                <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--muted)" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--muted)" }}>
                   {row.status} · {formatDate(row.createdAt)} · Open →
                 </p>
               </Link>
@@ -755,11 +755,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       </div>
 
       <Panel title="Staff notes">
-        <p style={{ fontSize: 10, color: "var(--muted)", marginBottom: 10 }}>
+        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 10 }}>
           Append-only internal notes. Not visible in the family portal.
         </p>
         {family.notes.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 11 }}>No notes yet.</p>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>No notes yet.</p>
         ) : (
           <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
             {family.notes.map((note) => (
@@ -770,16 +770,16 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                   paddingTop: 10,
                 }}
               >
-                <small style={{ color: "var(--muted)", fontSize: 9, fontWeight: 700 }}>
+                <small style={{ color: "var(--muted)", fontSize: 14, fontWeight: 700 }}>
                   {note.authorDisplayName} · {formatWhen(note.createdAt)}
                 </small>
-                <p style={{ margin: "4px 0 0", fontSize: 12, whiteSpace: "pre-wrap" }}>{note.body}</p>
+                <p style={{ margin: "4px 0 0", fontSize: 14, whiteSpace: "pre-wrap" }}>{note.body}</p>
               </article>
             ))}
           </div>
         )}
         <form onSubmit={addNote}>
-          <label style={{ display: "block", fontSize: 9, fontWeight: 800, color: "var(--muted)" }}>
+          <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--muted)" }}>
             Add note
             <textarea
               value={noteDraft}
@@ -792,7 +792,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 border: "1px solid var(--line)",
                 background: "#fbfcfa",
                 padding: 11,
-                fontSize: 11,
+                fontSize: 14,
                 fontFamily: "inherit",
               }}
             />

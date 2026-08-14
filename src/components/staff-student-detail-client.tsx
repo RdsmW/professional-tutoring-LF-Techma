@@ -102,7 +102,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     }
   }
 
-  if (loading) return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading student…</p>;
+  if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading student…</p>;
   if (error && !student) return <p className="form-error">{error}</p>;
   if (!student) return null;
 
@@ -117,7 +117,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         action={<span className="pill">{student.lifecycle}</span>}
       />
       {error ? <p className="form-error">{error}</p> : null}
-      {saveMessage ? <p style={{ fontSize: 11, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
+      {saveMessage ? <p style={{ fontSize: 14, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
 
       <div className="profile-layout">
         <Panel title="Profile" eyebrow="Student">
@@ -167,21 +167,21 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           </div>
         </Panel>
 
-        <Panel title="Household" eyebrow="Family account">
-          <p style={{ margin: "0 0 10px", fontSize: 12 }}>
+        <Panel title="Household">
+          <p style={{ margin: "0 0 10px", fontSize: 14 }}>
             <Link href={`/staff/families/${student.household.id}`} style={{ color: "var(--blue)", fontWeight: 700 }}>
               {student.household.displayName}
             </Link>
           </p>
-          <p style={{ margin: 0, fontSize: 10, color: "var(--muted)" }}>Open the family record for guardians and invites.</p>
+          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>Open the family record for guardians and invites.</p>
         </Panel>
       </div>
 
       <div className="profile-layout">
-        <Panel title="Learning needs" eyebrow="Support context">
-          <p style={{ margin: 0, fontSize: 11, whiteSpace: "pre-wrap" }}>{student.learningNeeds || "—"}</p>
+        <Panel title="Learning needs">
+          <p style={{ margin: 0, fontSize: 14, whiteSpace: "pre-wrap" }}>{student.learningNeeds || "—"}</p>
           {student.pendingIntakeNote ? (
-            <p style={{ margin: "12px 0 0", fontSize: 10, color: "var(--muted)" }}>
+            <p style={{ margin: "12px 0 0", fontSize: 14, color: "var(--muted)" }}>
               Pending intake: {student.pendingIntakeNote}
             </p>
           ) : null}
@@ -201,9 +201,9 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         </Panel>
       </div>
 
-      <Panel title="Restricted staff notes" eyebrow="Staff only">
+      <Panel title="Restricted staff notes">
         <label style={{ display: "block", marginBottom: 10 }}>
-          <span style={{ display: "block", fontSize: 8, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>
+          <span style={{ display: "block", fontSize: 14, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>
             Lifecycle
           </span>
           <select value={lifecycle} onChange={(e) => setLifecycle(e.target.value)} style={{ height: 36, minWidth: 180 }}>
@@ -215,14 +215,14 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           </select>
         </label>
         <label style={{ display: "block" }}>
-          <span style={{ display: "block", fontSize: 8, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>
+          <span style={{ display: "block", fontSize: 14, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>
             Restricted notes
           </span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={5}
-            style={{ width: "100%", border: "1px solid var(--line)", padding: 10, fontSize: 11, background: "#fbfcfa" }}
+            style={{ width: "100%", border: "1px solid var(--line)", padding: 10, fontSize: 14, background: "#fbfcfa" }}
           />
         </label>
         <div className="restricted-line" style={{ marginTop: 10 }}>
@@ -233,9 +233,9 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         </button>
       </Panel>
 
-      <Panel title="Recent bookings" eyebrow="Summary">
+      <Panel title="Recent bookings">
         {student.bookings.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 11 }}>No bookings yet.</p>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>No bookings yet.</p>
         ) : (
           <div className="table-panel">
             {student.bookings.map((booking) => (

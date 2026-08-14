@@ -112,7 +112,7 @@ export function FamilyOnboardingForm() {
   }
 
   if (loading) {
-    return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading household…</p>;
+    return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading household…</p>;
   }
 
   if (done) {

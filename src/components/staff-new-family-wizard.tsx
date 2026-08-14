@@ -397,7 +397,7 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
                   </div>
                 ))}
               </div>
-              <p style={{ color: "var(--muted)", fontSize: 11, marginBottom: 12 }}>
+              <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 12 }}>
                 Queue merge opens the merge queue with this household as the target — pick the source household there.
               </p>
             </>
@@ -702,7 +702,7 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
           </div>
           <div className="household-graph" style={{ marginBottom: 14 }}>
             {reviewLines.map((line) => (
-              <span key={line} style={{ display: "block", fontSize: 12, marginBottom: 6 }}>
+              <span key={line} style={{ display: "block", fontSize: 14, marginBottom: 6 }}>
                 {line}
               </span>
             ))}

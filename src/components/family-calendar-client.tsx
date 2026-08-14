@@ -502,7 +502,7 @@ export function FamilyCalendarClient() {
           </h3>
           <p>Family requests create linked review records and never overwrite a confirmed occurrence.</p>
           {selectedChanges.slice(0, 3).map((row) => (
-            <div key={row.id} style={{ marginTop: 10, fontSize: 9, color: "var(--muted)" }}>
+            <div key={row.id} style={{ marginTop: 10, fontSize: 14, color: "var(--muted)" }}>
               {row.changeType} · {row.reason} · {statusLabel(row.status)}
             </div>
           ))}
@@ -528,7 +528,7 @@ export function FamilyCalendarClient() {
             Request cancellation / make-up / refund review
           </button>
           {openChange ? (
-            <p style={{ marginTop: 10, fontSize: 9, color: "var(--muted)" }}>
+            <p style={{ marginTop: 10, fontSize: 14, color: "var(--muted)" }}>
               A request is already awaiting staff review for this record.
             </p>
           ) : null}

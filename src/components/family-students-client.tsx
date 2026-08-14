@@ -205,7 +205,7 @@ export function FamilyStudentsClient({
     return (
       <>
         {detailLoading && !detail ? (
-          <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading student detail…</p>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading student detail…</p>
         ) : null}
         {detailError ? <div className="validation-hint">{detailError}</div> : null}
         {detail ? (

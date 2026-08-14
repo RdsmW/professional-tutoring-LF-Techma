@@ -50,7 +50,7 @@ export function IntegrationStatusPanel({ stripeConfigured }: { stripeConfigured:
           </article>
         ))}
       </div>
-      <p style={{ margin: "14px 0 0", fontSize: 11, color: "var(--muted)" }}>
+      <p style={{ margin: "14px 0 0", fontSize: 14, color: "var(--muted)" }}>
         Status only — this screen does not charge, sync, or write outbound.
       </p>
     </>

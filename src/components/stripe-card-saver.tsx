@@ -188,7 +188,7 @@ export const StripeCardSaver = forwardRef<StripeCardSaverHandle, StripeCardSaver
           <strong>
             Saved card: {(savedCard.brand || "Card").toUpperCase()} ···· {savedCard.last4}
           </strong>
-          <p style={{ margin: "8px 0 0", fontSize: 9, color: "var(--muted)" }}>
+          <p style={{ margin: "8px 0 0", fontSize: 14, color: "var(--muted)" }}>
             Continue uses this card for this request. Choose replace to enter a different card.
           </p>
           <div className="wizard-footer" style={{ borderTop: 0, marginTop: 10, paddingTop: 0 }}>
@@ -226,7 +226,7 @@ export const StripeCardSaver = forwardRef<StripeCardSaverHandle, StripeCardSaver
           <SetupForm ref={formRef} onError={setConfirmError} />
         </Elements>
         {confirmError ? <div className="validation-hint">{confirmError}</div> : null}
-        <p style={{ marginTop: 10, fontSize: 9, color: "var(--muted)" }}>
+        <p style={{ marginTop: 10, fontSize: 14, color: "var(--muted)" }}>
           Enter card details above, then Continue. The card is confirmed with Stripe for this request;
           it is saved on your family account only if you checked save-for-future.
         </p>

@@ -648,7 +648,7 @@ export function BookTutoringWizard() {
       {step === 7 ? (
         <div className="wizard-stage">
           <h3>Review booking</h3>
-          <p style={{ margin: "0 0 4px", fontSize: 11, color: "var(--muted)" }}>
+          <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--muted)" }}>
             You’re about to submit this tutoring request.
           </p>
           <div className="review-groups">

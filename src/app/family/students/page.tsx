@@ -32,7 +32,7 @@ export default async function FamilyStudentsPage() {
   }
 
   return (
-    <Suspense fallback={<p style={{ color: "var(--muted)", fontSize: 12 }}>Loading students…</p>}>
+    <Suspense fallback={<p style={{ color: "var(--muted)", fontSize: 14 }}>Loading students…</p>}>
       <FamilyStudentsClient initialStudents={initialStudents} />
     </Suspense>
   );

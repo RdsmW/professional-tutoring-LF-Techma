@@ -250,8 +250,8 @@ export function StaffBillingClient() {
         </article>
       </section>
       {error ? <p className="form-error">{error}</p> : null}
-      <Panel title="Billing records" eyebrow="Live ledger">
-        {loading ? <p style={{ fontSize: 11, color: "var(--muted)" }}>Loading billing…</p> : null}
+      <Panel title="Billing records">
+        {loading ? <p style={{ fontSize: 14, color: "var(--muted)" }}>Loading billing…</p> : null}
         {!loading && payments.length === 0 ? (
           <div className="empty-action">
             <div className="empty-symbol">$</div>
@@ -279,7 +279,7 @@ export function StaffBillingClient() {
                     {row.displayCode} · {relatedLabel(row.relatedEntityType)}
                   </span>
                   <h3 style={{ margin: "4px 0" }}>{row.amountLabel}</h3>
-                  <p style={{ margin: 0, fontSize: 10, color: "var(--muted)" }}>
+                  <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
                     {row.householdName}
                     {row.methodLabel ? ` · ${row.methodLabel}` : ""}
                   </p>

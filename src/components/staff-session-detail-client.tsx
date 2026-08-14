@@ -154,7 +154,7 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
     }
   }
 
-  if (loading) return <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading session…</p>;
+  if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading session…</p>;
   if (error && !session) return <p className="form-error">{error}</p>;
   if (!session) return null;
 
@@ -169,7 +169,7 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
         action={<span className={`pill ${statusTone(session.status)}`}>{statusLabel(session.status)}</span>}
       />
       {error ? <p className="form-error">{error}</p> : null}
-      {saveMessage ? <p style={{ fontSize: 11, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
+      {saveMessage ? <p style={{ fontSize: 14, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
 
       <div className="profile-layout">
         <Panel title="Profile summary" eyebrow="Booking as session">
@@ -241,12 +241,12 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
           </div>
         </Panel>
 
-        <Panel title="Attendance" eyebrow="Record">
+        <Panel title="Attendance">
           <label style={{ display: "block", marginBottom: 10 }}>
             <span
               style={{
                 display: "block",
-                fontSize: 8,
+                fontSize: 14,
                 color: "var(--muted)",
                 textTransform: "uppercase",
                 letterSpacing: ".06em",
@@ -271,7 +271,7 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
             <span
               style={{
                 display: "block",
-                fontSize: 8,
+                fontSize: 14,
                 color: "var(--muted)",
                 textTransform: "uppercase",
                 letterSpacing: ".06em",
@@ -288,12 +288,12 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
                 width: "100%",
                 border: "1px solid var(--line)",
                 padding: 10,
-                fontSize: 11,
+                fontSize: 14,
                 background: "#fbfcfa",
               }}
             />
           </label>
-          <p style={{ margin: "10px 0 0", fontSize: 10, color: "var(--muted)" }}>
+          <p style={{ margin: "10px 0 0", fontSize: 14, color: "var(--muted)" }}>
             Last recorded: {formatWhen(session.attendanceRecordedAt)}
             {session.attendanceStatus ? (
               <>

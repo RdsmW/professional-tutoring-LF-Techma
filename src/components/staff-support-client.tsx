@@ -249,13 +249,13 @@ export function StaffSupportClient() {
     <>
       <PageIntro title="Support inbox" />
       {error ? <p className="form-error">{error}</p> : null}
-      {loading ? <p style={{ fontSize: 11, color: "var(--muted)" }}>Loading inbox…</p> : null}
+      {loading ? <p style={{ fontSize: 14, color: "var(--muted)" }}>Loading inbox…</p> : null}
       {!loading && cases.length === 0 ? (
         <section className="panel">
           <div className="empty-action">
             <div className="empty-symbol">✉</div>
             <p>Support Inbox is clear. No family requests are waiting.</p>
-            <p style={{ fontSize: 9, color: "var(--muted)" }}>
+            <p style={{ fontSize: 14, color: "var(--muted)" }}>
               Email, SMS, and Outlook routing are future integrations and are not live.
             </p>
           </div>
@@ -282,7 +282,7 @@ export function StaffSupportClient() {
                   {row.displayCode} · {row.priorityLabel}
                 </span>
                 <h3 style={{ margin: "4px 0" }}>{row.topic}</h3>
-                <p style={{ margin: 0, fontSize: 10, color: "var(--muted)" }}>
+                <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
                   {row.householdName}
                   {row.relatedLabel ? ` · ${row.relatedLabel}` : ""} · {row.assigneeName}
                 </p>

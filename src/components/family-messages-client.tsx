@@ -324,7 +324,7 @@ export function FamilyMessagesClient() {
         }
       />
 
-      <p style={{ margin: "0 0 16px", fontSize: 12, color: "var(--muted)" }}>
+      <p style={{ margin: "0 0 16px", fontSize: 14, color: "var(--muted)" }}>
         Scheduling changes stay on{" "}
         <Link href="/family/calendar" style={{ color: "var(--blue)", fontWeight: 700 }}>
           Calendar
@@ -333,7 +333,7 @@ export function FamilyMessagesClient() {
       </p>
 
       {error ? <p className="form-error" style={{ marginBottom: 12 }}>{error}</p> : null}
-      {loading ? <p style={{ fontSize: 11, color: "var(--muted)" }}>Loading cases…</p> : null}
+      {loading ? <p style={{ fontSize: 14, color: "var(--muted)" }}>Loading cases…</p> : null}
 
       {!loading && cases.length === 0 ? (
         <Panel title="Your cases">

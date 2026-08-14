@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 
 type TutorRow = {
@@ -17,6 +17,7 @@ type TutorRow = {
 
 export function StaffTutorsClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tutors, setTutors] = useState<TutorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +52,10 @@ export function StaffTutorsClient() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") setCreating(true);
+  }, [searchParams]);
 
   async function createTutor(event: React.FormEvent) {
     event.preventDefault();
@@ -87,10 +92,12 @@ export function StaffTutorsClient() {
   if (creating) {
     return (
       <section className="wizard-shell panel">
-        <button type="button" className="page-back" onClick={() => setCreating(false)}>
+        <button type="button" className="page-back" onClick={() => {
+          setCreating(false);
+          router.replace("/staff/tutors");
+        }}>
           ← Tutors
         </button>
-        <span className="eyebrow">Staff · New Tutor</span>
         <h2>Add tutor</h2>
         <form className="wizard-stage" onSubmit={createTutor}>
           <div className="input-grid">
@@ -161,10 +168,10 @@ export function StaffTutorsClient() {
         }
       />
       {error ? <p className="form-error">{error}</p> : null}
-      {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading tutors…</p> : null}
-      <Panel title="Tutor directory" eyebrow="Live database">
+      {loading ? <p className="dashboard-empty">Loading tutors…</p> : null}
+      <Panel title="Tutor directory">
         {tutors.length === 0 && !loading ? (
-          <p style={{ color: "var(--muted)" }}>No tutors yet.</p>
+          <p className="dashboard-empty">No tutors yet.</p>
         ) : (
           <div className="table-panel">
             {tutors.map((row) => (

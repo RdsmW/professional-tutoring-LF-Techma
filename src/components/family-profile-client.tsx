@@ -274,7 +274,7 @@ export function FamilyProfileClient() {
         </button>
         <span className="eyebrow">My guardian profile</span>
         <h2>Edit your information</h2>
-        <p style={{ maxWidth: 640, fontSize: 11, color: "var(--muted)" }}>
+        <p style={{ maxWidth: 640, fontSize: 14, color: "var(--muted)" }}>
           Update your own identity and shared household contact details. Another guardian’s identity
           and billing ownership are not changed here.
         </p>
@@ -438,7 +438,7 @@ export function FamilyProfileClient() {
         </div>
       </section>
 
-      {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading profile…</p> : null}
+      {loading ? <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading profile…</p> : null}
       {!loading && error ? (
         <div className="form-error" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <span>{error}</span>
@@ -448,7 +448,7 @@ export function FamilyProfileClient() {
         </div>
       ) : null}
       {savedMessage ? (
-        <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 11, marginBottom: 12 }}>{savedMessage}</p>
+        <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 14, marginBottom: 12 }}>{savedMessage}</p>
       ) : null}
 
       {!loading && profile ? (

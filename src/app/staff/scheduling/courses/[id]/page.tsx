@@ -245,7 +245,7 @@ export default function StaffCourseRosterPage() {
         }
       />
       {error ? <p className="form-error">{error}</p> : null}
-      {message ? <p style={{ color: "var(--blue)", fontSize: 12, fontWeight: 700 }}>{message}</p> : null}
+      {message ? <p style={{ color: "var(--blue)", fontSize: 14, fontWeight: 700 }}>{message}</p> : null}
 
       <Panel
         title="Capacity"
@@ -277,7 +277,7 @@ export default function StaffCourseRosterPage() {
             </button>
           </div>
         ) : (
-          <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading…</p>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading…</p>
         )}
       </Panel>
 
@@ -342,7 +342,7 @@ export default function StaffCourseRosterPage() {
             : "Course"
         }
       >
-        {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading roster…</p> : null}
+        {loading ? <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading roster…</p> : null}
         {!loading && roster.length === 0 ? (
           <p style={{ color: "var(--muted)" }}>No enrollments for this course.</p>
         ) : (
@@ -360,7 +360,7 @@ export default function StaffCourseRosterPage() {
                       <small style={{ display: "block", color: "var(--muted)", marginTop: 4 }}>{row.notes}</small>
                     ) : null}
                   </div>
-                  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 10, fontWeight: 700 }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 14, fontWeight: 700 }}>
                     Status
                     <select
                       value={draftStatus[row.id] ?? row.status}
@@ -386,10 +386,10 @@ export default function StaffCourseRosterPage() {
                     {savingId === row.id ? "Saving…" : "Save"}
                   </button>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
+                    <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 14 }}>
                       Student →
                     </Link>
-                    <Link href={`/staff/families/${row.householdId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 9 }}>
+                    <Link href={`/staff/families/${row.householdId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 14 }}>
                       Household →
                     </Link>
                   </div>

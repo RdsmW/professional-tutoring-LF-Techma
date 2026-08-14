@@ -245,7 +245,7 @@ export function AddStudentWizard({
           <h3>Learning needs</h3>
           <div className="select-block">
             <strong>Subjects or learning goals</strong>
-            <p style={{ margin: "6px 0 10px", fontSize: 10, color: "var(--muted)" }}>
+            <p style={{ margin: "6px 0 10px", fontSize: 14, color: "var(--muted)" }}>
               Select one or more subjects. Add optional notes for anything else.
             </p>
             <div className="subject-multi-select" role="group" aria-label="Subjects or learning goals">
