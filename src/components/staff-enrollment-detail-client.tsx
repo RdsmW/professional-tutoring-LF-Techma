@@ -93,7 +93,7 @@ export function StaffEnrollmentDetailClient({
           {enrollment.requestedBy ? <Field label="Requested by" value={enrollment.requestedBy} /> : null}
           <Field label="Submitted" value={formatWhen(enrollment.createdAt)} />
           <Field label="Updated" value={formatWhen(enrollment.updatedAt)} />
-          {enrollment.notes ? <Field label="Notes" value={enrollment.notes} /> : null}
+          <Field label="Notes" value={enrollment.notes || "—"} />
         </div>
       </Panel>
     </>

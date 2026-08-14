@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { StaffNewFamilyWizard } from "@/components/staff-new-family-wizard";
+import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -32,6 +33,7 @@ export function StaffFamiliesClient({
   const [creating, setCreating] = useState(false);
   const [addingGuardian, setAddingGuardian] = useState(false);
   const [savingGuardian, setSavingGuardian] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [applied, setApplied] = useState({ q: "", status: "" });
@@ -103,6 +105,49 @@ export function StaffFamiliesClient({
     setQ("");
     setStatus("");
     setApplied({ q: "", status: "" });
+  }
+
+  async function setFamilyStatus(id: string, next: "active" | "archived") {
+    if (busyId) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update family.");
+        return;
+      }
+      await reload();
+    } catch {
+      setError("Unable to update family.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteFamily(id: string) {
+    if (busyId) return;
+    if (!window.confirm("Permanently delete this empty household? This cannot be undone.")) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to delete family.");
+        return;
+      }
+      await reload();
+    } catch {
+      setError("Unable to delete family.");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function createGuardian(event: React.FormEvent) {
@@ -227,7 +272,7 @@ export function StaffFamiliesClient({
           <div className="wizard-footer">
             <button
               type="button"
-              className="wizard-back"
+              className="secondary-button"
               onClick={() => {
                 setAddingGuardian(false);
                 router.replace("/staff/families");
@@ -272,7 +317,8 @@ export function StaffFamiliesClient({
           ) : null}
         </p>
       ) : null}
-      <Panel>
+
+      <StaffDirectoryFilters>
         <form
           className="student-filter-panel"
           onSubmit={applyFilters}
@@ -296,7 +342,7 @@ export function StaffFamiliesClient({
               ))}
             </select>
           </label>
-          <button type="submit" className="primary-button" style={{ height: 36, alignSelf: "end" }}>
+          <button type="submit" className="secondary-button" style={{ height: 36, alignSelf: "end" }}>
             Filter
           </button>
           <button
@@ -308,40 +354,56 @@ export function StaffFamiliesClient({
             Clear
           </button>
         </form>
+      </StaffDirectoryFilters>
 
+      <Panel>
         {loading ? <p className="dashboard-empty">Loading families…</p> : null}
         {families.length === 0 && !loading ? (
           <p className="dashboard-empty">No households match these filters.</p>
         ) : (
-          <div className="table-panel">
+          <div className="table-panel staff-dir-table">
+            <div className="table-head staff-dir-cols-families">
+              <span>Name</span>
+              <span>Students</span>
+              <span>Guardians</span>
+              <span className="staff-dir-col-status">Status</span>
+              <span className="staff-dir-col-actions">Actions</span>
+            </div>
             {families.map((row) => (
-              <Link key={row.id} href={`/staff/families/${row.id}`} className="family-row">
-                <span
-                  className="avatar"
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: "50%",
-                    background: "var(--blue-soft)",
-                    color: "var(--blue)",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 800,
-                  }}
-                >
-                  {row.displayName.slice(0, 1)}
+              <div
+                key={row.id}
+                className="table-row staff-dir-cols-families"
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(`/staff/families/${row.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(`/staff/families/${row.id}`);
+                  }
+                }}
+              >
+                <strong>{row.displayName}</strong>
+                <span>{row.studentCount}</span>
+                <span>{row.guardianCount}</span>
+                <span className="staff-dir-col-status">
+                  <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
                 </span>
-                <span>
-                  <strong>{row.displayName}</strong>
-                  <small>
-                    {formatStatusLabel(row.status)} · {row.studentCount} student
-                    {row.studentCount === 1 ? "" : "s"} · {row.guardianCount} guardian
-                    {row.guardianCount === 1 ? "" : "s"}
-                  </small>
+                <span className="staff-dir-col-actions">
+                  <StaffRowActions
+                    label={`Actions for ${row.displayName}`}
+                    actions={lifecycleActions({
+                      isArchived: row.status === "archived",
+                      canDelete: Boolean(row.canDelete),
+                      busy: busyId === row.id,
+                      onEdit: () => router.push(`/staff/families/${row.id}?edit=1`),
+                      onArchive: () => void setFamilyStatus(row.id, "archived"),
+                      onRestore: () => void setFamilyStatus(row.id, "active"),
+                      onDelete: () => void deleteFamily(row.id),
+                    })}
+                  />
                 </span>
-                <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
-                <b>Detail →</b>
-              </Link>
+              </div>
             ))}
           </div>
         )}

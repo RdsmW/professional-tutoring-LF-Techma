@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -33,6 +33,9 @@ type CatalogSubject = {
 
 export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const deepLinkEdit = searchParams.get("edit") === "1";
+  const editDeepLinkHandled = useRef(false);
   const [tutor, setTutor] = useState<TutorDetail | null>(null);
   const [catalog, setCatalog] = useState<CatalogSubject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +86,20 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (!tutor || !deepLinkEdit || editDeepLinkHandled.current) return;
+    editDeepLinkHandled.current = true;
+    setProfileForm({
+      displayName: tutor.displayName,
+      email: tutor.email ?? "",
+      phone: tutor.phone ?? "",
+    });
+    setEditing(true);
+    setError(null);
+    setMessage(null);
+    router.replace(`/staff/tutors/${tutorId}`, { scroll: false });
+  }, [tutor, deepLinkEdit, tutorId, router]);
 
   const availableSubjects = useMemo(() => {
     if (!tutor) return catalog;
@@ -222,7 +239,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             type="button"
-            className="secondary-button"
+            className="primary-button"
             onClick={() => {
               setProfileForm({
                 displayName: tutor.displayName,
@@ -236,24 +253,34 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           >
             Edit
           </button>
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={togglingActive}
-            onClick={() => void patchTutor({ active: !tutor.active }, "active")}
-          >
-            {togglingActive ? "Updating…" : tutor.active ? "Archive" : "Restore"}
-          </button>
-          {tutor.canDelete ? (
+          {!tutor.active ? (
             <button
               type="button"
               className="secondary-button"
+              disabled={togglingActive}
+              onClick={() => void patchTutor({ active: true }, "active")}
+            >
+              {togglingActive ? "Updating…" : "Restore"}
+            </button>
+          ) : tutor.canDelete ? (
+            <button
+              type="button"
+              className="danger-button"
               disabled={togglingActive}
               onClick={() => void deleteTutor()}
             >
               Delete
             </button>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={togglingActive}
+              onClick={() => void patchTutor({ active: false }, "active")}
+            >
+              {togglingActive ? "Updating…" : "Archive"}
+            </button>
+          )}
         </div>
       </div>
       <PageIntro

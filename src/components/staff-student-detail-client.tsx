@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { GENDER, GRADE_LABELS, GRADUATION_YEARS } from "@/lib/forms/options";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -77,6 +77,9 @@ function toProfileForm(student: StudentDetail): ProfileForm {
 
 export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const deepLinkEdit = searchParams.get("edit") === "1";
+  const editDeepLinkHandled = useRef(false);
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -200,6 +203,16 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     setSaveMessage(null);
   }
 
+  useEffect(() => {
+    if (!student || !deepLinkEdit || editDeepLinkHandled.current) return;
+    editDeepLinkHandled.current = true;
+    setProfileForm(toProfileForm(student));
+    setEditing(true);
+    setError(null);
+    setSaveMessage(null);
+    router.replace(`/staff/students/${studentId}`, { scroll: false });
+  }, [student, deepLinkEdit, studentId, router]);
+
   async function saveProfile(event: FormEvent) {
     event.preventDefault();
     if (!profileForm || savingProfile) return;
@@ -267,7 +280,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           ← Students
         </Link>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" className="secondary-button" onClick={openEdit}>
+          <button type="button" className="primary-button" onClick={openEdit}>
             Edit
           </button>
           {isArchived ? (
@@ -279,6 +292,15 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
             >
               Restore
             </button>
+          ) : student.canDelete ? (
+            <button
+              type="button"
+              className="danger-button"
+              disabled={lifecycleBusy}
+              onClick={() => void deleteStudent()}
+            >
+              Delete
+            </button>
           ) : (
             <button
               type="button"
@@ -289,16 +311,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               Archive
             </button>
           )}
-          {student.canDelete ? (
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={lifecycleBusy}
-              onClick={() => void deleteStudent()}
-            >
-              Delete
-            </button>
-          ) : null}
         </div>
       </div>
       <PageIntro

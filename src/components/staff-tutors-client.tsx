@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type TutorRow = {
@@ -14,6 +14,7 @@ type TutorRow = {
   active: boolean;
   maxSeatsPerSlot: number;
   notesPreview: string | null;
+  canDelete: boolean;
 };
 
 const ACTIVE_OPTIONS = [
@@ -29,6 +30,7 @@ export function StaffTutorsClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [form, setForm] = useState({
     displayName: "",
     email: "",
@@ -84,6 +86,49 @@ export function StaffTutorsClient() {
     setQ("");
     setActive("true");
     setApplied({ q: "", active: "true" });
+  }
+
+  async function setTutorActive(id: string, nextActive: boolean) {
+    if (busyId) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/tutors/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: nextActive }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update tutor.");
+        return;
+      }
+      await reload();
+    } catch {
+      setError("Unable to update tutor.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteTutor(id: string) {
+    if (busyId) return;
+    if (!window.confirm("Permanently delete this tutor? This cannot be undone.")) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/tutors/${id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to delete tutor.");
+        return;
+      }
+      await reload();
+    } catch {
+      setError("Unable to delete tutor.");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function createTutor(event: React.FormEvent) {
@@ -178,7 +223,7 @@ export function StaffTutorsClient() {
           </div>
           {error ? <div className="validation-hint">{error}</div> : null}
           <div className="wizard-footer">
-            <button type="button" className="wizard-back" onClick={() => setCreating(false)}>
+            <button type="button" className="secondary-button" onClick={() => setCreating(false)}>
               Cancel
             </button>
             <button type="submit" className="primary-button" disabled={saving}>
@@ -213,7 +258,8 @@ export function StaffTutorsClient() {
           ) : null}
         </p>
       ) : null}
-      <Panel>
+
+      <StaffDirectoryFilters>
         <form
           className="student-filter-panel"
           onSubmit={applyFilters}
@@ -237,7 +283,7 @@ export function StaffTutorsClient() {
               ))}
             </select>
           </label>
-          <button type="submit" className="primary-button" style={{ height: 36, alignSelf: "end" }}>
+          <button type="submit" className="secondary-button" style={{ height: 36, alignSelf: "end" }}>
             Filter
           </button>
           <button
@@ -249,42 +295,56 @@ export function StaffTutorsClient() {
             Clear
           </button>
         </form>
+      </StaffDirectoryFilters>
 
+      <Panel>
         {loading ? <p className="dashboard-empty">Loading tutors…</p> : null}
         {tutors.length === 0 && !loading ? (
           <p className="dashboard-empty">No tutors match these filters.</p>
         ) : (
-          <div className="table-panel">
+          <div className="table-panel staff-dir-table">
+            <div className="table-head staff-dir-cols-tutors">
+              <span>Name</span>
+              <span>Email</span>
+              <span className="staff-dir-col-status">Status</span>
+              <span className="staff-dir-col-actions">Actions</span>
+            </div>
             {tutors.map((row) => (
-              <Link key={row.id} href={`/staff/tutors/${row.id}`} className="family-row">
-                <span
-                  className="avatar"
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: "50%",
-                    background: "var(--blue-soft)",
-                    color: "var(--blue)",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 800,
-                  }}
-                >
-                  {row.displayName.slice(0, 1)}
+              <div
+                key={row.id}
+                className="table-row staff-dir-cols-tutors"
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(`/staff/tutors/${row.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(`/staff/tutors/${row.id}`);
+                  }
+                }}
+              >
+                <strong>{row.displayName}</strong>
+                <span>{row.email || "—"}</span>
+                <span className="staff-dir-col-status">
+                  <span className={`pill ${statusTone(row.active ? "active" : "inactive")}`}>
+                    {formatStatusLabel(row.active ? "active" : "archived")}
+                  </span>
                 </span>
-                <span>
-                  <strong>{row.displayName}</strong>
-                  <small>
-                    {row.email || "No email"} · {row.phone || "No phone"} · {row.maxSeatsPerSlot}{" "}
-                    seat{row.maxSeatsPerSlot === 1 ? "" : "s"}/slot
-                    {row.notesPreview ? ` · ${row.notesPreview}` : ""}
-                  </small>
+                <span className="staff-dir-col-actions">
+                  <StaffRowActions
+                    label={`Actions for ${row.displayName}`}
+                    actions={lifecycleActions({
+                      isArchived: !row.active,
+                      canDelete: Boolean(row.canDelete),
+                      busy: busyId === row.id,
+                      onEdit: () => router.push(`/staff/tutors/${row.id}?edit=1`),
+                      onArchive: () => void setTutorActive(row.id, false),
+                      onRestore: () => void setTutorActive(row.id, true),
+                      onDelete: () => void deleteTutor(row.id),
+                    })}
+                  />
                 </span>
-                <span className={`pill ${statusTone(row.active ? "active" : "inactive")}`}>
-                  {formatStatusLabel(row.active ? "active" : "inactive")}
-                </span>
-                <b>Detail →</b>
-              </Link>
+              </div>
             ))}
           </div>
         )}

@@ -19,33 +19,24 @@ export function StaffReportsClient({
       />
 
       <Panel>
-        <div className="report-definition-list">
-          <div className="report-definition-head">
+        <div className="report-definition-list staff-reports-table">
+          <div className="report-definition-head staff-reports-cols">
             <span>Saved report</span>
             <span>Summary</span>
             <span>Records</span>
-            <span />
+            <span className="staff-dir-col-actions">Actions</span>
           </div>
           {reports.map((report) => (
-            <Link
-              key={report.id}
-              href={`/staff/reports/${report.id}`}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.3fr 1.6fr .5fr .7fr",
-                gap: 12,
-                alignItems: "center",
-                borderTop: "1px solid var(--line)",
-                padding: "13px 15px",
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
+            <div key={report.id} className="staff-reports-row staff-reports-cols">
               <strong>{report.name}</strong>
               <span>{report.summary}</span>
               <span className="pill">—</span>
-              <b>Open →</b>
-            </Link>
+              <span className="staff-dir-col-actions">
+                <Link href={`/staff/reports/${report.id}`} className="secondary-button staff-open-control">
+                  Open
+                </Link>
+              </span>
+            </div>
           ))}
           {reports.length === 0 ? (
             <p style={{ padding: "13px 15px", color: "var(--muted)" }}>No saved reports available.</p>

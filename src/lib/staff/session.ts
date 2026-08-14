@@ -73,8 +73,30 @@ export async function getStaffContext(): Promise<StaffContext | null> {
 
   try {
     // 1) Existing profile — enough for detail APIs
-    let staff = await loadStaffByClerkId(session.userId);
+    let staff: typeof staffProfiles.$inferSelect | null = await loadStaffByClerkId(session.userId);
     if (staff?.active) {
+      // Prefer a real name over the bootstrap placeholder when claims have one.
+      if (staff.fullName === "Staff Member") {
+        const claims = session.sessionClaims as SessionClaims | null | undefined;
+        const claimed =
+          [claims?.firstName ?? claims?.first_name, claims?.lastName ?? claims?.last_name]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+        if (claimed) {
+          try {
+            const database = requireDb();
+            const [updated] = await database
+              .update(staffProfiles)
+              .set({ fullName: claimed, updatedAt: new Date() })
+              .where(eq(staffProfiles.id, staff.id))
+              .returning();
+            if (updated) staff = updated;
+          } catch {
+            staff = { ...staff, fullName: claimed };
+          }
+        }
+      }
       return { userId: session.userId, staff };
     }
     if (staff && !staff.active) return null;

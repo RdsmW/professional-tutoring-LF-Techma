@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, ilike, or, SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, or, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { tutors } from "@/lib/db/schema";
+import { bookings, tutorSubjects, tutors } from "@/lib/db/schema";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 type NewTutorBody = {
@@ -48,22 +48,50 @@ export async function GET(request: Request) {
     if (activeParam === "false") filters.push(eq(tutors.active, false));
 
     const rows = await database
-      .select()
+      .select({
+        id: tutors.id,
+        displayName: tutors.displayName,
+        email: tutors.email,
+        phone: tutors.phone,
+        active: tutors.active,
+        maxSeatsPerSlot: tutors.maxSeatsPerSlot,
+        notes: tutors.notes,
+        updatedAt: tutors.updatedAt,
+        bookingCount: sql<number>`count(distinct ${bookings.id})::int`.mapWith(Number),
+        subjectCount: sql<number>`count(distinct ${tutorSubjects.id})::int`.mapWith(Number),
+      })
       .from(tutors)
+      .leftJoin(bookings, eq(bookings.tutorId, tutors.id))
+      .leftJoin(tutorSubjects, eq(tutorSubjects.tutorId, tutors.id))
       .where(filters.length > 0 ? and(...filters) : undefined)
+      .groupBy(
+        tutors.id,
+        tutors.displayName,
+        tutors.email,
+        tutors.phone,
+        tutors.active,
+        tutors.maxSeatsPerSlot,
+        tutors.notes,
+        tutors.updatedAt,
+      )
       .orderBy(desc(tutors.updatedAt));
 
     return NextResponse.json({
       ok: true,
-      tutors: rows.map((row) => ({
-        id: row.id,
-        displayName: row.displayName,
-        email: row.email,
-        phone: row.phone,
-        active: row.active,
-        maxSeatsPerSlot: row.maxSeatsPerSlot,
-        notesPreview: notesPreview(row.notes),
-      })),
+      tutors: rows.map((row) => {
+        const bookingCount = Number(row.bookingCount ?? 0);
+        const subjectCount = Number(row.subjectCount ?? 0);
+        return {
+          id: row.id,
+          displayName: row.displayName,
+          email: row.email,
+          phone: row.phone,
+          active: row.active,
+          maxSeatsPerSlot: row.maxSeatsPerSlot,
+          notesPreview: notesPreview(row.notes),
+          canDelete: bookingCount === 0 && subjectCount === 0,
+        };
+      }),
     });
   } catch (error) {
     console.warn("[staff/tutors] GET soft-fail", error);

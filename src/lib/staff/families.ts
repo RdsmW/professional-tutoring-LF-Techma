@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, ne, or, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { guardians, households, students } from "@/lib/db/schema";
+import { bookings, courseEnrollments, guardians, households, students } from "@/lib/db/schema";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 
 export type { StaffFamilyListRow };
@@ -45,10 +45,14 @@ export async function listStaffFamilies(
       updatedAt: households.updatedAt,
       studentCount: sql<number>`count(distinct ${students.id})::int`.mapWith(Number),
       guardianCount: sql<number>`count(distinct ${guardians.id})::int`.mapWith(Number),
+      bookingCount: sql<number>`count(distinct ${bookings.id})::int`.mapWith(Number),
+      enrollmentCount: sql<number>`count(distinct ${courseEnrollments.id})::int`.mapWith(Number),
     })
     .from(households)
     .leftJoin(students, eq(students.householdId, households.id))
     .leftJoin(guardians, eq(guardians.householdId, households.id))
+    .leftJoin(bookings, eq(bookings.householdId, households.id))
+    .leftJoin(courseEnrollments, eq(courseEnrollments.householdId, households.id))
     .where(whereParts.length > 0 ? and(...whereParts) : undefined)
     .groupBy(
       households.id,
@@ -59,13 +63,20 @@ export async function listStaffFamilies(
     )
     .orderBy(desc(households.updatedAt));
 
-  return rows.map((row) => ({
-    id: row.id,
-    displayName: row.displayName,
-    status: row.status,
-    primaryPhone: row.primaryPhone,
-    studentCount: Number(row.studentCount ?? 0),
-    guardianCount: Number(row.guardianCount ?? 0),
-    updatedAt: row.updatedAt.toISOString(),
-  }));
+  return rows.map((row) => {
+    const studentCount = Number(row.studentCount ?? 0);
+    const guardianCount = Number(row.guardianCount ?? 0);
+    const bookingCount = Number(row.bookingCount ?? 0);
+    const enrollmentCount = Number(row.enrollmentCount ?? 0);
+    return {
+      id: row.id,
+      displayName: row.displayName,
+      status: row.status,
+      primaryPhone: row.primaryPhone,
+      studentCount,
+      guardianCount,
+      canDelete: studentCount === 0 && bookingCount === 0 && enrollmentCount === 0,
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  });
 }

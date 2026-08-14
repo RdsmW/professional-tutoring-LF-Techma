@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type StudentRow = {
@@ -14,6 +14,7 @@ type StudentRow = {
   graduationYear: number | null;
   lifecycle: string;
   householdDisplayName: string;
+  canDelete: boolean;
 };
 
 type HouseholdOption = {
@@ -21,7 +22,15 @@ type HouseholdOption = {
   displayName: string;
 };
 
-const LIFECYCLE_OPTIONS = ["", "prospect", "active", "paused", "completed", "archived"];
+const LIFECYCLE_OPTIONS = [
+  { value: "", label: "All (non-archived)" },
+  { value: "prospect", label: "Prospect" },
+  { value: "active", label: "Active" },
+  { value: "paused", label: "Paused" },
+  { value: "completed", label: "Completed" },
+  { value: "archived", label: "Archived" },
+  { value: "all", label: "All statuses" },
+] as const;
 
 export function StaffStudentsClient() {
   const router = useRouter();
@@ -32,6 +41,7 @@ export function StaffStudentsClient() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [form, setForm] = useState({ householdId: "", displayName: "", gradeLabel: "" });
   const [q, setQ] = useState("");
   const [lifecycle, setLifecycle] = useState("");
@@ -113,6 +123,49 @@ export function StaffStudentsClient() {
     setApplied({ q: "", lifecycle: "", grade: "", school: "" });
   }
 
+  async function setStudentLifecycle(id: string, nextLifecycle: string) {
+    if (busyId) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/students/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lifecycle: nextLifecycle }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update student.");
+        return;
+      }
+      await reload();
+    } catch {
+      setError("Unable to update student.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteStudent(id: string) {
+    if (busyId) return;
+    if (!window.confirm("Permanently delete this student? This cannot be undone.")) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/students/${id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to delete student.");
+        return;
+      }
+      await reload();
+    } catch {
+      setError("Unable to delete student.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function createStudent(event: React.FormEvent) {
     event.preventDefault();
     if (saving) return;
@@ -188,7 +241,7 @@ export function StaffStudentsClient() {
           <div className="wizard-footer">
             <button
               type="button"
-              className="wizard-back"
+              className="secondary-button"
               onClick={() => {
                 setCreating(false);
                 router.replace("/staff/students");
@@ -229,7 +282,7 @@ export function StaffStudentsClient() {
         </p>
       ) : null}
 
-      <Panel>
+      <StaffDirectoryFilters>
         <form
           className="student-filter-panel"
           onSubmit={applyFilters}
@@ -242,9 +295,9 @@ export function StaffStudentsClient() {
           <label>
             Lifecycle
             <select value={lifecycle} onChange={(e) => setLifecycle(e.target.value)}>
-              {LIFECYCLE_OPTIONS.map((value) => (
-                <option key={value || "all"} value={value}>
-                  {value || "All"}
+              {LIFECYCLE_OPTIONS.map((option) => (
+                <option key={option.value || "default"} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -257,48 +310,65 @@ export function StaffStudentsClient() {
             School
             <input value={school} onChange={(e) => setSchool(e.target.value)} placeholder="School" />
           </label>
-          <button type="submit" className="primary-button" style={{ height: 36, alignSelf: "end" }}>
+          <button type="submit" className="secondary-button" style={{ height: 36, alignSelf: "end" }}>
             Filter
           </button>
           <button type="button" className="secondary-button" style={{ height: 36, alignSelf: "end" }} onClick={clearFilters}>
             Clear
           </button>
         </form>
+      </StaffDirectoryFilters>
 
+      <Panel>
         {loading ? <p className="dashboard-empty">Loading students…</p> : null}
         {students.length === 0 && !loading ? (
           <p className="dashboard-empty">No students match these filters.</p>
         ) : (
-          <div className="table-panel students-table compact-table">
-            <div
-              className="table-head"
-              style={{ gridTemplateColumns: "1.4fr 1.2fr 1.2fr 0.7fr 0.8fr 0.6fr" }}
-            >
+          <div className="table-panel staff-dir-table">
+            <div className="table-head staff-dir-cols-students">
               <span>Name</span>
               <span>Household</span>
-              <span>School</span>
               <span>Grade</span>
-              <span>Lifecycle</span>
-              <span />
+              <span>School</span>
+              <span className="staff-dir-col-status">Status</span>
+              <span className="staff-dir-col-actions">Actions</span>
             </div>
             {students.map((row) => (
-              <Link
+              <div
                 key={row.id}
-                href={`/staff/students/${row.id}`}
-                className="table-row"
-                style={{
-                  gridTemplateColumns: "1.4fr 1.2fr 1.2fr 0.7fr 0.8fr 0.6fr",
-                  textDecoration: "none",
-                  color: "inherit",
+                className="table-row staff-dir-cols-students"
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(`/staff/students/${row.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(`/staff/students/${row.id}`);
+                  }
                 }}
               >
                 <strong>{row.displayName}</strong>
                 <span>{row.householdDisplayName}</span>
-                <span>{row.schoolName ?? "—"}</span>
                 <span>{row.gradeLabel ?? "—"}</span>
-                <span className={`pill ${statusTone(row.lifecycle)}`}>{formatStatusLabel(row.lifecycle)}</span>
-                <span className="table-open">Open →</span>
-              </Link>
+                <span>{row.schoolName ?? "—"}</span>
+                <span className="staff-dir-col-status">
+                  <span className={`pill ${statusTone(row.lifecycle)}`}>{formatStatusLabel(row.lifecycle)}</span>
+                </span>
+                <span className="staff-dir-col-actions">
+                  <StaffRowActions
+                    label={`Actions for ${row.displayName}`}
+                    actions={lifecycleActions({
+                      isArchived: row.lifecycle === "archived",
+                      canDelete: Boolean(row.canDelete),
+                      busy: busyId === row.id,
+                      onEdit: () => router.push(`/staff/students/${row.id}?edit=1`),
+                      onArchive: () => void setStudentLifecycle(row.id, "archived"),
+                      onRestore: () => void setStudentLifecycle(row.id, "active"),
+                      onDelete: () => void deleteStudent(row.id),
+                    })}
+                  />
+                </span>
+              </div>
             ))}
           </div>
         )}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { courseEnrollments, courseOfferings, guardians, students } from "@/lib/db/schema";
+import { humanizeEnrollmentFields } from "@/lib/forms/humanize-enrollment";
 import { getStaffContext } from "@/lib/staff/session";
 
 export async function GET(
@@ -47,17 +48,11 @@ export async function GET(
       return NextResponse.json({ ok: false, error: "Enrollment not found." }, { status: 404 });
     }
 
-    let scheduleLabel = row.scheduleSummary || row.requestedSlotPreference || null;
-    let familyNotes: string | null = row.notes;
-    if (row.notes) {
-      try {
-        const parsed = JSON.parse(row.notes) as { scheduleLabel?: string; notes?: string };
-        if (parsed.scheduleLabel) scheduleLabel = parsed.scheduleLabel;
-        if (typeof parsed.notes === "string") familyNotes = parsed.notes;
-      } catch {
-        // keep raw notes
-      }
-    }
+    const human = humanizeEnrollmentFields({
+      notes: row.notes,
+      requestedSlotPreference: row.requestedSlotPreference,
+      scheduleSummary: row.scheduleSummary,
+    });
 
     const requestedBy =
       row.guardianFirstName || row.guardianLastName
@@ -72,10 +67,10 @@ export async function GET(
         studentName: row.studentName || "Student",
         courseName: row.courseName || "Course",
         courseActive: row.courseActive,
-        scheduleLabel,
-        requestedSlotPreference: row.requestedSlotPreference,
+        scheduleLabel: human.scheduleLabel,
+        requestedSlotPreference: human.slotPreference,
         referralSource: row.referralSource,
-        notes: familyNotes,
+        notes: human.notes,
         requestedBy,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),

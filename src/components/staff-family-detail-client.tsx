@@ -113,7 +113,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const deepLinkedGuardianId = searchParams.get("guardianId");
+  const deepLinkEdit = searchParams.get("edit") === "1";
   const deepLinkHandled = useRef<string | null>(null);
+  const editDeepLinkHandled = useRef(false);
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -225,6 +227,24 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     setEditingHousehold(true);
     setSavedMessage(null);
   }
+
+  useEffect(() => {
+    if (!family || !deepLinkEdit || editDeepLinkHandled.current) return;
+    editDeepLinkHandled.current = true;
+    setHouseholdForm({
+      displayName: family.displayName,
+      primaryPhone: family.primaryPhone || "",
+      addressLine1: family.addressLine1 || "",
+      addressLine2: family.addressLine2 || "",
+      city: family.city || "",
+      state: family.state || "",
+      postalCode: family.postalCode || "",
+      billingOwnerGuardianId: family.billingOwnerGuardianId || "",
+    });
+    setEditingHousehold(true);
+    setSavedMessage(null);
+    router.replace(`/staff/families/${familyId}`, { scroll: false });
+  }, [family, deepLinkEdit, familyId, router]);
 
   async function saveHousehold(event: React.FormEvent) {
     event.preventDefault();
@@ -394,7 +414,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           ← Families
         </Link>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" className="secondary-button" onClick={openHouseholdEdit}>
+          <button type="button" className="primary-button" onClick={openHouseholdEdit}>
             Edit
           </button>
           {isArchived ? (
@@ -406,6 +426,15 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             >
               Restore
             </button>
+          ) : family.canDelete ? (
+            <button
+              type="button"
+              className="danger-button"
+              disabled={lifecycleBusy}
+              onClick={() => void deleteFamily()}
+            >
+              Delete
+            </button>
           ) : (
             <button
               type="button"
@@ -416,30 +445,22 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               Archive
             </button>
           )}
-          {family.canDelete ? (
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={lifecycleBusy}
-              onClick={() => void deleteFamily()}
-            >
-              Delete
-            </button>
-          ) : null}
         </div>
       </div>
 
       <section className="family-record-hero">
         <span className="avatar navy">{initials(family.displayName)}</span>
-        <div>
-          <h2>{family.displayName}</h2>
+        <div className="family-record-hero-copy">
+          <div className="family-record-hero-title">
+            <h2>{family.displayName}</h2>
+            <span className={`pill ${statusTone(family.status)}`}>{formatStatusLabel(family.status)}</span>
+          </div>
           <p>
             {[family.billingOwnerName ? `Billing: ${family.billingOwnerName}` : null, billingCue]
               .filter(Boolean)
               .join(" · ")}
           </p>
         </div>
-        <span className={`pill ${statusTone(family.status)}`}>{formatStatusLabel(family.status)}</span>
       </section>
 
       {error ? <p className="form-error">{error}</p> : null}
@@ -708,18 +729,21 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         {family.students.length === 0 ? (
           <p style={{ color: "var(--muted)", fontSize: 14 }}>No students yet.</p>
         ) : (
-          <div className="linked-student-list">
+          <div className="staff-detail-list">
             {family.students.map((s) => (
-              <Link key={s.id} href={`/staff/students/${s.id}`} className="family-row">
+              <div key={s.id} className="staff-detail-list-row">
                 <span className="mini-avatar">{initials(s.displayName)}</span>
                 <span>
                   <strong>{s.displayName}</strong>
                   <small>
-                    {s.gradeLabel || "Grade pending"} · {s.schoolName || "School pending"} · {s.lifecycle}
+                    {s.gradeLabel || "Grade pending"} · {s.schoolName || "School pending"} ·{" "}
+                    {formatStatusLabel(s.lifecycle)}
                   </small>
                 </span>
-                <b>Open →</b>
-              </Link>
+                <Link href={`/staff/students/${s.id}`} className="secondary-button staff-open-control">
+                  Open
+                </Link>
+              </div>
             ))}
           </div>
         )}
@@ -730,52 +754,52 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           {family.activity.enrollments.length === 0 ? (
             <p style={{ color: "var(--muted)", fontSize: 14 }}>No course enrollments yet.</p>
           ) : (
-            family.activity.enrollments.map((row) => (
-              <Link
-                key={row.id}
-                href={`/staff/families/${familyId}/enrollments/${row.id}`}
-                style={{
-                  display: "block",
-                  borderTop: "1px solid var(--line)",
-                  padding: "10px 0",
-                  textDecoration: "none",
-                  color: "inherit",
-                }}
-              >
-                <strong style={{ fontSize: 14 }}>
-                  {row.studentName} · {row.courseName}
-                </strong>
-                <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--muted)" }}>
-                  {row.status} · {formatDate(row.createdAt)} · Open →
-                </p>
-              </Link>
-            ))
+            <div className="staff-detail-list">
+              {family.activity.enrollments.map((row) => (
+                <div key={row.id} className="staff-detail-list-row">
+                  <span>
+                    <strong>
+                      {row.studentName} · {row.courseName}
+                    </strong>
+                    <small>
+                      {formatStatusLabel(row.status)} · {formatDate(row.createdAt)}
+                    </small>
+                  </span>
+                  <Link
+                    href={`/staff/families/${familyId}/enrollments/${row.id}`}
+                    className="secondary-button staff-open-control"
+                  >
+                    Open
+                  </Link>
+                </div>
+              ))}
+            </div>
           )}
         </Panel>
         <Panel title="Bookings">
           {family.activity.bookings.length === 0 ? (
             <p style={{ color: "var(--muted)", fontSize: 14 }}>No tutoring bookings yet.</p>
           ) : (
-            family.activity.bookings.map((row) => (
-              <Link
-                key={row.id}
-                href={`/staff/families/${familyId}/bookings/${row.id}`}
-                style={{
-                  display: "block",
-                  borderTop: "1px solid var(--line)",
-                  padding: "10px 0",
-                  textDecoration: "none",
-                  color: "inherit",
-                }}
-              >
-                <strong style={{ fontSize: 14 }}>
-                  {row.studentName} · {row.tutorName}
-                </strong>
-                <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--muted)" }}>
-                  {row.status} · {formatDate(row.createdAt)} · Open →
-                </p>
-              </Link>
-            ))
+            <div className="staff-detail-list">
+              {family.activity.bookings.map((row) => (
+                <div key={row.id} className="staff-detail-list-row">
+                  <span>
+                    <strong>
+                      {row.studentName} · {row.tutorName}
+                    </strong>
+                    <small>
+                      {formatStatusLabel(row.status)} · {formatDate(row.createdAt)}
+                    </small>
+                  </span>
+                  <Link
+                    href={`/staff/families/${familyId}/bookings/${row.id}`}
+                    className="secondary-button staff-open-control"
+                  >
+                    Open
+                  </Link>
+                </div>
+              ))}
+            </div>
           )}
         </Panel>
       </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, ilike, SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, ne, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { households, students } from "@/lib/db/schema";
+import { bookings, courseEnrollments, households, students } from "@/lib/db/schema";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 const LIFECYCLES = new Set(["prospect", "active", "paused", "completed", "archived"]);
@@ -21,14 +21,21 @@ export async function GET(request: Request) {
     const school = (searchParams.get("school") ?? "").trim();
     const householdId = (searchParams.get("householdId") ?? searchParams.get("household") ?? "").trim();
 
-    if (lifecycle && !LIFECYCLES.has(lifecycle)) {
+    if (lifecycle && lifecycle !== "all" && !LIFECYCLES.has(lifecycle)) {
       return NextResponse.json({ ok: false, error: "Invalid lifecycle filter." }, { status: 400 });
     }
 
     const database = requireDb();
     const filters: SQL[] = [];
     if (q) filters.push(ilike(students.displayName, `%${q}%`));
-    if (lifecycle) filters.push(eq(students.lifecycle, lifecycle as typeof students.$inferSelect.lifecycle));
+    if (lifecycle === "all") {
+      // no lifecycle constraint
+    } else if (lifecycle && LIFECYCLES.has(lifecycle)) {
+      filters.push(eq(students.lifecycle, lifecycle as typeof students.$inferSelect.lifecycle));
+    } else {
+      // Default: exclude archived so Restore is reachable via Archived filter
+      filters.push(ne(students.lifecycle, "archived"));
+    }
     if (grade) filters.push(ilike(students.gradeLabel, `%${grade}%`));
     if (school) filters.push(ilike(students.schoolName, `%${school}%`));
     if (householdId) filters.push(eq(students.householdId, householdId));
@@ -44,25 +51,45 @@ export async function GET(request: Request) {
         householdId: students.householdId,
         householdDisplayName: households.displayName,
         updatedAt: students.updatedAt,
+        bookingCount: sql<number>`count(distinct ${bookings.id})::int`.mapWith(Number),
+        enrollmentCount: sql<number>`count(distinct ${courseEnrollments.id})::int`.mapWith(Number),
       })
       .from(students)
       .innerJoin(households, eq(students.householdId, households.id))
+      .leftJoin(bookings, eq(bookings.studentId, students.id))
+      .leftJoin(courseEnrollments, eq(courseEnrollments.studentId, students.id))
       .where(filters.length > 0 ? and(...filters) : undefined)
+      .groupBy(
+        students.id,
+        students.displayName,
+        students.gradeLabel,
+        students.schoolName,
+        students.graduationYear,
+        students.lifecycle,
+        students.householdId,
+        households.displayName,
+        students.updatedAt,
+      )
       .orderBy(desc(students.updatedAt));
 
     return NextResponse.json({
       ok: true,
-      students: rows.map((row) => ({
-        id: row.id,
-        displayName: row.displayName,
-        gradeLabel: row.gradeLabel,
-        schoolName: row.schoolName,
-        graduationYear: row.graduationYear,
-        lifecycle: row.lifecycle,
-        householdId: row.householdId,
-        householdDisplayName: row.householdDisplayName,
-        updatedAt: row.updatedAt.toISOString(),
-      })),
+      students: rows.map((row) => {
+        const bookingCount = Number(row.bookingCount ?? 0);
+        const enrollmentCount = Number(row.enrollmentCount ?? 0);
+        return {
+          id: row.id,
+          displayName: row.displayName,
+          gradeLabel: row.gradeLabel,
+          schoolName: row.schoolName,
+          graduationYear: row.graduationYear,
+          lifecycle: row.lifecycle,
+          householdId: row.householdId,
+          householdDisplayName: row.householdDisplayName,
+          canDelete: bookingCount === 0 && enrollmentCount === 0,
+          updatedAt: row.updatedAt.toISOString(),
+        };
+      }),
     });
   } catch (error) {
     console.warn("[staff/students] GET soft-fail", error);

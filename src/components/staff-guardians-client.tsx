@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { StaffDirectoryFilters, StaffRowActions } from "@/components/staff-row-actions";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type GuardianRow = {
@@ -84,11 +85,6 @@ export function StaffGuardiansClient() {
     router.push(`/staff/families/${householdId}`);
   }
 
-  function openEdit(event: MouseEvent, householdId: string, guardianId: string) {
-    event.stopPropagation();
-    router.push(`/staff/families/${householdId}?guardianId=${guardianId}`);
-  }
-
   return (
     <>
       <PageIntro title="Guardians" />
@@ -106,7 +102,7 @@ export function StaffGuardiansClient() {
         </p>
       ) : null}
 
-      <Panel>
+      <StaffDirectoryFilters>
         <form
           className="student-filter-panel"
           onSubmit={applyFilters}
@@ -130,68 +126,73 @@ export function StaffGuardiansClient() {
               ))}
             </select>
           </label>
-          <button type="submit" className="primary-button" style={{ height: 36, alignSelf: "end" }}>
+          <button type="submit" className="secondary-button" style={{ height: 36, alignSelf: "end" }}>
             Filter
           </button>
           <button type="button" className="secondary-button" style={{ height: 36, alignSelf: "end" }} onClick={clearFilters}>
             Clear
           </button>
         </form>
+      </StaffDirectoryFilters>
 
+      <Panel>
         {loading ? <p className="dashboard-empty">Loading guardians…</p> : null}
         {guardians.length === 0 && !loading ? (
           <p className="dashboard-empty">No guardians match these filters.</p>
         ) : (
-          <div className="table-panel students-table compact-table">
-            <div
-              className="table-head"
-              style={{ gridTemplateColumns: "1.3fr 1.4fr 1.2fr 0.9fr 0.8fr 0.6fr" }}
-            >
+          <div className="table-panel staff-dir-table">
+            <div className="table-head staff-dir-cols-guardians">
               <span>Name</span>
               <span>Email</span>
               <span>Family</span>
-              <span>Status</span>
-              <span>Role</span>
-              <span />
+              <span className="staff-dir-col-status">Status</span>
+              <span className="staff-dir-col-actions">Actions</span>
             </div>
-            {guardians.map((row) => (
-              <div
-                key={row.id}
-                className="table-row"
-                role="link"
-                tabIndex={0}
-                onClick={() => openFamily(row.household.id)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    openFamily(row.household.id);
-                  }
-                }}
-                style={{
-                  gridTemplateColumns: "1.3fr 1.4fr 1.2fr 0.9fr 0.8fr 0.6fr",
-                  cursor: "pointer",
-                }}
-              >
-                <strong>
-                  {row.firstName} {row.lastName}
-                </strong>
-                <span>{row.email}</span>
-                <span>{row.household.displayName}</span>
-                <span className={`pill ${statusTone(row.linkStatus)}`}>
-                  {formatStatusLabel(row.linkStatus)}
-                </span>
-                <span>{row.isBillingOwner ? "Billing" : "—"}</span>
-                <span>
-                  <button
-                    type="button"
-                    className="text-button table-open"
-                    onClick={(event) => openEdit(event, row.household.id, row.id)}
-                  >
-                    Edit →
-                  </button>
-                </span>
-              </div>
-            ))}
+            {guardians.map((row) => {
+              const fullName = `${row.firstName} ${row.lastName}`.trim();
+              return (
+                <div
+                  key={row.id}
+                  className="table-row staff-dir-cols-guardians"
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => openFamily(row.household.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openFamily(row.household.id);
+                    }
+                  }}
+                >
+                  <strong>{fullName}</strong>
+                  <span>{row.email}</span>
+                  <span>{row.household.displayName}</span>
+                  <span className="staff-dir-col-status">
+                    <span className={`pill ${statusTone(row.linkStatus)}`}>
+                      {formatStatusLabel(row.linkStatus)}
+                    </span>
+                  </span>
+                  <span className="staff-dir-col-actions">
+                    <StaffRowActions
+                      label={`Actions for ${fullName}`}
+                      actions={[
+                        {
+                          id: "edit",
+                          label: "Edit",
+                          onSelect: () =>
+                            router.push(`/staff/families/${row.household.id}?guardianId=${row.id}`),
+                        },
+                        {
+                          id: "open-family",
+                          label: "Open family",
+                          onSelect: () => openFamily(row.household.id),
+                        },
+                      ]}
+                    />
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </Panel>

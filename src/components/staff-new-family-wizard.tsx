@@ -411,7 +411,7 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
             <button type="button" className="wizard-back" onClick={onCancel}>
               ← Cancel
             </button>
-            <button type="button" className="family-primary" disabled={!searched} onClick={goNext}>
+            <button type="button" className="primary-button" disabled={!searched} onClick={goNext}>
               {hasMatches ? "Continue as new" : "Continue to household"}
             </button>
           </div>
@@ -472,7 +472,7 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
             <button type="button" className="wizard-back" onClick={() => setStep(1)}>
               ← Back
             </button>
-            <button type="button" className="family-primary" disabled={!householdValid} onClick={goNext}>
+            <button type="button" className="primary-button" disabled={!householdValid} onClick={goNext}>
               Add guardians
             </button>
           </div>
@@ -631,7 +631,7 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
             <button type="button" className="wizard-back" onClick={() => setStep(2)}>
               ← Back
             </button>
-            <button type="button" className="family-primary" disabled={!guardiansValid} onClick={goNext}>
+            <button type="button" className="primary-button" disabled={!guardiansValid} onClick={goNext}>
               Add students
             </button>
           </div>
@@ -681,7 +681,7 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
             <button type="button" className="wizard-back" onClick={() => setStep(3)}>
               ← Back
             </button>
-            <button type="button" className="family-primary" onClick={goNext}>
+            <button type="button" className="primary-button" onClick={goNext}>
               Review
             </button>
           </div>
@@ -718,7 +718,7 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
             <button type="button" className="wizard-back" onClick={() => setStep(4)}>
               ← Back
             </button>
-            <button type="button" className="family-primary" disabled={saving} onClick={() => void createFamily()}>
+            <button type="button" className="primary-button" disabled={saving} onClick={() => void createFamily()}>
               {saving ? "Creating…" : "Create family"}
             </button>
           </div>
