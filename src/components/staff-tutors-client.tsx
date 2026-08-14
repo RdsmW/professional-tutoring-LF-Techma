@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type TutorRow = {
   id: string;
@@ -169,7 +170,7 @@ export function StaffTutorsClient() {
       />
       {error ? <p className="form-error">{error}</p> : null}
       {loading ? <p className="dashboard-empty">Loading tutors…</p> : null}
-      <Panel title="Tutor directory">
+      <Panel>
         {tutors.length === 0 && !loading ? (
           <p className="dashboard-empty">No tutors yet.</p>
         ) : (
@@ -199,7 +200,9 @@ export function StaffTutorsClient() {
                     {row.notesPreview ? ` · ${row.notesPreview}` : ""}
                   </small>
                 </span>
-                <span className="pill">{row.active ? "Active" : "Inactive"}</span>
+                <span className={`pill ${statusTone(row.active ? "active" : "inactive")}`}>
+                  {formatStatusLabel(row.active ? "active" : "inactive")}
+                </span>
                 <b>Detail →</b>
               </Link>
             ))}

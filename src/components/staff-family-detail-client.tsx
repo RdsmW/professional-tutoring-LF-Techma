@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Panel } from "@/components/ui";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type NoteRow = {
   id: string;
@@ -378,7 +379,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               .join(" · ")}
           </p>
         </div>
-        <span className="pill">{family.status}</span>
+        <span className={`pill ${statusTone(family.status)}`}>{formatStatusLabel(family.status)}</span>
       </section>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
@@ -581,8 +582,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                       ) : null}
                     </span>
                   </span>
-                  <span className={`pill ${g.linked ? "green" : "amber"}`}>
-                    {g.linked ? "Active" : g.invitePending ? "Invite pending" : "Unlinked"}
+                  <span className={`pill ${statusTone(g.linked ? "active" : g.invitePending ? "invite_pending" : "unlinked")}`}>
+                    {formatStatusLabel(g.linked ? "active" : g.invitePending ? "invite_pending" : "unlinked")}
                   </span>
                 </article>
               );

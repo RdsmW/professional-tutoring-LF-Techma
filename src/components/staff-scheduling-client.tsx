@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type BookingRow = {
   id: string;
@@ -66,7 +67,7 @@ type OptionSlot = {
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const TIME_BUCKETS = ["9:00", "11:00", "1:00", "3:15", "5:15", "7:15"] as const;
 
-function statusTone(status: string) {
+function slotStatusTone(status: string) {
   if (status === "confirmed") return "tone-0";
   if (status === "held" || status === "pending_payment" || status === "pending_staff_review") return "tone-3";
   if (status === "cancelled" || status === "failed") return "tone-1";
@@ -561,7 +562,7 @@ export function StaffSchedulingClient() {
                             ? `/staff/students/${first.studentId}`
                             : `/staff/families/${first.householdId}`
                         }
-                        className={`slot-card ${statusTone(first.status)}`}
+                        className={`slot-card ${slotStatusTone(first.status)}`}
                         style={{ textDecoration: "none", color: "inherit", display: "block" }}
                       >
                         <strong>{first.studentName}</strong>
@@ -593,8 +594,8 @@ export function StaffSchedulingClient() {
                         {timeLabel(row)} · {formatWhen(row.createdAt)}
                       </small>
                     </div>
-                    <span className="pill" style={{ marginRight: 10 }}>
-                      {row.status}
+                    <span className={`pill ${statusTone(row.status)}`} style={{ marginRight: 10 }}>
+                      {formatStatusLabel(row.status)}
                     </span>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {row.studentId ? (
@@ -633,7 +634,9 @@ export function StaffSchedulingClient() {
                     <article key={course.id} className="course-card">
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                         <span className="pill">{capacityLabel}</span>
-                        <span className="pill">{course.active ? "Active" : "Inactive"}</span>
+                        <span className={`pill ${statusTone(course.active ? "active" : "inactive")}`}>
+                          {formatStatusLabel(course.active ? "active" : "inactive")}
+                        </span>
                       </div>
                       <span className="course-kicker">{course.code}</span>
                       <h3>{course.name}</h3>
@@ -699,8 +702,8 @@ export function StaffSchedulingClient() {
                           {row.householdName} · {formatWhen(row.createdAt)}
                         </small>
                       </div>
-                      <span className="pill" style={{ marginRight: 10 }}>
-                        {row.status}
+                      <span className={`pill ${statusTone(row.status)}`} style={{ marginRight: 10 }}>
+                        {formatStatusLabel(row.status)}
                       </span>
                       <Link href={`/staff/students/${row.studentId}`} style={{ color: "var(--blue)", fontWeight: 800, fontSize: 14 }}>
                         Student →

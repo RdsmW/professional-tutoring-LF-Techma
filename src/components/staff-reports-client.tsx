@@ -18,7 +18,7 @@ export function StaffReportsClient({
         action={<span className="pill blue">{reports.length} saved reports</span>}
       />
 
-      <Panel title="Saved reports">
+      <Panel>
         <div className="report-definition-list">
           <div className="report-definition-head">
             <span>Saved report</span>

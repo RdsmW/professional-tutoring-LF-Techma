@@ -11,6 +11,7 @@ import {
   paymentRecords,
   students,
 } from "@/lib/db/schema";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
@@ -26,10 +27,6 @@ function initialsFromName(name: string) {
   if (parts.length === 0) return "??";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-}
-
-function statusLabel(value: string) {
-  return value.replace(/_/g, " ");
 }
 
 function startOfWeekNy(now = new Date()) {
@@ -85,6 +82,7 @@ async function loadDashboardData() {
       title: string;
       copy: string;
       meta: string;
+      tone: string;
       href: string;
     }[],
     weekBars: WEEK_DAYS.map((day) => ({
@@ -187,10 +185,10 @@ async function loadDashboardData() {
     const familyRequests = openRequests.map((row) => ({
       id: row.id,
       initials: initialsFromName(row.studentName || row.householdName),
-      title: `${statusLabel(row.changeType)} · ${row.studentName}`,
-      copy: `${row.householdName} · ${statusLabel(row.requestedOutcome)}`,
-      meta: statusLabel(row.status),
-      tone: row.status === "under_review" ? "blue" : "coral",
+      title: `${formatStatusLabel(row.changeType)} · ${row.studentName}`,
+      copy: `${row.householdName} · ${formatStatusLabel(row.requestedOutcome)}`,
+      meta: formatStatusLabel(row.status),
+      tone: statusTone(row.status) || (row.status === "under_review" ? "blue" : "coral"),
       href: `/staff/sessions?exceptionId=${row.id}`,
     }));
 
@@ -199,7 +197,8 @@ async function loadDashboardData() {
       initials: initialsFromName(row.displayName),
       title: row.displayName,
       copy: [row.householdName, row.gradeLabel, row.schoolName].filter(Boolean).join(" · ") || "Student",
-      meta: row.lifecycle,
+      meta: formatStatusLabel(row.lifecycle),
+      tone: statusTone(row.lifecycle),
       href: `/staff/students/${row.id}`,
     }));
 
@@ -347,7 +346,7 @@ export default async function StaffDashboardPage() {
                     <strong>{item.title}</strong>
                     <small>{item.copy}</small>
                   </span>
-                  <span className="pill">{item.meta}</span>
+                  <span className={`pill ${item.tone}`}>{item.meta}</span>
                 </Link>
               ))
             )}

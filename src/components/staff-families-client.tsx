@@ -7,6 +7,7 @@ import { PageIntro, Panel } from "@/components/ui";
 import { StaffNewFamilyWizard } from "@/components/staff-new-family-wizard";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type ListFilter = "active" | "archived" | "all";
 
@@ -239,7 +240,7 @@ export function StaffFamiliesClient({
       </div>
       {error ? <p className="form-error">{error}</p> : null}
       {loading ? <p className="dashboard-empty">Loading families…</p> : null}
-      <Panel title="Household directory">
+      <Panel>
         {visible.length === 0 && !loading ? (
           <p className="dashboard-empty">
             {filter === "archived" ? "No archived households." : "No households yet."}
@@ -270,7 +271,7 @@ export function StaffFamiliesClient({
                     {row.guardianCount} guardian{row.guardianCount === 1 ? "" : "s"}
                   </small>
                 </span>
-                <span className="pill">{row.status}</span>
+                <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
                 <b>Detail →</b>
               </Link>
             ))}

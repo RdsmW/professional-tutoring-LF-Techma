@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 const STEPS = ["Match", "Household", "Guardians", "Students", "Review"] as const;
 
@@ -377,7 +378,9 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
                         {candidate.guardian.matchOn.join(" + ")}
                       </small>
                     </span>
-                    <span className="pill">{candidate.householdStatus}</span>
+                    <span className={`pill ${statusTone(candidate.householdStatus)}`}>
+                      {formatStatusLabel(candidate.householdStatus)}
+                    </span>
                     <span style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
                       <Link
                         href={`/staff/families/${candidate.householdId}`}

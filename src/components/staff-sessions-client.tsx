@@ -9,6 +9,7 @@ import {
   isChangeReason,
   isRequestedOutcome,
 } from "@/lib/family/change-policy";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type SessionRow = {
   id: string;
@@ -62,14 +63,10 @@ const EXCEPTION_STATUS_OPTIONS = [
   "applied",
 ];
 
-function statusLabel(status: string) {
-  return status.replace(/_/g, " ");
-}
-
-function statusTone(status: string) {
-  if (status === "confirmed" || status === "approved" || status === "applied") return "mint";
-  if (status === "cancelled" || status === "declined" || status === "failed") return "coral";
-  return "amber";
+function relatedEntityLabel(type: string) {
+  if (type === "booking") return "Booking / session";
+  if (type === "course_enrollment") return "Course enrollment";
+  return formatStatusLabel(type);
 }
 
 function formatWhen(iso: string | null) {
@@ -85,12 +82,6 @@ function formatWhen(iso: string | null) {
   } catch {
     return iso;
   }
-}
-
-function relatedEntityLabel(type: string) {
-  if (type === "booking") return "Booking / session";
-  if (type === "course_enrollment") return "Course enrollment";
-  return type.replace(/_/g, " ");
 }
 
 function relatedEntityHref(type: string, id: string) {
@@ -296,7 +287,7 @@ export function StaffSessionsClient() {
       </section>
 
       {mode === "Sessions" ? (
-        <Panel title="Session list" eyebrow="Bookings as sessions">
+        <Panel>
           {sessionsError ? <p className="form-error">{sessionsError}</p> : null}
           <form className="session-filter-bar" onSubmit={applySessionFilters} style={{ gridTemplateColumns: "1.4fr 1fr auto auto auto" }}>
             <label>
@@ -312,7 +303,7 @@ export function StaffSessionsClient() {
               <select value={status} onChange={(e) => setStatus(e.target.value)}>
                 {BOOKING_STATUS_OPTIONS.map((value) => (
                   <option key={value || "all"} value={value}>
-                    {value ? statusLabel(value) : "All"}
+                    {value ? formatStatusLabel(value) : "All"}
                   </option>
                 ))}
               </select>
@@ -364,7 +355,7 @@ export function StaffSessionsClient() {
                       {row.tutorName ?? "Tutor pending"} · {row.householdName} · {formatWhen(row.createdAt)}
                     </small>
                   </span>
-                  <span className={`pill ${statusTone(row.status)}`}>{statusLabel(row.status)}</span>
+                  <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
                   <b>Open →</b>
                 </Link>
               ))}
@@ -380,7 +371,7 @@ export function StaffSessionsClient() {
               <select value={exceptionStatus} onChange={(e) => setExceptionStatus(e.target.value)}>
                 {EXCEPTION_STATUS_OPTIONS.map((value) => (
                   <option key={value || "all"} value={value}>
-                    {value ? statusLabel(value) : "All"}
+                    {value ? formatStatusLabel(value) : "All"}
                   </option>
                 ))}
               </select>
@@ -421,7 +412,7 @@ export function StaffSessionsClient() {
                     </strong>
                     <small>{row.reason}</small>
                   </span>
-                  <span className={`pill ${statusTone(row.status)}`}>{statusLabel(row.status)}</span>
+                  <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
                   <b>{selectedId === row.id ? "Selected" : "Open"}</b>
                 </button>
               ))}
@@ -453,7 +444,7 @@ export function StaffSessionsClient() {
                         <Link href={`/staff/families/${selected.householdId}`}>{selected.householdName}</Link>
                       </p>
                     </div>
-                    <span className={`pill ${statusTone(selected.status)}`}>{statusLabel(selected.status)}</span>
+                    <span className={`pill ${statusTone(selected.status)}`}>{formatStatusLabel(selected.status)}</span>
                   </section>
 
                   <div className="record-detail-grid" style={{ marginBottom: 14 }}>

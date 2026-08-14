@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { ENROLLMENT_STATUSES } from "@/lib/enrollment/status";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type CourseMeta = {
   id: string;
@@ -262,8 +263,8 @@ export default function StaffCourseRosterPage() {
                 {atCapacity ? "Full — active enrollments blocked" : `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left`}
               </span>
               {!course.active ? (
-                <span className="pill" style={{ marginLeft: 8 }}>
-                  Inactive
+                <span className={`pill ${statusTone("inactive")}`} style={{ marginLeft: 8 }}>
+                  {formatStatusLabel("inactive")}
                 </span>
               ) : null}
             </p>

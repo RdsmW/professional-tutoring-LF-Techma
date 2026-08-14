@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
 import { PAYMENT_STATUSES, amountLabel, paymentStatusLabel } from "@/lib/billing";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type BillingSummary = {
   unpaid: { count: number; amountCents: number };
@@ -33,12 +34,6 @@ type PaymentDetail = PaymentRow & {
   updatedAt: string;
   cardOnFile: { brand: string | null; last4: string | null } | null;
 };
-
-function statusTone(status: string) {
-  if (status === "paid" || status === "waived") return "mint";
-  if (status === "failed" || status === "refunded") return "rose";
-  return "amber";
-}
 
 function relatedLabel(type: string | null) {
   if (type === "booking") return "Tutoring booking";
@@ -154,7 +149,7 @@ export function StaffBillingClient() {
         <PageIntro
           title="Billing detail"
           description="Manual ledger updates only — no Stripe charges from this screen."
-          action={<span className={`pill ${statusTone(selected.status)}`}>{selected.statusLabel}</span>}
+          action={<span className={`pill ${statusTone(selected.status)}`}>{formatStatusLabel(selected.statusLabel || selected.status)}</span>}
         />
         <section className="panel">
           <div className="panel-heading">
@@ -250,7 +245,7 @@ export function StaffBillingClient() {
         </article>
       </section>
       {error ? <p className="form-error">{error}</p> : null}
-      <Panel title="Billing records">
+      <Panel>
         {loading ? <p style={{ fontSize: 14, color: "var(--muted)" }}>Loading billing…</p> : null}
         {!loading && payments.length === 0 ? (
           <div className="empty-action">
@@ -284,7 +279,7 @@ export function StaffBillingClient() {
                     {row.methodLabel ? ` · ${row.methodLabel}` : ""}
                   </p>
                 </div>
-                <span className={`pill ${statusTone(row.status)}`}>{row.statusLabel}</span>
+                <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.statusLabel || row.status)}</span>
               </div>
             </button>
           ))}

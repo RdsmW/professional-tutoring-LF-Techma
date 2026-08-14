@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type FamilyOption = { id: string; displayName: string; status: string };
 
@@ -238,7 +239,7 @@ export function StaffFamilyMergesClient() {
                     {row.notes ? ` · ${row.notes}` : ""} · {new Date(row.createdAt).toLocaleString()}
                   </small>
                 </span>
-                <span className="pill">{row.status}</span>
+                <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
                 <span style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
                   <Link
                     href={`/staff/families/${row.sourceHouseholdId}`}

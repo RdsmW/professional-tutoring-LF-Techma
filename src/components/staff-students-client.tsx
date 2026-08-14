@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type StudentRow = {
   id: string;
@@ -212,7 +213,7 @@ export function StaffStudentsClient() {
       />
       {error ? <p className="form-error">{error}</p> : null}
 
-      <Panel title="Student directory">
+      <Panel>
         <form
           className="student-filter-panel"
           onSubmit={applyFilters}
@@ -279,7 +280,7 @@ export function StaffStudentsClient() {
                 <span>{row.householdDisplayName}</span>
                 <span>{row.schoolName ?? "—"}</span>
                 <span>{row.gradeLabel ?? "—"}</span>
-                <span className="pill">{row.lifecycle}</span>
+                <span className={`pill ${statusTone(row.lifecycle)}`}>{formatStatusLabel(row.lifecycle)}</span>
                 <span className="table-open">Open →</span>
               </Link>
             ))}

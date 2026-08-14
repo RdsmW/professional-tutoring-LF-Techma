@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type SessionDetail = {
   id: string;
@@ -48,17 +49,6 @@ type SessionDetail = {
 const ATTENDANCE_OPTIONS = ["", "present", "absent", "late", "excused"];
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function statusLabel(status: string) {
-  return status.replace(/_/g, " ");
-}
-
-function statusTone(status: string) {
-  if (status === "confirmed" || status === "present") return "mint";
-  if (status === "cancelled" || status === "absent" || status === "failed") return "coral";
-  if (status === "late" || status === "excused") return "amber";
-  return "amber";
-}
 
 function formatWhen(iso: string | null) {
   if (!iso) return "—";
@@ -166,7 +156,7 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
       <PageIntro
         title={session.student.displayName}
         description={`${session.subject?.name || "Subject pending"} · ${formatSlot(session.slot)}`}
-        action={<span className={`pill ${statusTone(session.status)}`}>{statusLabel(session.status)}</span>}
+        action={<span className={`pill ${statusTone(session.status)}`}>{formatStatusLabel(session.status)}</span>}
       />
       {error ? <p className="form-error">{error}</p> : null}
       {saveMessage ? <p style={{ fontSize: 14, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
@@ -262,7 +252,7 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
             >
               {ATTENDANCE_OPTIONS.map((value) => (
                 <option key={value || "unset"} value={value}>
-                  {value ? statusLabel(value) : "Not recorded"}
+                  {value ? formatStatusLabel(value) : "Not recorded"}
                 </option>
               ))}
             </select>
@@ -298,7 +288,7 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
             {session.attendanceStatus ? (
               <>
                 {" "}
-                · <span className={`pill ${statusTone(session.attendanceStatus)}`}>{statusLabel(session.attendanceStatus)}</span>
+                · <span className={`pill ${statusTone(session.attendanceStatus)}`}>{formatStatusLabel(session.attendanceStatus)}</span>
               </>
             ) : null}
           </p>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type TutorDetail = {
   id: string;
@@ -180,7 +181,11 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
       </Link>
       <PageIntro
         title={tutor.displayName}
-        action={<span className="pill">{tutor.active ? "Active" : "Archived"}</span>}
+        action={
+          <span className={`pill ${statusTone(tutor.active ? "active" : "archived")}`}>
+            {formatStatusLabel(tutor.active ? "active" : "archived")}
+          </span>
+        }
       />
       {error ? <p className="form-error">{error}</p> : null}
       {message ? <p style={{ fontSize: 14, marginBottom: 12 }}>{message}</p> : null}

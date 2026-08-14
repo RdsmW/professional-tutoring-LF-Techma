@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type StudentDetail = {
   id: string;
@@ -114,7 +115,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
       <PageIntro
         title={student.displayName}
         description={`${student.gradeLabel || "Grade pending"} · ${student.schoolName || "School pending"}`}
-        action={<span className="pill">{student.lifecycle}</span>}
+        action={<span className={`pill ${statusTone(student.lifecycle)}`}>{formatStatusLabel(student.lifecycle)}</span>}
       />
       {error ? <p className="form-error">{error}</p> : null}
       {saveMessage ? <p style={{ fontSize: 14, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
@@ -262,7 +263,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                     {new Date(booking.createdAt).toLocaleString()}
                   </small>
                 </span>
-                <span className="pill">{booking.status}</span>
+                <span className={`pill ${statusTone(booking.status)}`}>{formatStatusLabel(booking.status)}</span>
                 <b>{booking.id.slice(0, 8)}</b>
               </div>
             ))}
