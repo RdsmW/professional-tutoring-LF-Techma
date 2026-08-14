@@ -54,13 +54,18 @@ export function Panel({
   title,
   children,
   eyebrow,
+  className,
 }: {
   title?: string;
   children: React.ReactNode;
   eyebrow?: string;
+  className?: string;
 }) {
   return (
-    <section className="panel" style={{ background: "var(--paper)", border: "1px solid var(--line)", padding: 18, marginBottom: 14 }}>
+    <section
+      className={className ? `panel ${className}` : "panel"}
+      style={{ background: "var(--paper)", border: "1px solid var(--line)", padding: 18, marginBottom: 14 }}
+    >
       {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
       {title ? <h2 style={{ margin: "4px 0 12px", font: "700 18px Georgia, serif" }}>{title}</h2> : null}
       {children}

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { FamilyHomeCreateMenu } from "@/components/family-home-create-menu";
 import { useFamilyPortal } from "@/components/family-portal-context";
 
 export function FamilyHomeHero() {
@@ -13,38 +13,8 @@ export function FamilyHomeHero() {
           {householdName ? `Welcome to the ${householdName} account.` : "Welcome to your family account."}
         </h1>
         <p>Manage children, then book tutoring or enroll in a course.</p>
-        <div className="hero-actions" style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link
-            href="/family/students"
-            className="primary-button family-primary"
-            style={{
-              textDecoration: "none",
-              display: "inline-block",
-              padding: "10px 14px",
-              background: "var(--coral)",
-              color: "#fff",
-              fontWeight: 800,
-              fontSize: 14,
-            }}
-          >
-            Students
-          </Link>
-          <Link
-            href="/family/book-tutoring"
-            className="secondary-button"
-            style={{
-              textDecoration: "none",
-              display: "inline-block",
-              padding: "10px 14px",
-              border: "1px solid var(--line)",
-              fontWeight: 800,
-              fontSize: 14,
-            }}
-          >
-            Book Tutoring
-          </Link>
-        </div>
       </div>
+      <FamilyHomeCreateMenu />
     </section>
   );
 }

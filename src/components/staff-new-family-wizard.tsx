@@ -270,11 +270,7 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
       <button type="button" className="wizard-close" aria-label="Close" onClick={onCancel}>
         ×
       </button>
-      <span className="eyebrow">Staff Operations · New Family</span>
       <h2>Create a connected household</h2>
-      <p className="wizard-lead">
-        Search existing households by guardian email or phone before creating a new Family account.
-      </p>
 
       <div className="wizard-progress" aria-label={`Step ${step} of ${STEPS.length}`}>
         {STEPS.map((label, index) => {

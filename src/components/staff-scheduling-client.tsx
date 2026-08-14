@@ -360,12 +360,7 @@ export function StaffSchedulingClient() {
         <button type="button" className="wizard-close" onClick={() => setCreating(false)} aria-label="Close">
           ×
         </button>
-        <span className="eyebrow">Staff booking on behalf of a family</span>
         <h2>Create booking</h2>
-        <p className="wizard-lead">
-          Choose household, student, subject, tutor, and an open availability slot. Confirmed bookings appear on
-          the week board and recent list.
-        </p>
         <form className="wizard-stage" onSubmit={submitBooking}>
           {optionsLoading ? (
             <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading options…</p>

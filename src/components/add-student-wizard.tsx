@@ -134,9 +134,7 @@ export function AddStudentWizard({
       <button type="button" className="wizard-close" aria-label="Close" onClick={resetAndClose}>
         ×
       </button>
-      <span className="eyebrow">Family account · Add child</span>
       <h2>Add a Student profile</h2>
-      <p className="wizard-lead">Student records are children owned by the parent’s Family account.</p>
 
       <div className="wizard-progress" aria-label={`Step ${step} of 3`}>
         {steps.map((label, index) => {

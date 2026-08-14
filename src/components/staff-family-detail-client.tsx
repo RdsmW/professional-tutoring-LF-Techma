@@ -751,7 +751,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         )}
       </Panel>
 
-      <div className="profile-layout" style={{ marginTop: 14 }}>
+      <div className="family-activity-band">
         <Panel title="Course enrollments">
           {family.activity.enrollments.length === 0 ? (
             <p style={{ color: "var(--muted)", fontSize: 14 }}>No course enrollments yet.</p>
@@ -807,8 +807,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       </div>
 
       <div className="family-notes-layout">
-        <Panel title="Add note">
-          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 10 }}>
+        <Panel title="Add note" className="family-notes-panel">
+          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 8 }}>
             Internal notes only. Not visible in the family portal.
           </p>
           <form onSubmit={addNote}>
@@ -817,14 +817,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <textarea
                 value={noteDraft}
                 onChange={(event) => setNoteDraft(event.target.value)}
-                rows={4}
+                rows={3}
                 style={{
                   display: "block",
                   width: "100%",
                   marginTop: 6,
                   border: "1px solid var(--line)",
                   background: "#fbfcfa",
-                  padding: 11,
+                  padding: 10,
                   fontSize: 14,
                   fontFamily: "inherit",
                 }}
@@ -833,7 +833,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             <button
               type="submit"
               className="primary-button"
-              style={{ marginTop: 10 }}
+              style={{ marginTop: 8 }}
               disabled={savingNotes || !noteDraft.trim()}
             >
               {savingNotes ? "Adding…" : "Add note"}
@@ -841,18 +841,18 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </form>
         </Panel>
 
-        <Panel title="Notes">
+        <Panel title="Notes" className="family-notes-panel">
           {family.notes.length === 0 ? (
             <p style={{ color: "var(--muted)", fontSize: 14 }}>No notes yet.</p>
           ) : (
-            <div style={{ overflowX: "auto" }}>
+            <div className="family-notes-table-wrap">
               <table className="family-notes-table">
                 <thead>
                   <tr>
-                    <th className="family-notes-col-content">Content</th>
-                    <th className="family-notes-col-who">Who</th>
-                    <th className="family-notes-col-when">When</th>
-                    <th className="family-notes-col-edit">Edit</th>
+                    <th className="family-notes-col-content">Note</th>
+                    <th className="family-notes-col-who">Creator</th>
+                    <th className="family-notes-col-when">Creation Date</th>
+                    <th className="family-notes-col-edit" aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
@@ -922,42 +922,44 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             <h3 id="guardian-edit-title">
               Edit guardian · {guardianForm.firstName} {guardianForm.lastName}
             </h3>
-            <form onSubmit={saveGuardian} className="input-grid" style={{ gap: 12 }}>
-              <label>
-                First name
-                <input
-                  value={guardianForm.firstName}
-                  onChange={(e) => setGuardianForm({ ...guardianForm, firstName: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Last name
-                <input
-                  value={guardianForm.lastName}
-                  onChange={(e) => setGuardianForm({ ...guardianForm, lastName: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Email
-                <input
-                  type="email"
-                  value={guardianForm.email}
-                  onChange={(e) => setGuardianForm({ ...guardianForm, email: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Phone
-                <input
-                  type="tel"
-                  value={guardianForm.phone || ""}
-                  onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
-                />
-              </label>
-              <div className="guardian-perm-row">
+            <form onSubmit={saveGuardian} className="staff-modal-form">
+              <div className="input-grid staff-modal-fields">
                 <label>
+                  First name
+                  <input
+                    value={guardianForm.firstName}
+                    onChange={(e) => setGuardianForm({ ...guardianForm, firstName: e.target.value })}
+                    required
+                  />
+                </label>
+                <label>
+                  Last name
+                  <input
+                    value={guardianForm.lastName}
+                    onChange={(e) => setGuardianForm({ ...guardianForm, lastName: e.target.value })}
+                    required
+                  />
+                </label>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    value={guardianForm.email}
+                    onChange={(e) => setGuardianForm({ ...guardianForm, email: e.target.value })}
+                    required
+                  />
+                </label>
+                <label>
+                  Phone
+                  <input
+                    type="tel"
+                    value={guardianForm.phone || ""}
+                    onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="guardian-perm-row" role="group" aria-label="Permissions">
+                <label className="guardian-perm-option">
                   <input
                     type="checkbox"
                     checked={guardianForm.isBillingOwner}
@@ -965,9 +967,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                       setGuardianForm({ ...guardianForm, isBillingOwner: e.target.checked })
                     }
                   />
-                  Billing owner
+                  <span>Billing owner</span>
                 </label>
-                <label>
+                <label className="guardian-perm-option">
                   <input
                     type="checkbox"
                     checked={guardianForm.canManageStudents}
@@ -975,9 +977,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                       setGuardianForm({ ...guardianForm, canManageStudents: e.target.checked })
                     }
                   />
-                  Can manage students
+                  <span>Can manage students</span>
                 </label>
-                <label>
+                <label className="guardian-perm-option">
                   <input
                     type="checkbox"
                     checked={guardianForm.canRequestServices}
@@ -985,15 +987,15 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                       setGuardianForm({ ...guardianForm, canRequestServices: e.target.checked })
                     }
                   />
-                  Can request services
+                  <span>Can request services</span>
                 </label>
               </div>
-              <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
-                <button type="submit" className="primary-button" disabled={savingGuardian}>
-                  {savingGuardian ? "Saving…" : "Save guardian"}
-                </button>
+              <div className="staff-modal-actions">
                 <button type="button" className="secondary-button" onClick={closeGuardianEdit}>
                   Cancel
+                </button>
+                <button type="submit" className="primary-button" disabled={savingGuardian}>
+                  {savingGuardian ? "Saving…" : "Save guardian"}
                 </button>
               </div>
             </form>
