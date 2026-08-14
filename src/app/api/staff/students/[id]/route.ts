@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { bookings, households, students, tutors } from "@/lib/db/schema";
-import { getStaffContext } from "@/lib/staff/session";
+import { bookings, courseEnrollments, households, students, tutors } from "@/lib/db/schema";
+import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 const LIFECYCLES = new Set(["prospect", "active", "paused", "completed", "archived"]);
 
@@ -40,6 +40,18 @@ async function loadStudentDetail(studentId: string) {
     .orderBy(desc(bookings.createdAt))
     .limit(12);
 
+  const [bookingCount] = await database
+    .select({ value: count() })
+    .from(bookings)
+    .where(eq(bookings.studentId, studentId));
+  const [enrollmentCount] = await database
+    .select({ value: count() })
+    .from(courseEnrollments)
+    .where(eq(courseEnrollments.studentId, studentId));
+
+  const canDelete =
+    Number(bookingCount?.value ?? 0) === 0 && Number(enrollmentCount?.value ?? 0) === 0;
+
   const s = joined.student;
   return {
     id: s.id,
@@ -62,6 +74,7 @@ async function loadStudentDetail(studentId: string) {
     pendingIntakeNote: s.pendingIntakeNote,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
+    canDelete,
     household: {
       id: joined.householdId,
       displayName: joined.householdDisplayName,
@@ -82,7 +95,8 @@ export async function GET(
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { id } = await contextParams.params;
@@ -105,7 +119,8 @@ export async function PATCH(
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { id } = await contextParams.params;
@@ -140,5 +155,50 @@ export async function PATCH(
   } catch (error) {
     console.warn("[staff/students/id] PATCH soft-fail", error);
     return NextResponse.json({ ok: false, error: "Unable to update student." }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  contextParams: { params: Promise<{ id: string }> },
+) {
+  try {
+    const context = await getStaffContext();
+    if (!context) {
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
+    }
+
+    const { id } = await contextParams.params;
+    const database = requireDb();
+    const [existing] = await database.select({ id: students.id }).from(students).where(eq(students.id, id)).limit(1);
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: "Student not found." }, { status: 404 });
+    }
+
+    const [bookingCount] = await database
+      .select({ value: count() })
+      .from(bookings)
+      .where(eq(bookings.studentId, id));
+    const [enrollmentCount] = await database
+      .select({ value: count() })
+      .from(courseEnrollments)
+      .where(eq(courseEnrollments.studentId, id));
+
+    if (Number(bookingCount?.value ?? 0) > 0 || Number(enrollmentCount?.value ?? 0) > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Delete is only allowed when the student has no bookings or enrollments. Archive instead.",
+        },
+        { status: 400 },
+      );
+    }
+
+    await database.delete(students).where(eq(students.id, id));
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.warn("[staff/students/id] DELETE soft-fail", error);
+    return NextResponse.json({ ok: false, error: "Unable to delete student." }, { status: 500 });
   }
 }

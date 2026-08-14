@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { tutors } from "@/lib/db/schema";
-import { getStaffContext } from "@/lib/staff/session";
+import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 type NewTutorBody = {
   displayName?: string;
@@ -25,7 +25,8 @@ export async function GET(request: Request) {
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { searchParams } = new URL(request.url);
@@ -74,7 +75,8 @@ export async function POST(request: Request) {
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const body = (await request.json()) as NewTutorBody;

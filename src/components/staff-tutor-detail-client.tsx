@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -20,6 +21,7 @@ type TutorDetail = {
     priority: number;
   }>;
   workloadCount: number;
+  canDelete: boolean;
 };
 
 type CatalogSubject = {
@@ -30,6 +32,7 @@ type CatalogSubject = {
 };
 
 export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
+  const router = useRouter();
   const [tutor, setTutor] = useState<TutorDetail | null>(null);
   const [catalog, setCatalog] = useState<CatalogSubject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,6 +173,27 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     }
   }
 
+  async function deleteTutor() {
+    if (!tutor?.canDelete || togglingActive) return;
+    if (!window.confirm("Permanently delete this tutor? This cannot be undone.")) return;
+    setError(null);
+    setMessage(null);
+    setTogglingActive(true);
+    try {
+      const response = await fetch(`/api/staff/tutors/${tutorId}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to delete tutor.");
+        return;
+      }
+      router.push("/staff/tutors");
+    } catch {
+      setError("Unable to delete tutor.");
+    } finally {
+      setTogglingActive(false);
+    }
+  }
+
   if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading tutor…</p>;
   if (error && !tutor) return <p className="form-error">{error}</p>;
   if (!tutor) return null;
@@ -187,6 +211,26 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           </span>
         }
       />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={togglingActive}
+          onClick={() => void patchTutor({ active: !tutor.active }, "active")}
+        >
+          {togglingActive ? "Updating…" : tutor.active ? "Archive" : "Restore"}
+        </button>
+        {tutor.canDelete ? (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={togglingActive}
+            onClick={() => void deleteTutor()}
+          >
+            Delete
+          </button>
+        ) : null}
+      </div>
       {error ? <p className="form-error">{error}</p> : null}
       {message ? <p style={{ fontSize: 14, marginBottom: 12 }}>{message}</p> : null}
 
@@ -212,19 +256,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
               </strong>
             </span>
           </div>
-          <button
-            type="button"
-            className="secondary-button"
-            style={{ marginTop: 14 }}
-            disabled={togglingActive}
-            onClick={() => void patchTutor({ active: !tutor.active }, "active")}
-          >
-            {togglingActive
-              ? "Updating…"
-              : tutor.active
-                ? "Archive tutor"
-                : "Activate tutor"}
-          </button>
         </Panel>
 
         <Panel title="Capacity">

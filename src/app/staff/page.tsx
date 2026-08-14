@@ -61,6 +61,7 @@ function formatCapacityDay(weekStart: Date, dayOfWeek: number) {
 async function loadDashboardData() {
   const weekStart = startOfWeekNy();
   const empty = {
+    loadError: null as string | null,
     onboardingFamilies: 0,
     weekSessions: 0,
     weekSessionsLive: false,
@@ -94,7 +95,12 @@ async function loadDashboardData() {
     weekBarsLive: false,
   };
 
-  if (!db) return empty;
+  if (!db) {
+    return {
+      ...empty,
+      loadError: "Database not configured. Set DATABASE_URL and restart the server.",
+    };
+  }
 
   try {
     const now = new Date();
@@ -223,6 +229,7 @@ async function loadDashboardData() {
     }));
 
     return {
+      loadError: null,
       onboardingFamilies: onboardingHouseholds.length,
       weekSessions: weekBookingRows.length,
       weekSessionsLive: true,
@@ -237,7 +244,10 @@ async function loadDashboardData() {
     };
   } catch (error) {
     console.warn("[staff-dashboard] soft-fail", error);
-    return empty;
+    return {
+      ...empty,
+      loadError: "Unable to load dashboard data. Check DATABASE_URL and server logs.",
+    };
   }
 }
 
@@ -268,6 +278,8 @@ export default async function StaffDashboardPage() {
         </div>
         <StaffHomeCreateMenu />
       </section>
+
+      {data.loadError ? <p className="form-error">{data.loadError}</p> : null}
 
       <section className="metric-grid" aria-label="Dashboard metrics">
         <article className="metric-card">

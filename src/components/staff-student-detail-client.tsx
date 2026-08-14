@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -24,6 +25,7 @@ type StudentDetail = {
   emergencyContact: string | null;
   changeRequestStatus: string | null;
   pendingIntakeNote: string | null;
+  canDelete: boolean;
   household: {
     id: string;
     displayName: string;
@@ -39,12 +41,14 @@ type StudentDetail = {
 const LIFECYCLE_OPTIONS = ["prospect", "active", "paused", "completed", "archived"];
 
 export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
+  const router = useRouter();
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [lifecycle, setLifecycle] = useState("prospect");
   const [saving, setSaving] = useState(false);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -103,9 +107,58 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     }
   }
 
+  async function setLifecycleStatus(nextLifecycle: "active" | "archived") {
+    if (lifecycleBusy) return;
+    setLifecycleBusy(true);
+    setError(null);
+    setSaveMessage(null);
+    try {
+      const response = await fetch(`/api/staff/students/${studentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lifecycle: nextLifecycle }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update status.");
+        return;
+      }
+      const next = data.student as StudentDetail;
+      setStudent(next);
+      setLifecycle(next.lifecycle);
+      setSaveMessage(nextLifecycle === "archived" ? "Student archived." : "Student restored.");
+    } catch {
+      setError("Unable to update status.");
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
+
+  async function deleteStudent() {
+    if (!student?.canDelete || lifecycleBusy) return;
+    if (!window.confirm("Permanently delete this student? This cannot be undone.")) return;
+    setLifecycleBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/students/${studentId}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to delete student.");
+        return;
+      }
+      router.push("/staff/students");
+    } catch {
+      setError("Unable to delete student.");
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
+
   if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading student…</p>;
   if (error && !student) return <p className="form-error">{error}</p>;
   if (!student) return null;
+
+  const isArchived = student.lifecycle === "archived";
 
   return (
     <>
@@ -117,6 +170,37 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         description={`${student.gradeLabel || "Grade pending"} · ${student.schoolName || "School pending"}`}
         action={<span className={`pill ${statusTone(student.lifecycle)}`}>{formatStatusLabel(student.lifecycle)}</span>}
       />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {isArchived ? (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={lifecycleBusy}
+            onClick={() => void setLifecycleStatus("active")}
+          >
+            Restore
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={lifecycleBusy}
+            onClick={() => void setLifecycleStatus("archived")}
+          >
+            Archive
+          </button>
+        )}
+        {student.canDelete ? (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={lifecycleBusy}
+            onClick={() => void deleteStudent()}
+          >
+            Delete
+          </button>
+        ) : null}
+      </div>
       {error ? <p className="form-error">{error}</p> : null}
       {saveMessage ? <p style={{ fontSize: 14, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
 

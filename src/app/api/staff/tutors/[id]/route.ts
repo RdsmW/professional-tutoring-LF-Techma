@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { bookings, subjects, tutorSubjects, tutors } from "@/lib/db/schema";
-import { getStaffContext } from "@/lib/staff/session";
+import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 type PatchBody = {
   displayName?: string;
@@ -20,7 +20,8 @@ export async function GET(
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { id } = await contextParams.params;
@@ -51,6 +52,18 @@ export async function GET(
         ),
       );
 
+    const [bookingCount] = await database
+      .select({ value: count() })
+      .from(bookings)
+      .where(eq(bookings.tutorId, id));
+    const [subjectCount] = await database
+      .select({ value: count() })
+      .from(tutorSubjects)
+      .where(eq(tutorSubjects.tutorId, id));
+
+    const canDelete =
+      Number(bookingCount?.value ?? 0) === 0 && Number(subjectCount?.value ?? 0) === 0;
+
     return NextResponse.json({
       ok: true,
       tutor: {
@@ -68,6 +81,7 @@ export async function GET(
           priority: row.priority,
         })),
         workloadCount: workloadRows.length,
+        canDelete,
       },
     });
   } catch (error) {
@@ -83,7 +97,8 @@ export async function PATCH(
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { id } = await contextParams.params;
@@ -152,5 +167,52 @@ export async function PATCH(
   } catch (error) {
     console.warn("[staff/tutors/id] PATCH soft-fail", error);
     return NextResponse.json({ ok: false, error: "Unable to update tutor." }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  contextParams: { params: Promise<{ id: string }> },
+) {
+  try {
+    const context = await getStaffContext();
+    if (!context) {
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
+    }
+
+    const { id } = await contextParams.params;
+    const database = requireDb();
+    const [existing] = await database.select({ id: tutors.id }).from(tutors).where(eq(tutors.id, id)).limit(1);
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: "Tutor not found." }, { status: 404 });
+    }
+
+    const [bookingCount] = await database
+      .select({ value: count() })
+      .from(bookings)
+      .where(eq(bookings.tutorId, id));
+    const [subjectCount] = await database
+      .select({ value: count() })
+      .from(tutorSubjects)
+      .where(eq(tutorSubjects.tutorId, id));
+
+    if (Number(bookingCount?.value ?? 0) > 0 || Number(subjectCount?.value ?? 0) > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Delete is only allowed when the tutor has no bookings and no assigned subjects. Remove subjects and archive instead.",
+        },
+        { status: 400 },
+      );
+    }
+
+    await database.delete(tutorSubjects).where(eq(tutorSubjects.tutorId, id));
+    await database.delete(tutors).where(eq(tutors.id, id));
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.warn("[staff/tutors/id] DELETE soft-fail", error);
+    return NextResponse.json({ ok: false, error: "Unable to delete tutor." }, { status: 500 });
   }
 }

@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { requireDb } from "@/lib/db";
 import { guardians, households, students } from "@/lib/db/schema";
 import { listStaffFamilies } from "@/lib/staff/families";
-import { getStaffContext } from "@/lib/staff/session";
+import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 type NewFamilyBody = {
   displayName?: string;
@@ -36,7 +36,8 @@ export async function GET(request: Request) {
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { searchParams } = new URL(request.url);
@@ -77,7 +78,8 @@ export async function POST(request: Request) {
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const body = (await request.json()) as NewFamilyBody;

@@ -75,6 +75,10 @@ export function StaffFamiliesClient({
     void reload();
   }, [reload]);
 
+  const showStaffRetry =
+    Boolean(error) &&
+    (error!.toLowerCase().includes("staff profile") || error!.toLowerCase().includes("database not configured"));
+
   useEffect(() => {
     if (!addingGuardian) return;
     void (async () => {
@@ -255,7 +259,19 @@ export function StaffFamiliesClient({
           </span>
         }
       />
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? (
+        <p className="form-error">
+          {error}
+          {showStaffRetry ? (
+            <>
+              {" "}
+              <button type="button" className="text-button" onClick={() => void reload()} disabled={loading}>
+                Retry
+              </button>
+            </>
+          ) : null}
+        </p>
+      ) : null}
       <Panel>
         <form
           className="student-filter-panel"
