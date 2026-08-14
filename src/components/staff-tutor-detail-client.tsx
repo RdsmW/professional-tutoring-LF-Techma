@@ -46,6 +46,9 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [profileForm, setProfileForm] = useState({ displayName: "", email: "", phone: "" });
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -94,12 +97,13 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     }
   }, [availableSubjects, selectedSubjectId]);
 
-  async function patchTutor(body: Record<string, unknown>, mode: "notes" | "seats" | "active") {
+  async function patchTutor(body: Record<string, unknown>, mode: "notes" | "seats" | "active" | "profile") {
     setError(null);
     setMessage(null);
     if (mode === "notes") setSavingNotes(true);
     if (mode === "seats") setSavingSeats(true);
     if (mode === "active") setTogglingActive(true);
+    if (mode === "profile") setSavingProfile(true);
     try {
       const response = await fetch(`/api/staff/tutors/${tutorId}`, {
         method: "PATCH",
@@ -112,6 +116,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         return;
       }
       setMessage("Saved.");
+      if (mode === "profile") setEditing(false);
       await reload();
     } catch {
       setError("Unable to update tutor.");
@@ -119,6 +124,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
       setSavingNotes(false);
       setSavingSeats(false);
       setTogglingActive(false);
+      setSavingProfile(false);
     }
   }
 
@@ -200,9 +206,56 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
 
   return (
     <>
-      <Link href="/staff/tutors" className="page-back" style={{ display: "inline-block", marginBottom: 12 }}>
-        ← Tutors
-      </Link>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 12,
+        }}
+      >
+        <Link href="/staff/tutors" className="page-back">
+          ← Tutors
+        </Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => {
+              setProfileForm({
+                displayName: tutor.displayName,
+                email: tutor.email ?? "",
+                phone: tutor.phone ?? "",
+              });
+              setEditing(true);
+              setError(null);
+              setMessage(null);
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={togglingActive}
+            onClick={() => void patchTutor({ active: !tutor.active }, "active")}
+          >
+            {togglingActive ? "Updating…" : tutor.active ? "Archive" : "Restore"}
+          </button>
+          {tutor.canDelete ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={togglingActive}
+              onClick={() => void deleteTutor()}
+            >
+              Delete
+            </button>
+          ) : null}
+        </div>
+      </div>
       <PageIntro
         title={tutor.displayName}
         action={
@@ -211,28 +264,66 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           </span>
         }
       />
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <button
-          type="button"
-          className="secondary-button"
-          disabled={togglingActive}
-          onClick={() => void patchTutor({ active: !tutor.active }, "active")}
-        >
-          {togglingActive ? "Updating…" : tutor.active ? "Archive" : "Restore"}
-        </button>
-        {tutor.canDelete ? (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={togglingActive}
-            onClick={() => void deleteTutor()}
-          >
-            Delete
-          </button>
-        ) : null}
-      </div>
       {error ? <p className="form-error">{error}</p> : null}
       {message ? <p style={{ fontSize: 14, marginBottom: 12 }}>{message}</p> : null}
+
+      {editing ? (
+        <Panel title="Edit tutor">
+          <form
+            className="input-grid"
+            style={{ gap: 12 }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              void patchTutor(
+                {
+                  displayName: profileForm.displayName,
+                  email: profileForm.email || null,
+                  phone: profileForm.phone || null,
+                },
+                "profile",
+              );
+            }}
+          >
+            <label>
+              Display name
+              <input
+                value={profileForm.displayName}
+                onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Email
+              <input
+                type="email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+              />
+            </label>
+            <label>
+              Phone
+              <input
+                type="tel"
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+              />
+            </label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="submit" className="primary-button" disabled={savingProfile}>
+                {savingProfile ? "Saving…" : "Save profile"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={savingProfile}
+                onClick={() => setEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Panel>
+      ) : null}
 
       <div className="profile-layout">
         <Panel title="Profile" eyebrow="Tutor">

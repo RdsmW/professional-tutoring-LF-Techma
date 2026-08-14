@@ -12,7 +12,7 @@ import {
   students,
   tutors,
 } from "@/lib/db/schema";
-import { getStaffContext } from "@/lib/staff/session";
+import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 import { isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
 export async function GET(
@@ -22,7 +22,8 @@ export async function GET(
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { id } = await contextParams.params;
@@ -188,7 +189,8 @@ export async function PATCH(
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { id } = await contextParams.params;
@@ -310,7 +312,8 @@ export async function DELETE(
   try {
     const context = await getStaffContext();
     if (!context) {
-      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+      const authError = staffAuthErrorPayload();
+      return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
     const { id } = await contextParams.params;

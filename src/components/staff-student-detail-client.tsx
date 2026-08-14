@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { GENDER, GRADE_LABELS, GRADUATION_YEARS } from "@/lib/forms/options";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type StudentDetail = {
@@ -38,7 +39,41 @@ type StudentDetail = {
   }>;
 };
 
+type ProfileForm = {
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  gender: string;
+  birthdate: string;
+  gradeLabel: string;
+  graduationYear: string;
+  schoolName: string;
+  email: string;
+  cellPhone: string;
+  learningNeeds: string;
+  availabilityNotes: string;
+  emergencyContact: string;
+};
+
 const LIFECYCLE_OPTIONS = ["prospect", "active", "paused", "completed", "archived"];
+
+function toProfileForm(student: StudentDetail): ProfileForm {
+  return {
+    firstName: student.firstName,
+    lastName: student.lastName,
+    displayName: student.displayName,
+    gender: student.gender ?? "",
+    birthdate: student.birthdate ?? "",
+    gradeLabel: student.gradeLabel ?? "",
+    graduationYear: student.graduationYear != null ? String(student.graduationYear) : "",
+    schoolName: student.schoolName ?? "",
+    email: student.email ?? "",
+    cellPhone: student.cellPhone ?? "",
+    learningNeeds: student.learningNeeds ?? "",
+    availabilityNotes: student.availabilityNotes ?? "",
+    emergencyContact: student.emergencyContact ?? "",
+  };
+}
 
 export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
   const router = useRouter();
@@ -50,6 +85,9 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
   const [saving, setSaving] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [profileForm, setProfileForm] = useState<ProfileForm | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -154,6 +192,59 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     }
   }
 
+  function openEdit() {
+    if (!student) return;
+    setProfileForm(toProfileForm(student));
+    setEditing(true);
+    setError(null);
+    setSaveMessage(null);
+  }
+
+  async function saveProfile(event: FormEvent) {
+    event.preventDefault();
+    if (!profileForm || savingProfile) return;
+    setSavingProfile(true);
+    setError(null);
+    setSaveMessage(null);
+    try {
+      const response = await fetch(`/api/staff/students/${studentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: profileForm.firstName,
+          lastName: profileForm.lastName,
+          displayName: profileForm.displayName,
+          gender: profileForm.gender || null,
+          birthdate: profileForm.birthdate || null,
+          gradeLabel: profileForm.gradeLabel || null,
+          graduationYear: profileForm.graduationYear ? Number(profileForm.graduationYear) : null,
+          schoolName: profileForm.schoolName || null,
+          email: profileForm.email || null,
+          cellPhone: profileForm.cellPhone || null,
+          learningNeeds: profileForm.learningNeeds || null,
+          availabilityNotes: profileForm.availabilityNotes || null,
+          emergencyContact: profileForm.emergencyContact || null,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to save student.");
+        return;
+      }
+      const next = data.student as StudentDetail;
+      setStudent(next);
+      setNotes(next.supportNotesRestricted ?? "");
+      setLifecycle(next.lifecycle);
+      setProfileForm(toProfileForm(next));
+      setEditing(false);
+      setSaveMessage("Profile saved.");
+    } catch {
+      setError("Unable to save student.");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading student…</p>;
   if (error && !student) return <p className="form-error">{error}</p>;
   if (!student) return null;
@@ -162,47 +253,202 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
 
   return (
     <>
-      <Link href="/staff/students" className="page-back" style={{ display: "inline-block", marginBottom: 12 }}>
-        ← Students
-      </Link>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 12,
+        }}
+      >
+        <Link href="/staff/students" className="page-back">
+          ← Students
+        </Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="secondary-button" onClick={openEdit}>
+            Edit
+          </button>
+          {isArchived ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={lifecycleBusy}
+              onClick={() => void setLifecycleStatus("active")}
+            >
+              Restore
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={lifecycleBusy}
+              onClick={() => void setLifecycleStatus("archived")}
+            >
+              Archive
+            </button>
+          )}
+          {student.canDelete ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={lifecycleBusy}
+              onClick={() => void deleteStudent()}
+            >
+              Delete
+            </button>
+          ) : null}
+        </div>
+      </div>
       <PageIntro
         title={student.displayName}
         description={`${student.gradeLabel || "Grade pending"} · ${student.schoolName || "School pending"}`}
         action={<span className={`pill ${statusTone(student.lifecycle)}`}>{formatStatusLabel(student.lifecycle)}</span>}
       />
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        {isArchived ? (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={lifecycleBusy}
-            onClick={() => void setLifecycleStatus("active")}
-          >
-            Restore
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={lifecycleBusy}
-            onClick={() => void setLifecycleStatus("archived")}
-          >
-            Archive
-          </button>
-        )}
-        {student.canDelete ? (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={lifecycleBusy}
-            onClick={() => void deleteStudent()}
-          >
-            Delete
-          </button>
-        ) : null}
-      </div>
       {error ? <p className="form-error">{error}</p> : null}
       {saveMessage ? <p style={{ fontSize: 14, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
+
+      {editing && profileForm ? (
+        <Panel title="Edit student">
+          <form onSubmit={(e) => void saveProfile(e)} className="input-grid" style={{ gap: 12 }}>
+            <label>
+              First name
+              <input
+                value={profileForm.firstName}
+                onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Last name
+              <input
+                value={profileForm.lastName}
+                onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Preferred name
+              <input
+                value={profileForm.displayName}
+                onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Gender
+              <select
+                value={profileForm.gender}
+                onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
+              >
+                <option value="">—</option>
+                {GENDER.options.map((option) => (
+                  <option key={option.id} value={option.label}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Birthdate
+              <input
+                value={profileForm.birthdate}
+                onChange={(e) => setProfileForm({ ...profileForm, birthdate: e.target.value })}
+                placeholder="YYYY-MM-DD"
+              />
+            </label>
+            <label>
+              Grade
+              <select
+                value={profileForm.gradeLabel}
+                onChange={(e) => setProfileForm({ ...profileForm, gradeLabel: e.target.value })}
+              >
+                <option value="">—</option>
+                {GRADE_LABELS.options.map((option) => (
+                  <option key={option.id} value={option.label}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Grad year
+              <select
+                value={profileForm.graduationYear}
+                onChange={(e) => setProfileForm({ ...profileForm, graduationYear: e.target.value })}
+              >
+                <option value="">—</option>
+                {GRADUATION_YEARS.options.map((option) => (
+                  <option key={option.id} value={option.label}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              School
+              <input
+                value={profileForm.schoolName}
+                onChange={(e) => setProfileForm({ ...profileForm, schoolName: e.target.value })}
+              />
+            </label>
+            <label>
+              Email
+              <input
+                type="email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+              />
+            </label>
+            <label>
+              Cell phone
+              <input
+                type="tel"
+                value={profileForm.cellPhone}
+                onChange={(e) => setProfileForm({ ...profileForm, cellPhone: e.target.value })}
+              />
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Learning needs
+              <textarea
+                value={profileForm.learningNeeds}
+                onChange={(e) => setProfileForm({ ...profileForm, learningNeeds: e.target.value })}
+                rows={3}
+              />
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Availability
+              <textarea
+                value={profileForm.availabilityNotes}
+                onChange={(e) => setProfileForm({ ...profileForm, availabilityNotes: e.target.value })}
+                rows={3}
+              />
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Emergency contact
+              <textarea
+                value={profileForm.emergencyContact}
+                onChange={(e) => setProfileForm({ ...profileForm, emergencyContact: e.target.value })}
+                rows={2}
+              />
+            </label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="submit" className="primary-button" disabled={savingProfile}>
+                {savingProfile ? "Saving…" : "Save profile"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={savingProfile}
+                onClick={() => setEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Panel>
+      ) : null}
 
       <div className="profile-layout">
         <Panel title="Profile" eyebrow="Student">

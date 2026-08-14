@@ -365,9 +365,54 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
   return (
     <>
-      <Link href="/staff/families" className="page-back" style={{ display: "inline-block", marginBottom: 12 }}>
-        ← Families
-      </Link>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 12,
+        }}
+      >
+        <Link href="/staff/families" className="page-back">
+          ← Families
+        </Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="secondary-button" onClick={openHouseholdEdit}>
+            Edit
+          </button>
+          {isArchived ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={lifecycleBusy}
+              onClick={() => void setStatus("active")}
+            >
+              Restore
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={lifecycleBusy}
+              onClick={() => void setStatus("archived")}
+            >
+              Archive
+            </button>
+          )}
+          {family.canDelete ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={lifecycleBusy}
+              onClick={() => void deleteFamily()}
+            >
+              Delete
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       <section className="family-record-hero">
         <span className="avatar navy">{initials(family.displayName)}</span>
@@ -381,41 +426,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </div>
         <span className={`pill ${statusTone(family.status)}`}>{formatStatusLabel(family.status)}</span>
       </section>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <button type="button" className="secondary-button" onClick={openHouseholdEdit}>
-          Edit household
-        </button>
-        {isArchived ? (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={lifecycleBusy}
-            onClick={() => void setStatus("active")}
-          >
-            Restore
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={lifecycleBusy}
-            onClick={() => void setStatus("archived")}
-          >
-            Archive
-          </button>
-        )}
-        {family.canDelete ? (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={lifecycleBusy}
-            onClick={() => void deleteFamily()}
-          >
-            Delete
-          </button>
-        ) : null}
-      </div>
 
       {error ? <p className="form-error">{error}</p> : null}
       {inviteMessage ? <p style={{ fontSize: 14, marginBottom: 12 }}>{inviteMessage}</p> : null}
