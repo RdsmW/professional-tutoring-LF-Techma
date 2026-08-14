@@ -2,10 +2,12 @@ import { count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
 import { safeCurrentUser } from "@/lib/auth/clerk";
+import { refreshCardOnFile } from "@/lib/billing/refresh-card-on-file";
 import { getFamilyContext } from "@/lib/family/session";
 import { requireDb } from "@/lib/db";
 import { guardians, households, students } from "@/lib/db/schema";
 import { isValidOptionId } from "@/lib/forms/options";
+import { isValidPhone } from "@/lib/validation/contact";
 
 type ProfileBody = {
   firstName?: string;
@@ -71,6 +73,7 @@ function serializeProfile(
   household: typeof households.$inferSelect,
   signInEmail: string,
   extras: { guardians: ReturnType<typeof serializeGuardianRow>[]; studentCount: number },
+  card: { cardBrand: string | null; cardLast4: string | null; cardOnFile: boolean },
 ) {
   return {
     guardian: {
@@ -91,6 +94,9 @@ function serializeProfile(
       city: household.city ?? "",
       state: household.state ?? "",
       postalCode: household.postalCode ?? "",
+      cardBrand: card.cardBrand,
+      cardLast4: card.cardLast4,
+      cardOnFile: card.cardOnFile,
     },
     guardians: extras.guardians,
     studentCount: extras.studentCount,
@@ -119,11 +125,17 @@ export async function GET() {
       guardianRow = updatedGuardian;
     }
 
+    const card = await refreshCardOnFile(context.household.id);
+    const [householdRow] = await database
+      .select()
+      .from(households)
+      .where(eq(households.id, context.household.id))
+      .limit(1);
     const extras = await loadHouseholdExtras(context.household.id, guardianRow.id, signInEmail);
 
     return NextResponse.json({
       ok: true,
-      ...serializeProfile(guardianRow, context.household, signInEmail, extras),
+      ...serializeProfile(guardianRow, householdRow ?? context.household, signInEmail, extras, card),
     });
   } catch (error) {
     console.warn("[family/profile] GET soft-fail", error);
@@ -158,6 +170,12 @@ export async function PATCH(request: Request) {
         { ok: false, error: "Household name, phone, and full address are required." },
         { status: 400 },
       );
+    }
+    if (!isValidPhone(primaryPhone)) {
+      return NextResponse.json({ ok: false, error: "Enter a valid household phone number." }, { status: 400 });
+    }
+    if (phone && !isValidPhone(phone)) {
+      return NextResponse.json({ ok: false, error: "Enter a valid mobile phone number." }, { status: 400 });
     }
     if (!isValidOptionId("US_STATES", state)) {
       return NextResponse.json({ ok: false, error: "Invalid state selection." }, { status: 400 });
@@ -206,10 +224,11 @@ export async function PATCH(request: Request) {
     const user = await safeCurrentUser();
     const signInEmail = clerkEmail(user) || updatedGuardian.email;
     const extras = await loadHouseholdExtras(updatedHousehold.id, updatedGuardian.id, signInEmail);
+    const card = await refreshCardOnFile(updatedHousehold.id);
 
     return NextResponse.json({
       ok: true,
-      ...serializeProfile(updatedGuardian, updatedHousehold, signInEmail, extras),
+      ...serializeProfile(updatedGuardian, updatedHousehold, signInEmail, extras, card),
       displayName: [firstName, lastName].filter(Boolean).join(" "),
       householdName: updatedHousehold.displayName,
     });

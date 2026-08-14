@@ -91,7 +91,7 @@ export function FamilyHomeDashboard() {
           }}
         >
           {latestBooking ? (
-            <Link href="/family/calendar">
+            <Link href={`/family/bookings/${latestBooking.id}`}>
               <span>✓</span>
               <div>
                 <strong>Tutoring request saved</strong>
@@ -103,11 +103,11 @@ export function FamilyHomeDashboard() {
                   {` · ${latestBooking.status.replace(/_/g, " ")}`}
                 </small>
               </div>
-              <b>View calendar →</b>
+              <b>View details →</b>
             </Link>
           ) : null}
           {latestEnrollment ? (
-            <Link href="/family/enroll-courses">
+            <Link href={`/family/enrollments/${latestEnrollment.id}`}>
               <span>✓</span>
               <div>
                 <strong>{latestEnrollment.courseName} enrollment submitted</strong>
@@ -116,7 +116,7 @@ export function FamilyHomeDashboard() {
                   {latestEnrollment.status.replace(/_/g, " ")}
                 </small>
               </div>
-              <b>View courses →</b>
+              <b>View details →</b>
             </Link>
           ) : null}
         </section>
@@ -234,8 +234,9 @@ export function FamilyHomeDashboard() {
           ) : (
             <div className="schedule-list">
               {bookings.slice(0, 2).map((booking) => (
-                <div
+                <Link
                   key={booking.id}
+                  href={`/family/bookings/${booking.id}`}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "52px 1fr auto",
@@ -243,6 +244,8 @@ export function FamilyHomeDashboard() {
                     alignItems: "center",
                     borderTop: "1px solid var(--line)",
                     padding: "12px 0",
+                    textDecoration: "none",
+                    color: "inherit",
                   }}
                 >
                   <span className="date-block">{booking.timeLabel.slice(0, 3) || "PT"}</span>
@@ -254,12 +257,13 @@ export function FamilyHomeDashboard() {
                       {booking.tutorName ?? "Tutor TBD"} · {booking.status.replace(/_/g, " ")}
                     </small>
                   </span>
-                  <b style={{ fontSize: 8, color: "var(--blue)" }}>{booking.timeLabel}</b>
-                </div>
+                  <b style={{ fontSize: 8, color: "var(--blue)" }}>Open →</b>
+                </Link>
               ))}
               {enrollments.slice(0, 2).map((enrollment) => (
-                <div
+                <Link
                   key={enrollment.id}
+                  href={`/family/enrollments/${enrollment.id}`}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "52px 1fr auto",
@@ -267,6 +271,8 @@ export function FamilyHomeDashboard() {
                     alignItems: "center",
                     borderTop: "1px solid var(--line)",
                     padding: "12px 0",
+                    textDecoration: "none",
+                    color: "inherit",
                   }}
                 >
                   <span className="date-block">CR</span>
@@ -278,8 +284,8 @@ export function FamilyHomeDashboard() {
                       {enrollment.scheduleLabel} · {enrollment.status.replace(/_/g, " ")}
                     </small>
                   </span>
-                  <b style={{ fontSize: 8, color: "var(--blue)" }}>Course</b>
-                </div>
+                  <b style={{ fontSize: 8, color: "var(--blue)" }}>Open →</b>
+                </Link>
               ))}
             </div>
           )}

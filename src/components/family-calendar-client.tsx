@@ -506,6 +506,17 @@ export function FamilyCalendarClient() {
               {row.changeType} · {row.reason} · {statusLabel(row.status)}
             </div>
           ))}
+          <Link
+            href={
+              selected.kind === "booking"
+                ? `/family/bookings/${selected.id}`
+                : `/family/enrollments/${selected.id}`
+            }
+            className="text-button"
+            style={{ display: "inline-block", marginTop: 10 }}
+          >
+            Full submission details →
+          </Link>
           <button
             type="button"
             className="family-primary"

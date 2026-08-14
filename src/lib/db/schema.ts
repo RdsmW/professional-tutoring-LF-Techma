@@ -452,3 +452,15 @@ export const identityMergeRequests = pgTable("identity_merge_requests", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 });
+
+/** Append-only staff notes on a household (never shown in family portal). */
+export const householdNotes = pgTable("household_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  householdId: uuid("household_id")
+    .notNull()
+    .references(() => households.id),
+  authorStaffId: uuid("author_staff_id").references(() => staffProfiles.id),
+  authorDisplayName: text("author_display_name").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

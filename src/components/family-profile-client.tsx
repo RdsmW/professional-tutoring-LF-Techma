@@ -6,6 +6,7 @@ import { AddressAutocompleteInput } from "@/components/address-autocomplete-inpu
 import { FamilySecurityForm } from "@/components/family-security-form";
 import { useFamilyPortal } from "@/components/family-portal-context";
 import { US_STATES } from "@/lib/forms/options";
+import { isValidPhone } from "@/lib/validation/contact";
 
 type Mode = "view" | "edit" | "security";
 
@@ -39,6 +40,9 @@ type ProfileData = {
     city: string;
     state: string;
     postalCode: string;
+    cardBrand?: string | null;
+    cardLast4?: string | null;
+    cardOnFile?: boolean;
   };
   guardians: GuardianRow[];
   studentCount: number;
@@ -160,11 +164,14 @@ export function FamilyProfileClient() {
     void reload();
   }, [reload]);
 
+  const phoneOk =
+    isValidPhone(form.primaryPhone) && (!form.phone.trim() || isValidPhone(form.phone));
   const valid =
     form.firstName.trim() &&
     form.lastName.trim() &&
     form.displayName.trim() &&
     form.primaryPhone.trim() &&
+    phoneOk &&
     form.addressLine1.trim() &&
     form.city.trim() &&
     form.state.trim() &&
@@ -292,6 +299,8 @@ export function FamilyProfileClient() {
             <label>
               Mobile phone
               <input
+                type="tel"
+                autoComplete="tel"
                 value={form.phone}
                 onChange={(event) => setForm({ ...form, phone: event.target.value })}
               />
@@ -307,6 +316,8 @@ export function FamilyProfileClient() {
             <label>
               Household primary phone
               <input
+                type="tel"
+                autoComplete="tel"
                 value={form.primaryPhone}
                 onChange={(event) => setForm({ ...form, primaryPhone: event.target.value })}
                 required
@@ -379,7 +390,13 @@ export function FamilyProfileClient() {
             </div>
           </div>
           {!valid ? (
-            <div className="validation-hint">Complete name, household phone, and address to save.</div>
+            <div className="validation-hint">
+              {form.primaryPhone.trim() && !isValidPhone(form.primaryPhone)
+                ? "Enter a valid household phone (at least 10 digits)."
+                : form.phone.trim() && !isValidPhone(form.phone)
+                  ? "Enter a valid mobile phone (at least 10 digits)."
+                  : "Complete name, household phone, and address to save."}
+            </div>
           ) : null}
           {error ? <div className="validation-hint">{error}</div> : null}
           <div className="wizard-footer">
@@ -486,6 +503,17 @@ export function FamilyProfileClient() {
               <label>
                 Household phone
                 <input value={profile.household.primaryPhone || "—"} readOnly />
+              </label>
+              <label>
+                Card on file
+                <input
+                  value={
+                    profile.household.cardLast4
+                      ? `${(profile.household.cardBrand || "Card").toUpperCase()} ···· ${profile.household.cardLast4}`
+                      : "No card on file"
+                  }
+                  readOnly
+                />
               </label>
               <label>
                 Household address

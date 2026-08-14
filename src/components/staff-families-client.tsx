@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
 import { StaffNewFamilyWizard } from "@/components/staff-new-family-wizard";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
+
+type ListFilter = "active" | "archived" | "all";
 
 export function StaffFamiliesClient({
   initialFamilies = [],
@@ -15,6 +17,7 @@ export function StaffFamiliesClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [filter, setFilter] = useState<ListFilter>("active");
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -33,6 +36,12 @@ export function StaffFamiliesClient({
       setLoading(false);
     }
   }, []);
+
+  const visible = useMemo(() => {
+    if (filter === "all") return families;
+    if (filter === "archived") return families.filter((row) => row.status === "archived");
+    return families.filter((row) => row.status !== "archived");
+  }, [families, filter]);
 
   if (creating) {
     return <StaffNewFamilyWizard onCancel={() => setCreating(false)} />;
@@ -53,14 +62,37 @@ export function StaffFamiliesClient({
           </span>
         }
       />
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        {(
+          [
+            ["active", "Active"],
+            ["archived", "Archived"],
+            ["all", "All"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={filter === value ? "primary-button" : "secondary-button"}
+            onClick={() => setFilter(value)}
+          >
+            {label}
+          </button>
+        ))}
+        <button type="button" className="text-button" onClick={() => void reload()} disabled={loading}>
+          Refresh
+        </button>
+      </div>
       {error ? <p className="form-error">{error}</p> : null}
       {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading families…</p> : null}
       <Panel title="Household directory" eyebrow="Live database">
-        {families.length === 0 && !loading ? (
-          <p style={{ color: "var(--muted)" }}>No households yet.</p>
+        {visible.length === 0 && !loading ? (
+          <p style={{ color: "var(--muted)" }}>
+            {filter === "archived" ? "No archived households." : "No households yet."}
+          </p>
         ) : (
           <div className="table-panel">
-            {families.map((row) => (
+            {visible.map((row) => (
               <Link key={row.id} href={`/staff/families/${row.id}`} className="family-row">
                 <span
                   className="avatar"

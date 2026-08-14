@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { desc, eq, inArray } from "drizzle-orm";
+import { refreshCardOnFile } from "@/lib/billing/refresh-card-on-file";
 import { getFamilyContext } from "@/lib/family/session";
 import { requireDb } from "@/lib/db";
 import {
@@ -64,6 +65,7 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Family household not found" }, { status: 404 });
     }
 
+    const card = await refreshCardOnFile(context.household.id);
     const database = requireDb();
     const rows = await database
       .select()
@@ -147,11 +149,7 @@ export async function GET() {
             ? "Tutoring booking"
             : "Payment record";
       const description = row.notes?.trim() || baseDescription;
-      const methodLabel = formatMethodLabel(
-        row.methodLabel,
-        context.household.cardBrand,
-        context.household.cardLast4,
-      );
+      const methodLabel = formatMethodLabel(row.methodLabel, card.cardBrand, card.cardLast4);
 
       return {
         id: row.id,
@@ -175,10 +173,10 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      savedCard: context.household.cardLast4
+      savedCard: card.cardLast4
         ? {
-            brand: context.household.cardBrand,
-            last4: context.household.cardLast4,
+            brand: card.cardBrand,
+            last4: card.cardLast4,
           }
         : null,
       payments,

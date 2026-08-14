@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
+import { refreshCardOnFile } from "@/lib/billing/refresh-card-on-file";
 import { getFamilyContext, listHouseholdStudents } from "@/lib/family/session";
 import { requireDb } from "@/lib/db";
 import {
@@ -18,6 +19,7 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Family household not found" }, { status: 404 });
     }
 
+    const card = await refreshCardOnFile(context.household.id);
     const database = requireDb();
     const studentRows = await listHouseholdStudents(context.household.id);
 
@@ -66,8 +68,8 @@ export async function GET() {
       household: {
         displayName: context.household.displayName,
         status: context.household.status,
-        cardLast4: context.household.cardLast4,
-        cardBrand: context.household.cardBrand,
+        cardLast4: card.cardLast4,
+        cardBrand: card.cardBrand,
       },
       students: studentRows.map((row) => ({
         id: row.id,
