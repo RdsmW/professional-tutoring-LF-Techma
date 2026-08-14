@@ -996,20 +996,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             {renderGuardiansTable(previewGuardians)}
           </FamilyListPreview>
         </Panel>
-      </div>
 
-      <Panel className="family-equal-panel family-students-band">
-        <div className="family-panel-heading">
-          <h2>Students</h2>
-        </div>
-        <FamilyListPreview
-          total={family.students.length}
-          empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No students yet.</p>}
-          onViewMore={() => setListModal("students")}
-        >
-          {renderStudentsTable(previewStudents)}
-        </FamilyListPreview>
-      </Panel>
+        <Panel className="family-equal-panel family-students-band">
+          <div className="family-panel-heading">
+            <h2>Students</h2>
+          </div>
+          <FamilyListPreview
+            total={family.students.length}
+            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No students yet.</p>}
+            onViewMore={() => setListModal("students")}
+          >
+            {renderStudentsTable(previewStudents)}
+          </FamilyListPreview>
+        </Panel>
+      </div>
 
       <div className="family-activity-band">
         <Panel title="Course enrollments" className="family-equal-panel">
