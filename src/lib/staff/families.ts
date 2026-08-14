@@ -1,13 +1,40 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, ne, or, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardians, households, students } from "@/lib/db/schema";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 
 export type { StaffFamilyListRow };
 
+export type ListStaffFamiliesFilters = {
+  q?: string;
+  /** Exact status, `all` for every status, or omit / empty for non-archived default. */
+  status?: string;
+};
+
+const HOUSEHOLD_STATUSES = new Set(["pending", "active", "inactive", "archived"]);
+
 /** Single aggregated query for the staff Families directory. */
-export async function listStaffFamilies(): Promise<StaffFamilyListRow[]> {
+export async function listStaffFamilies(
+  filters: ListStaffFamiliesFilters = {},
+): Promise<StaffFamilyListRow[]> {
   const database = requireDb();
+  const q = (filters.q ?? "").trim();
+  const status = (filters.status ?? "").trim();
+
+  const whereParts: SQL[] = [];
+  if (q) {
+    whereParts.push(
+      or(ilike(households.displayName, `%${q}%`), ilike(households.primaryPhone, `%${q}%`))!,
+    );
+  }
+  if (status === "all") {
+    // no status constraint
+  } else if (status && HOUSEHOLD_STATUSES.has(status)) {
+    whereParts.push(eq(households.status, status as typeof households.$inferSelect.status));
+  } else {
+    // Default Active bucket: exclude archived
+    whereParts.push(ne(households.status, "archived"));
+  }
 
   const rows = await database
     .select({
@@ -22,6 +49,7 @@ export async function listStaffFamilies(): Promise<StaffFamilyListRow[]> {
     .from(households)
     .leftJoin(students, eq(students.householdId, households.id))
     .leftJoin(guardians, eq(guardians.householdId, households.id))
+    .where(whereParts.length > 0 ? and(...whereParts) : undefined)
     .groupBy(
       households.id,
       households.displayName,

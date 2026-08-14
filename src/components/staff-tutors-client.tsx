@@ -16,6 +16,12 @@ type TutorRow = {
   notesPreview: string | null;
 };
 
+const ACTIVE_OPTIONS = [
+  { value: "true", label: "Active" },
+  { value: "false", label: "Archived" },
+  { value: "", label: "All" },
+] as const;
+
 export function StaffTutorsClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,12 +37,19 @@ export function StaffTutorsClient() {
     maxSeatsPerSlot: "1",
   });
   const [saving, setSaving] = useState(false);
+  const [q, setQ] = useState("");
+  const [active, setActive] = useState("true");
+  const [applied, setApplied] = useState({ q: "", active: "true" });
 
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/staff/tutors");
+      const params = new URLSearchParams();
+      if (applied.q) params.set("q", applied.q);
+      if (applied.active) params.set("active", applied.active);
+      const query = params.toString();
+      const response = await fetch(`/api/staff/tutors${query ? `?${query}` : ""}`);
       const data = await response.json();
       if (!response.ok || !data.ok) {
         setError(data.error || "Unable to load tutors.");
@@ -48,7 +61,7 @@ export function StaffTutorsClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applied]);
 
   useEffect(() => {
     void reload();
@@ -57,6 +70,17 @@ export function StaffTutorsClient() {
   useEffect(() => {
     if (searchParams.get("new") === "1") setCreating(true);
   }, [searchParams]);
+
+  function applyFilters(event: React.FormEvent) {
+    event.preventDefault();
+    setApplied({ q: q.trim(), active });
+  }
+
+  function clearFilters() {
+    setQ("");
+    setActive("true");
+    setApplied({ q: "", active: "true" });
+  }
 
   async function createTutor(event: React.FormEvent) {
     event.preventDefault();
@@ -93,10 +117,14 @@ export function StaffTutorsClient() {
   if (creating) {
     return (
       <section className="wizard-shell panel">
-        <button type="button" className="page-back" onClick={() => {
-          setCreating(false);
-          router.replace("/staff/tutors");
-        }}>
+        <button
+          type="button"
+          className="page-back"
+          onClick={() => {
+            setCreating(false);
+            router.replace("/staff/tutors");
+          }}
+        >
           ← Tutors
         </button>
         <h2>Add tutor</h2>
@@ -169,10 +197,46 @@ export function StaffTutorsClient() {
         }
       />
       {error ? <p className="form-error">{error}</p> : null}
-      {loading ? <p className="dashboard-empty">Loading tutors…</p> : null}
       <Panel>
+        <form
+          className="student-filter-panel"
+          onSubmit={applyFilters}
+          style={{ gridTemplateColumns: "1.6fr 1fr auto auto" }}
+        >
+          <label className="student-search">
+            Search name, email, or phone
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Tutor name, email, or phone"
+            />
+          </label>
+          <label>
+            Status
+            <select value={active} onChange={(e) => setActive(e.target.value)}>
+              {ACTIVE_OPTIONS.map((option) => (
+                <option key={option.value || "all"} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="primary-button" style={{ height: 36, alignSelf: "end" }}>
+            Filter
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            style={{ height: 36, alignSelf: "end" }}
+            onClick={clearFilters}
+          >
+            Clear
+          </button>
+        </form>
+
+        {loading ? <p className="dashboard-empty">Loading tutors…</p> : null}
         {tutors.length === 0 && !loading ? (
-          <p className="dashboard-empty">No tutors yet.</p>
+          <p className="dashboard-empty">No tutors match these filters.</p>
         ) : (
           <div className="table-panel">
             {tutors.map((row) => (

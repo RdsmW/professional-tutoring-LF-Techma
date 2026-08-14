@@ -32,14 +32,18 @@ function optionalText(value: string | undefined) {
   return trimmed || null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const context = await getStaffContext();
     if (!context) {
       return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
     }
 
-    const families = await listStaffFamilies();
+    const { searchParams } = new URL(request.url);
+    const q = (searchParams.get("q") ?? "").trim();
+    const status = (searchParams.get("status") ?? "").trim();
+
+    const families = await listStaffFamilies({ q, status });
 
     return NextResponse.json({
       ok: true,

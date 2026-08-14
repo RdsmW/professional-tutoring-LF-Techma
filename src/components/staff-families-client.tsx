@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
@@ -9,7 +9,14 @@ import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
-type ListFilter = "active" | "archived" | "all";
+const STATUS_OPTIONS = [
+  { value: "", label: "All (non-archived)" },
+  { value: "pending", label: "Pending" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "archived", label: "Archived" },
+  { value: "all", label: "All statuses" },
+] as const;
 
 export function StaffFamiliesClient({
   initialFamilies = [],
@@ -19,12 +26,15 @@ export function StaffFamiliesClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [families, setFamilies] = useState<StaffFamilyListRow[]>(initialFamilies);
+  const [householdOptions, setHouseholdOptions] = useState<StaffFamilyListRow[]>(initialFamilies);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [addingGuardian, setAddingGuardian] = useState(false);
   const [savingGuardian, setSavingGuardian] = useState(false);
-  const [filter, setFilter] = useState<ListFilter>("active");
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("");
+  const [applied, setApplied] = useState({ q: "", status: "" });
   const [guardianForm, setGuardianForm] = useState({
     householdId: "",
     firstName: "",
@@ -43,7 +53,11 @@ export function StaffFamiliesClient({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/staff/families");
+      const params = new URLSearchParams();
+      if (applied.q) params.set("q", applied.q);
+      if (applied.status) params.set("status", applied.status);
+      const query = params.toString();
+      const response = await fetch(`/api/staff/families${query ? `?${query}` : ""}`);
       const data = await response.json();
       if (!response.ok || !data.ok) {
         setError(data.error || "Unable to load families.");
@@ -55,13 +69,37 @@ export function StaffFamiliesClient({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applied]);
 
-  const visible = useMemo(() => {
-    if (filter === "all") return families;
-    if (filter === "archived") return families.filter((row) => row.status === "archived");
-    return families.filter((row) => row.status !== "archived");
-  }, [families, filter]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  useEffect(() => {
+    if (!addingGuardian) return;
+    void (async () => {
+      try {
+        const response = await fetch("/api/staff/families?status=all");
+        const data = await response.json();
+        if (response.ok && data.ok) {
+          setHouseholdOptions(data.families ?? []);
+        }
+      } catch {
+        // keep existing options
+      }
+    })();
+  }, [addingGuardian]);
+
+  function applyFilters(event: React.FormEvent) {
+    event.preventDefault();
+    setApplied({ q: q.trim(), status });
+  }
+
+  function clearFilters() {
+    setQ("");
+    setStatus("");
+    setApplied({ q: "", status: "" });
+  }
 
   async function createGuardian(event: React.FormEvent) {
     event.preventDefault();
@@ -130,7 +168,7 @@ export function StaffFamiliesClient({
                 required
               >
                 <option value="">Select family</option>
-                {families.map((row) => (
+                {householdOptions.map((row) => (
                   <option key={row.id} value={row.id}>
                     {row.displayName}
                   </option>
@@ -217,37 +255,50 @@ export function StaffFamiliesClient({
           </span>
         }
       />
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        {(
-          [
-            ["active", "Active"],
-            ["archived", "Archived"],
-            ["all", "All"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={filter === value ? "primary-button" : "secondary-button"}
-            onClick={() => setFilter(value)}
-          >
-            {label}
-          </button>
-        ))}
-        <button type="button" className="text-button" onClick={() => void reload()} disabled={loading}>
-          Refresh
-        </button>
-      </div>
       {error ? <p className="form-error">{error}</p> : null}
-      {loading ? <p className="dashboard-empty">Loading families…</p> : null}
       <Panel>
-        {visible.length === 0 && !loading ? (
-          <p className="dashboard-empty">
-            {filter === "archived" ? "No archived households." : "No households yet."}
-          </p>
+        <form
+          className="student-filter-panel"
+          onSubmit={applyFilters}
+          style={{ gridTemplateColumns: "1.6fr 1fr auto auto" }}
+        >
+          <label className="student-search">
+            Search name or phone
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Household name or phone"
+            />
+          </label>
+          <label>
+            Status
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value || "default"} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="primary-button" style={{ height: 36, alignSelf: "end" }}>
+            Filter
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            style={{ height: 36, alignSelf: "end" }}
+            onClick={clearFilters}
+          >
+            Clear
+          </button>
+        </form>
+
+        {loading ? <p className="dashboard-empty">Loading families…</p> : null}
+        {families.length === 0 && !loading ? (
+          <p className="dashboard-empty">No households match these filters.</p>
         ) : (
           <div className="table-panel">
-            {visible.map((row) => (
+            {families.map((row) => (
               <Link key={row.id} href={`/staff/families/${row.id}`} className="family-row">
                 <span
                   className="avatar"
@@ -267,8 +318,9 @@ export function StaffFamiliesClient({
                 <span>
                   <strong>{row.displayName}</strong>
                   <small>
-                    {row.status} · {row.studentCount} student{row.studentCount === 1 ? "" : "s"} ·{" "}
-                    {row.guardianCount} guardian{row.guardianCount === 1 ? "" : "s"}
+                    {formatStatusLabel(row.status)} · {row.studentCount} student
+                    {row.studentCount === 1 ? "" : "s"} · {row.guardianCount} guardian
+                    {row.guardianCount === 1 ? "" : "s"}
                   </small>
                 </span>
                 <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>

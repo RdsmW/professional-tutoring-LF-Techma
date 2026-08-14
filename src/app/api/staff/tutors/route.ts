@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc } from "drizzle-orm";
+import { and, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { tutors } from "@/lib/db/schema";
 import { getStaffContext } from "@/lib/staff/session";
@@ -21,15 +21,36 @@ function notesPreview(notes: string | null, max = 80) {
   return `${trimmed.slice(0, max).trimEnd()}…`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const context = await getStaffContext();
     if (!context) {
       return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const q = (searchParams.get("q") ?? "").trim();
+    const activeParam = (searchParams.get("active") ?? "").trim().toLowerCase();
+
     const database = requireDb();
-    const rows = await database.select().from(tutors).orderBy(desc(tutors.updatedAt));
+    const filters: SQL[] = [];
+    if (q) {
+      filters.push(
+        or(
+          ilike(tutors.displayName, `%${q}%`),
+          ilike(tutors.email, `%${q}%`),
+          ilike(tutors.phone, `%${q}%`),
+        )!,
+      );
+    }
+    if (activeParam === "true") filters.push(eq(tutors.active, true));
+    if (activeParam === "false") filters.push(eq(tutors.active, false));
+
+    const rows = await database
+      .select()
+      .from(tutors)
+      .where(filters.length > 0 ? and(...filters) : undefined)
+      .orderBy(desc(tutors.updatedAt));
 
     return NextResponse.json({
       ok: true,

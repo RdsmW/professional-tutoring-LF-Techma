@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lte, ne, notExists, or, sql } from "drizzle-orm";
 import { StaffHomeCreateMenu } from "@/components/staff-home-create-menu";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { db } from "@/lib/db";
@@ -7,6 +7,7 @@ import {
   availabilitySlots,
   bookings,
   changeRequests,
+  guardians,
   households,
   paymentRecords,
   students,
@@ -103,15 +104,34 @@ async function loadDashboardData() {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 7);
 
+    const linkedGuardianExists = db
+      .select({ id: guardians.id })
+      .from(guardians)
+      .where(
+        and(
+          eq(guardians.householdId, households.id),
+          isNotNull(guardians.clerkUserId),
+          sql`trim(${guardians.clerkUserId}) <> ''`,
+        ),
+      );
+
     const [
-      pendingHouseholds,
+      onboardingHouseholds,
       weekBookingRows,
       slotRows,
       exceptionRows,
       openRequests,
       recentStudentRows,
     ] = await Promise.all([
-      db.select({ id: households.id }).from(households).where(eq(households.status, "pending")),
+      db
+        .select({ id: households.id })
+        .from(households)
+        .where(
+          and(
+            ne(households.status, "archived"),
+            or(eq(households.status, "pending"), notExists(linkedGuardianExists)),
+          ),
+        ),
       db
         .select({ id: bookings.id })
         .from(bookings)
@@ -203,7 +223,7 @@ async function loadDashboardData() {
     }));
 
     return {
-      onboardingFamilies: pendingHouseholds.length,
+      onboardingFamilies: onboardingHouseholds.length,
       weekSessions: weekBookingRows.length,
       weekSessionsLive: true,
       tutorOpenings: openSeats,
@@ -254,7 +274,7 @@ export default async function StaffDashboardPage() {
           <span className="metric-mark coral" />
           <p>Onboarding families</p>
           <strong>{data.onboardingFamilies}</strong>
-          <small>Pending household records</small>
+          <small>Pending / incomplete households</small>
         </article>
         <article className="metric-card">
           <span className="metric-mark blue" />
