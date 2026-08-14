@@ -102,12 +102,11 @@ async function checkSourceContracts() {
     "src/components/family-shell.tsx": ["BootstrapSession", "family-mode"],
     "src/app/staff/page.tsx": [
       "hero-panel",
-      "recommendation-banner",
-      "Needs attention",
-      "Week at a glance",
-      "Integration control",
       "Onboarding families",
-      "+ New Family",
+      "Family requests",
+      "Recently added",
+      "loadError",
+      "StaffHomeCreateMenu",
     ],
     "src/app/api/bootstrap/route.ts": ["ensureStaffProfile", "ensureFamilyGuardian", "ok: false"],
   };

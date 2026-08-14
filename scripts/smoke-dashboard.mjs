@@ -37,7 +37,18 @@ endOfWeek.setDate(startOfWeek.getDate() + 7);
 
 const [metrics] = await sql`
   select
-    (select count(*)::int from households where status = 'pending') as onboarding_families,
+    (select count(*)::int from households h
+      where h.status <> 'archived'
+        and (
+          h.status = 'pending'
+          or not exists (
+            select 1 from guardians g
+            where g.household_id = h.id
+              and g.clerk_user_id is not null
+              and trim(g.clerk_user_id) <> ''
+          )
+        )
+    ) as onboarding_families,
     (select count(*)::int from bookings
       where created_at >= ${startOfWeek}
         and created_at <= ${endOfWeek}
