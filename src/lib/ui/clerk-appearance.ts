@@ -67,11 +67,11 @@ export function familyUserButtonAppearance(): ClerkAppearance {
   };
 }
 
-/** Clerk SignIn / SignUp — website gold primary, minimal card chrome. */
+/** Clerk SignIn / SignUp — website navy primary, minimal card chrome. */
 export function authClerkAppearance(): ClerkAppearance {
   return {
     variables: {
-      colorPrimary: "#E2A61C",
+      colorPrimary: "#010345",
       colorPrimaryForeground: "#ffffff",
       colorBackground: "transparent",
       colorForeground: "#2A2A2A",
@@ -92,6 +92,7 @@ export function authClerkAppearance(): ClerkAppearance {
       headerTitle: "pt-auth-clerk-header-title",
       headerSubtitle: "pt-auth-clerk-header-subtitle",
       socialButtonsBlockButton: "pt-auth-clerk-social",
+      dividerRow: "pt-auth-clerk-divider",
       formButtonPrimary: "pt-auth-clerk-primary",
       footerActionLink: "pt-auth-clerk-footer-link",
     },

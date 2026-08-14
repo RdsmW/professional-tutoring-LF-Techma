@@ -4,7 +4,7 @@ import { authClerkAppearance } from "@/lib/ui/clerk-appearance";
 
 export default function SignUpPage() {
   return (
-    <AuthShell title="Create account">
+    <AuthShell formLabel="Create account">
       <SignUp
         routing="path"
         path="/sign-up"

@@ -4,7 +4,7 @@ import { authClerkAppearance } from "@/lib/ui/clerk-appearance";
 
 export default function SignInPage() {
   return (
-    <AuthShell title="Sign in">
+    <AuthShell formLabel="Sign in">
       <SignIn
         routing="path"
         path="/sign-in"
