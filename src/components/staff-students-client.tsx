@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { DirectoryViewToggle } from "@/components/directory-view-toggle";
+import { StaffDirectoryCard } from "@/components/staff-directory-card";
 import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
+import { useDirectoryView } from "@/lib/ui/directory-view";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type StudentRow = {
@@ -35,6 +38,7 @@ const LIFECYCLE_OPTIONS = [
 export function StaffStudentsClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { view, setView } = useDirectoryView("pt.dirView.staff.students", "table");
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [households, setHouseholds] = useState<HouseholdOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -282,47 +286,82 @@ export function StaffStudentsClient() {
         </p>
       ) : null}
 
-      <StaffDirectoryFilters>
-        <form
-          className="student-filter-panel"
-          onSubmit={applyFilters}
-          style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr auto auto" }}
-        >
-          <label className="student-search">
-            Search name
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Student name" />
-          </label>
-          <label>
-            Lifecycle
-            <select value={lifecycle} onChange={(e) => setLifecycle(e.target.value)}>
-              {LIFECYCLE_OPTIONS.map((option) => (
-                <option key={option.value || "default"} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Grade
-            <input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Grade" />
-          </label>
-          <label>
-            School
-            <input value={school} onChange={(e) => setSchool(e.target.value)} placeholder="School" />
-          </label>
-          <button type="submit" className="filter-btn">
-            Filter
-          </button>
-          <button type="button" className="clear-btn" onClick={clearFilters}>
-            Clear
-          </button>
-        </form>
-      </StaffDirectoryFilters>
+      <div className="directory-toolbar">
+        <StaffDirectoryFilters>
+          <form
+            className="student-filter-panel"
+            onSubmit={applyFilters}
+            style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr auto auto" }}
+          >
+            <label className="student-search">
+              Search name
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Student name" />
+            </label>
+            <label>
+              Lifecycle
+              <select value={lifecycle} onChange={(e) => setLifecycle(e.target.value)}>
+                {LIFECYCLE_OPTIONS.map((option) => (
+                  <option key={option.value || "default"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Grade
+              <input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Grade" />
+            </label>
+            <label>
+              School
+              <input value={school} onChange={(e) => setSchool(e.target.value)} placeholder="School" />
+            </label>
+            <button type="submit" className="filter-btn">
+              Filter
+            </button>
+            <button type="button" className="clear-btn" onClick={clearFilters}>
+              Clear
+            </button>
+          </form>
+        </StaffDirectoryFilters>
+        <DirectoryViewToggle view={view} onChange={setView} label="Students layout" />
+      </div>
 
       <Panel>
         {loading ? <p className="dashboard-empty">Loading students…</p> : null}
         {students.length === 0 && !loading ? (
           <p className="dashboard-empty">No students match these filters.</p>
+        ) : view === "cards" ? (
+          <div className="staff-dir-card-grid">
+            {students.map((row) => {
+              const actions = lifecycleActions({
+                isArchived: row.lifecycle === "archived",
+                canDelete: Boolean(row.canDelete),
+                busy: busyId === row.id,
+                onEdit: () => router.push(`/staff/students/${row.id}?edit=1`),
+                onArchive: () => void setStudentLifecycle(row.id, "archived"),
+                onRestore: () => void setStudentLifecycle(row.id, "active"),
+                onDelete: () => void deleteStudent(row.id),
+              });
+              return (
+                <StaffDirectoryCard
+                  key={row.id}
+                  title={row.displayName}
+                  subtitle={row.householdDisplayName}
+                  status={
+                    <span className={`pill ${statusTone(row.lifecycle)}`}>
+                      {formatStatusLabel(row.lifecycle)}
+                    </span>
+                  }
+                  fields={[
+                    { label: "Grade", value: row.gradeLabel ?? "—" },
+                    { label: "School", value: row.schoolName ?? "—" },
+                  ]}
+                  actions={actions}
+                  onOpen={() => router.push(`/staff/students/${row.id}`)}
+                />
+              );
+            })}
+          </div>
         ) : (
           <div className="table-panel staff-dir-table">
             <div className="table-head staff-dir-cols-students">

@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { DirectoryViewToggle } from "@/components/directory-view-toggle";
+import { StaffDirectoryCard } from "@/components/staff-directory-card";
 import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
+import { useDirectoryView } from "@/lib/ui/directory-view";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type TutorRow = {
@@ -26,6 +29,7 @@ const ACTIVE_OPTIONS = [
 export function StaffTutorsClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { view, setView } = useDirectoryView("pt.dirView.staff.tutors", "table");
   const [tutors, setTutors] = useState<TutorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -259,43 +263,78 @@ export function StaffTutorsClient() {
         </p>
       ) : null}
 
-      <StaffDirectoryFilters>
-        <form
-          className="student-filter-panel"
-          onSubmit={applyFilters}
-          style={{ gridTemplateColumns: "1.6fr 1fr auto auto" }}
-        >
-          <label className="student-search">
-            Search name, email, or phone
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Tutor name, email, or phone"
-            />
-          </label>
-          <label>
-            Status
-            <select value={active} onChange={(e) => setActive(e.target.value)}>
-              {ACTIVE_OPTIONS.map((option) => (
-                <option key={option.value || "all"} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="filter-btn">
-            Filter
-          </button>
-          <button type="button" className="clear-btn" onClick={clearFilters}>
-            Clear
-          </button>
-        </form>
-      </StaffDirectoryFilters>
+      <div className="directory-toolbar">
+        <StaffDirectoryFilters>
+          <form
+            className="student-filter-panel"
+            onSubmit={applyFilters}
+            style={{ gridTemplateColumns: "1.6fr 1fr auto auto" }}
+          >
+            <label className="student-search">
+              Search name, email, or phone
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Tutor name, email, or phone"
+              />
+            </label>
+            <label>
+              Status
+              <select value={active} onChange={(e) => setActive(e.target.value)}>
+                {ACTIVE_OPTIONS.map((option) => (
+                  <option key={option.value || "all"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="filter-btn">
+              Filter
+            </button>
+            <button type="button" className="clear-btn" onClick={clearFilters}>
+              Clear
+            </button>
+          </form>
+        </StaffDirectoryFilters>
+        <DirectoryViewToggle view={view} onChange={setView} label="Tutors layout" />
+      </div>
 
       <Panel>
         {loading ? <p className="dashboard-empty">Loading tutors…</p> : null}
         {tutors.length === 0 && !loading ? (
           <p className="dashboard-empty">No tutors match these filters.</p>
+        ) : view === "cards" ? (
+          <div className="staff-dir-card-grid">
+            {tutors.map((row) => {
+              const actions = lifecycleActions({
+                isArchived: !row.active,
+                canDelete: Boolean(row.canDelete),
+                busy: busyId === row.id,
+                onEdit: () => router.push(`/staff/tutors/${row.id}?edit=1`),
+                onArchive: () => void setTutorActive(row.id, false),
+                onRestore: () => void setTutorActive(row.id, true),
+                onDelete: () => void deleteTutor(row.id),
+              });
+              return (
+                <StaffDirectoryCard
+                  key={row.id}
+                  title={row.displayName}
+                  subtitle={row.email || undefined}
+                  status={
+                    <span className={`pill ${statusTone(row.active ? "active" : "inactive")}`}>
+                      {formatStatusLabel(row.active ? "active" : "archived")}
+                    </span>
+                  }
+                  fields={[
+                    { label: "Email", value: row.email || "—" },
+                    { label: "Phone", value: row.phone || "—" },
+                  ]}
+                  actions={actions}
+                  onOpen={() => router.push(`/staff/tutors/${row.id}`)}
+                />
+              );
+            })}
+          </div>
         ) : (
           <div className="table-panel staff-dir-table">
             <div className="table-head staff-dir-cols-tutors">

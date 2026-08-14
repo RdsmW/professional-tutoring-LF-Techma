@@ -9,8 +9,11 @@ import {
 } from "@/components/family-student-detail";
 import { FamilyStudentEdit } from "@/components/family-student-edit";
 import { useFamilyPortal } from "@/components/family-portal-context";
+import { DirectoryViewToggle } from "@/components/directory-view-toggle";
 import { PageIntro } from "@/components/ui";
 import { learningNeedChips } from "@/lib/family/learning-needs";
+import { useDirectoryView } from "@/lib/ui/directory-view";
+import { statusTone } from "@/lib/ui/status";
 
 type StudentCard = {
   id: string;
@@ -61,6 +64,7 @@ export function FamilyStudentsClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { householdName, displayName } = useFamilyPortal();
+  const { view, setView } = useDirectoryView("pt.dirView.family.students", "cards");
   const [students, setStudents] = useState(initialStudents);
   const [adding, setAdding] = useState(searchParams.get("add") === "1");
   const [mode, setMode] = useState<StudentMode>("list");
@@ -227,66 +231,117 @@ export function FamilyStudentsClient({
       <PageIntro
         title="Students"
         action={
-          <button
-            type="button"
-            className="family-primary"
-            style={{ border: 0, padding: "10px 14px", cursor: "pointer" }}
-            onClick={() => {
-              setSelectedId(null);
-              setAdding(true);
-            }}
-          >
-            + Add student
-          </button>
+          <span style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <DirectoryViewToggle view={view} onChange={setView} label="Students layout" />
+            <button
+              type="button"
+              className="family-primary"
+              style={{ border: 0, padding: "10px 14px", cursor: "pointer" }}
+              onClick={() => {
+                setSelectedId(null);
+                setAdding(true);
+              }}
+            >
+              + Add student
+            </button>
+          </span>
         }
       />
 
       {listError ? <p className="form-error" style={{ marginBottom: 12 }}>{listError}</p> : null}
 
-      <section className="family-student-grid">
-        {students.map((student) => {
-          const chips = learningNeedChips(student.learningNeeds, 4);
-          const active = student.lifecycle === "active";
-          return (
-            <article className="family-student-card-shell" key={student.id}>
-              <button
-                type="button"
-                className="family-student-main"
-                onClick={() => void openDetail(student.id)}
-              >
-                <div className="student-card-top">
-                  <span className="student-detail-avatar small">{initials(student.displayName)}</span>
-                  <span className={`pill ${active ? "mint" : "amber"}`}>{statusLabel(student.lifecycle)}</span>
-                </div>
-                <h3>{student.displayName}</h3>
-                <p>
-                  {student.schoolName ?? "School pending"} · {student.gradeLabel ?? "Grade pending"}
-                </p>
-                <div className="field-cloud">
-                  {chips.length > 0 ? (
-                    chips.map((chip) => <span key={chip}>{chip}</span>)
-                  ) : (
-                    <span>Needs not listed yet</span>
-                  )}
-                </div>
-                <b>Open →</b>
-              </button>
-            </article>
-          );
-        })}
-        <button
-          type="button"
-          className="add-student-tile"
-          onClick={() => {
-            setSelectedId(null);
-            setAdding(true);
-          }}
-        >
-          <span>＋</span>
-          <h3>Add student</h3>
-          <p>Create a child profile under this household.</p>
-        </button>
-      </section>
+      {view === "table" ? (
+        <section className="family-student-list-panel">
+          {students.length === 0 ? (
+            <p className="dashboard-empty" style={{ padding: 18 }}>
+              No students yet. Add a student to get started.
+            </p>
+          ) : (
+            <div className="table-panel">
+              <div className="table-head family-student-list-cols">
+                <span>Name</span>
+                <span>School</span>
+                <span>Grade</span>
+                <span>Status</span>
+                <span aria-hidden="true" />
+              </div>
+              {students.map((student) => {
+                const active = student.lifecycle === "active";
+                return (
+                  <div
+                    key={student.id}
+                    className="table-row family-student-list-cols"
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => void openDetail(student.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        void openDetail(student.id);
+                      }
+                    }}
+                  >
+                    <strong>{student.displayName}</strong>
+                    <span>{student.schoolName ?? "School pending"}</span>
+                    <span>{student.gradeLabel ?? "Grade pending"}</span>
+                    <span>
+                      <span className={`pill ${active ? "mint" : statusTone(student.lifecycle)}`}>
+                        {statusLabel(student.lifecycle)}
+                      </span>
+                    </span>
+                    <span className="table-open">Open →</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ) : (
+        <section className="family-student-grid">
+          {students.map((student) => {
+            const chips = learningNeedChips(student.learningNeeds, 4);
+            const active = student.lifecycle === "active";
+            return (
+              <article className="family-student-card-shell" key={student.id}>
+                <button
+                  type="button"
+                  className="family-student-main"
+                  onClick={() => void openDetail(student.id)}
+                >
+                  <div className="student-card-top">
+                    <span className="student-detail-avatar small">{initials(student.displayName)}</span>
+                    <span className={`pill ${active ? "mint" : "amber"}`}>{statusLabel(student.lifecycle)}</span>
+                  </div>
+                  <h3>{student.displayName}</h3>
+                  <p>
+                    {student.schoolName ?? "School pending"} · {student.gradeLabel ?? "Grade pending"}
+                  </p>
+                  <div className="field-cloud">
+                    {chips.length > 0 ? (
+                      chips.map((chip) => <span key={chip}>{chip}</span>)
+                    ) : (
+                      <span>Needs not listed yet</span>
+                    )}
+                  </div>
+                  <b>Open →</b>
+                </button>
+              </article>
+            );
+          })}
+          <button
+            type="button"
+            className="add-student-tile"
+            onClick={() => {
+              setSelectedId(null);
+              setAdding(true);
+            }}
+          >
+            <span>＋</span>
+            <h3>Add student</h3>
+            <p>Create a child profile under this household.</p>
+          </button>
+        </section>
+      )}
     </>
   );
 }

@@ -773,6 +773,135 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.3fr) minmax(0, 1.1fr) 0.9fr 64px;
 }
 
+.directory-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.directory-toolbar .staff-directory-filters {
+  flex: 1 1 280px;
+  margin-bottom: 0;
+  min-width: 0;
+}
+.directory-view-toggle {
+  flex: 0 0 auto;
+  align-self: flex-end;
+}
+.directory-view-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+}
+.directory-view-icon {
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+.staff-dir-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.staff-dir-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.staff-dir-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 0;
+}
+.staff-dir-card-status {
+  min-width: 0;
+}
+.staff-dir-card-body {
+  flex: 1;
+  padding: 12px 14px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  color: inherit;
+}
+.staff-dir-card-body:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+.staff-dir-card-body h3 {
+  margin: 0 0 4px;
+  font: 700 16px Georgia, serif;
+}
+.staff-dir-card-body > p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.staff-dir-card-body .mini-fields {
+  margin-top: auto;
+}
+.staff-dir-card-body .card-action {
+  margin-top: 4px;
+  padding-bottom: 0;
+}
+.family-directory-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+.family-student-list-cols {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 0.8fr 0.9fr 72px;
+}
+.family-mode .family-student-list-panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0;
+  margin-bottom: 14px;
+}
+.family-mode .family-student-list-panel .table-panel {
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+}
+.family-mode .family-student-list-panel .table-row {
+  cursor: pointer;
+}
+.family-mode .family-student-list-panel .table-open {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
+@media (max-width: 1100px) {
+  .staff-dir-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .staff-dir-card-grid {
+    grid-template-columns: 1fr;
+  }
+  .directory-view-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
 .staff-row-actions {
   position: relative;
   display: inline-flex;

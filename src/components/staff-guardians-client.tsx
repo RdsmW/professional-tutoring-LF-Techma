@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
+import { DirectoryViewToggle } from "@/components/directory-view-toggle";
+import { StaffDirectoryCard } from "@/components/staff-directory-card";
 import { StaffDirectoryFilters, StaffRowActions } from "@/components/staff-row-actions";
+import { useDirectoryView } from "@/lib/ui/directory-view";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type GuardianRow = {
@@ -33,6 +36,7 @@ const STATUS_OPTIONS = [
 
 export function StaffGuardiansClient() {
   const router = useRouter();
+  const { view, setView } = useDirectoryView("pt.dirView.staff.guardians", "table");
   const [guardians, setGuardians] = useState<GuardianRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,43 +114,81 @@ export function StaffGuardiansClient() {
         </p>
       ) : null}
 
-      <StaffDirectoryFilters>
-        <form
-          className="student-filter-panel"
-          onSubmit={applyFilters}
-          style={{ gridTemplateColumns: "1.8fr 1fr auto auto" }}
-        >
-          <label className="student-search">
-            Search
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Name, email, phone, or family"
-            />
-          </label>
-          <label>
-            Status
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="filter-btn">
-            Filter
-          </button>
-          <button type="button" className="clear-btn" onClick={clearFilters}>
-            Clear
-          </button>
-        </form>
-      </StaffDirectoryFilters>
+      <div className="directory-toolbar">
+        <StaffDirectoryFilters>
+          <form
+            className="student-filter-panel"
+            onSubmit={applyFilters}
+            style={{ gridTemplateColumns: "1.8fr 1fr auto auto" }}
+          >
+            <label className="student-search">
+              Search
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Name, email, phone, or family"
+              />
+            </label>
+            <label>
+              Status
+              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="filter-btn">
+              Filter
+            </button>
+            <button type="button" className="clear-btn" onClick={clearFilters}>
+              Clear
+            </button>
+          </form>
+        </StaffDirectoryFilters>
+        <DirectoryViewToggle view={view} onChange={setView} label="Guardians layout" />
+      </div>
 
       <Panel>
         {loading ? <p className="dashboard-empty">Loading guardians…</p> : null}
         {guardians.length === 0 && !loading ? (
           <p className="dashboard-empty">No guardians match these filters.</p>
+        ) : view === "cards" ? (
+          <div className="staff-dir-card-grid">
+            {guardians.map((row) => {
+              const fullName = `${row.firstName} ${row.lastName}`.trim();
+              const actions = [
+                {
+                  id: "edit",
+                  label: "Edit",
+                  tone: "edit" as const,
+                  onSelect: () =>
+                    router.push(`/staff/families/${row.household.id}?guardianId=${row.id}`),
+                },
+                {
+                  id: "open-family",
+                  label: "Open family",
+                  onSelect: () => openFamily(row.household.id),
+                },
+              ];
+              return (
+                <StaffDirectoryCard
+                  key={row.id}
+                  title={fullName}
+                  subtitle={row.email}
+                  status={
+                    <span className={`pill ${statusTone(row.linkStatus)}`}>
+                      {formatStatusLabel(row.linkStatus)}
+                    </span>
+                  }
+                  fields={[{ label: "Family", value: row.household.displayName }]}
+                  actions={actions}
+                  onOpen={() => openFamily(row.household.id)}
+                />
+              );
+            })}
+          </div>
         ) : (
           <div className="table-panel staff-dir-table">
             <div className="table-head staff-dir-cols-guardians">
