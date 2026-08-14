@@ -38,17 +38,27 @@ export async function GET(
     const guardianRows = await database.select().from(guardians).where(eq(guardians.householdId, id));
     const studentRows = await database.select().from(students).where(eq(students.householdId, id));
 
-    const noteRows = await database
-      .select({
-        id: householdNotes.id,
-        body: householdNotes.body,
-        authorDisplayName: householdNotes.authorDisplayName,
-        createdAt: householdNotes.createdAt,
-      })
-      .from(householdNotes)
-      .where(eq(householdNotes.householdId, id))
-      .orderBy(desc(householdNotes.createdAt))
-      .limit(100);
+    let noteRows: Array<{
+      id: string;
+      body: string;
+      authorDisplayName: string;
+      createdAt: Date;
+    }> = [];
+    try {
+      noteRows = await database
+        .select({
+          id: householdNotes.id,
+          body: householdNotes.body,
+          authorDisplayName: householdNotes.authorDisplayName,
+          createdAt: householdNotes.createdAt,
+        })
+        .from(householdNotes)
+        .where(eq(householdNotes.householdId, id))
+        .orderBy(desc(householdNotes.createdAt))
+        .limit(100);
+    } catch (error) {
+      console.warn("[staff/families/id] notes soft-fail", error);
+    }
 
     const bookingRows = await database
       .select({
