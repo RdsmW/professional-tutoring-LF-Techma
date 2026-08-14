@@ -24,8 +24,8 @@ function IconBook() {
 }
 
 const ACTIONS: Array<{ href: string; label: string; icon: ReactNode }> = [
-  { href: "/family/students?add=1", label: "+ New Student", icon: <IconStudent /> },
-  { href: "/family/book-tutoring", label: "+ Book Tutoring", icon: <IconBook /> },
+  { href: "/family/students?add=1", label: "New Student", icon: <IconStudent /> },
+  { href: "/family/book-tutoring", label: "Book Tutoring", icon: <IconBook /> },
 ];
 
 export function FamilyHomeCreateMenu() {
