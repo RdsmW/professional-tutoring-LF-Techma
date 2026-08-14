@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Panel } from "@/components/ui";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -111,6 +111,9 @@ function formatDate(value: string) {
 
 export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const deepLinkedGuardianId = searchParams.get("guardianId");
+  const deepLinkHandled = useRef<string | null>(null);
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +150,18 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (!family || !deepLinkedGuardianId) return;
+    if (deepLinkHandled.current === deepLinkedGuardianId) return;
+    const match = family.guardians.find((g) => g.id === deepLinkedGuardianId);
+    if (!match) return;
+    deepLinkHandled.current = deepLinkedGuardianId;
+    setGuardianForm({ ...match });
+    setEditingGuardianId(match.id);
+    setSavedMessage(null);
+    router.replace(`/staff/families/${familyId}`, { scroll: false });
+  }, [family, deepLinkedGuardianId, familyId, router]);
 
   async function refreshInvite(guardianId: string) {
     setInviteMessage(null);

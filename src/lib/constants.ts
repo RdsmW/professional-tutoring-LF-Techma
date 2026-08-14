@@ -12,6 +12,7 @@ export const CURRENT_TERM = {
 export const STAFF_NAV = [
   { href: "/staff", label: "Dashboard", icon: "dashboard" },
   { href: "/staff/families", label: "Families", icon: "families" },
+  { href: "/staff/guardians", label: "Guardians", icon: "profile" },
   { href: "/staff/students", label: "Students", icon: "student" },
   { href: "/staff/tutors", label: "Tutors", icon: "tutor" },
   { href: "/staff/scheduling", label: "Scheduling", icon: "calendar" },

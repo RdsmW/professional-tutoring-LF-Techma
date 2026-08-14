@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { StaffFamilyDetailClient } from "@/components/staff-family-detail-client";
 
 export default async function StaffFamilyDetailPage({
@@ -6,5 +7,9 @@ export default async function StaffFamilyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <StaffFamilyDetailClient familyId={id} />;
+  return (
+    <Suspense fallback={<p className="dashboard-empty">Loading family…</p>}>
+      <StaffFamilyDetailClient familyId={id} />
+    </Suspense>
+  );
 }
