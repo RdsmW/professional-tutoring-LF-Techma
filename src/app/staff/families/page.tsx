@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { StaffFamiliesClient } from "@/components/staff-families-client";
 import { listStaffFamilies } from "@/lib/staff/families";
 import { getStaffContext } from "@/lib/staff/session";
@@ -13,5 +14,9 @@ export default async function StaffFamiliesPage() {
     }
   }
 
-  return <StaffFamiliesClient initialFamilies={initialFamilies} />;
+  return (
+    <Suspense fallback={<p className="dashboard-empty">Loading families…</p>}>
+      <StaffFamiliesClient initialFamilies={initialFamilies} />
+    </Suspense>
+  );
 }

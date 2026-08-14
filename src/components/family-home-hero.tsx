@@ -24,7 +24,7 @@ export function FamilyHomeHero() {
               background: "var(--coral)",
               color: "#fff",
               fontWeight: 800,
-              fontSize: 11,
+              fontSize: 14,
             }}
           >
             Students
@@ -38,7 +38,7 @@ export function FamilyHomeHero() {
               padding: "10px 14px",
               border: "1px solid var(--line)",
               fontWeight: 800,
-              fontSize: 11,
+              fontSize: 14,
             }}
           >
             Book Tutoring

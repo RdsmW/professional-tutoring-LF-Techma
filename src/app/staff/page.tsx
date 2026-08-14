@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { StaffHomeCreateMenu } from "@/components/staff-home-create-menu";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { db } from "@/lib/db";
 import {
   availabilitySlots,
   bookings,
+  changeRequests,
   households,
   paymentRecords,
   students,
@@ -26,7 +28,40 @@ function initialsFromName(name: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
+function statusLabel(value: string) {
+  return value.replace(/_/g, " ");
+}
+
+function startOfWeekNy(now = new Date()) {
+  const nyParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).formatToParts(now);
+  const year = Number(nyParts.find((p) => p.type === "year")?.value);
+  const month = Number(nyParts.find((p) => p.type === "month")?.value);
+  const day = Number(nyParts.find((p) => p.type === "day")?.value);
+  const weekday = nyParts.find((p) => p.type === "weekday")?.value ?? "Sun";
+  const weekdayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
+  const localMidnight = new Date(year, month - 1, day);
+  localMidnight.setDate(localMidnight.getDate() - Math.max(0, weekdayIndex));
+  return localMidnight;
+}
+
+function formatCapacityDay(weekStart: Date, dayOfWeek: number) {
+  const date = new Date(weekStart);
+  date.setDate(weekStart.getDate() + dayOfWeek);
+  const monthDay = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+  return `${DAY_LABELS[dayOfWeek]} · ${monthDay}`;
+}
+
 async function loadDashboardData() {
+  const weekStart = startOfWeekNy();
   const empty = {
     onboardingFamilies: 0,
     weekSessions: 0,
@@ -35,7 +70,8 @@ async function loadDashboardData() {
     tutorOpeningsLive: false,
     billingExceptions: 0,
     billingExceptionsLive: false,
-    attention: [] as {
+    familyRequests: [] as {
+      id: string;
       initials: string;
       title: string;
       copy: string;
@@ -43,8 +79,16 @@ async function loadDashboardData() {
       tone: string;
       href: string;
     }[],
+    recentStudents: [] as {
+      id: string;
+      initials: string;
+      title: string;
+      copy: string;
+      meta: string;
+      href: string;
+    }[],
     weekBars: WEEK_DAYS.map((day) => ({
-      day: DAY_LABELS[day],
+      day: formatCapacityDay(weekStart, day),
       width: 0,
       count: "0 / 0",
     })),
@@ -66,9 +110,10 @@ async function loadDashboardData() {
       weekBookingRows,
       slotRows,
       exceptionRows,
-      prospectStudents,
+      openRequests,
+      recentStudentRows,
     ] = await Promise.all([
-      db.select().from(households).where(eq(households.status, "pending")),
+      db.select({ id: households.id }).from(households).where(eq(households.status, "pending")),
       db
         .select({ id: bookings.id })
         .from(bookings)
@@ -84,7 +129,34 @@ async function loadDashboardData() {
         .select({ id: paymentRecords.id })
         .from(paymentRecords)
         .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"])),
-      db.select().from(students).where(eq(students.lifecycle, "prospect")).limit(8),
+      db
+        .select({
+          id: changeRequests.id,
+          changeType: changeRequests.changeType,
+          requestedOutcome: changeRequests.requestedOutcome,
+          status: changeRequests.status,
+          studentName: students.displayName,
+          householdName: households.displayName,
+        })
+        .from(changeRequests)
+        .innerJoin(students, eq(changeRequests.studentId, students.id))
+        .innerJoin(households, eq(changeRequests.householdId, households.id))
+        .where(inArray(changeRequests.status, ["submitted", "under_review"]))
+        .orderBy(desc(changeRequests.createdAt))
+        .limit(8),
+      db
+        .select({
+          id: students.id,
+          displayName: students.displayName,
+          lifecycle: students.lifecycle,
+          schoolName: students.schoolName,
+          gradeLabel: students.gradeLabel,
+          householdName: households.displayName,
+        })
+        .from(students)
+        .innerJoin(households, eq(students.householdId, households.id))
+        .orderBy(desc(students.createdAt))
+        .limit(8),
     ]);
 
     const openSeats = slotRows.reduce((sum, slot) => {
@@ -106,33 +178,30 @@ async function loadDashboardData() {
       const used = Math.max(0, bucket.capacity - bucket.open);
       const width = bucket.capacity > 0 ? Math.round((used / bucket.capacity) * 100) : 0;
       return {
-        day: DAY_LABELS[day],
+        day: formatCapacityDay(weekStart, day),
         width,
         count: `${used} / ${bucket.capacity}`,
       };
     });
 
-    const attention: typeof empty.attention = [];
-    for (const household of pendingHouseholds.slice(0, 6)) {
-      attention.push({
-        initials: initialsFromName(household.displayName),
-        title: `Verify ${household.displayName} onboarding`,
-        copy: "Household pending placement",
-        meta: "Needs placement",
-        tone: "coral",
-        href: "/staff/families",
-      });
-    }
-    for (const student of prospectStudents.slice(0, Math.max(0, 6 - attention.length))) {
-      attention.push({
-        initials: initialsFromName(student.displayName),
-        title: `Place ${student.firstName}`,
-        copy: student.schoolName ? `${student.schoolName} · prospect` : "Prospect student",
-        meta: "Needs placement",
-        tone: "blue",
-        href: "/staff/students",
-      });
-    }
+    const familyRequests = openRequests.map((row) => ({
+      id: row.id,
+      initials: initialsFromName(row.studentName || row.householdName),
+      title: `${statusLabel(row.changeType)} · ${row.studentName}`,
+      copy: `${row.householdName} · ${statusLabel(row.requestedOutcome)}`,
+      meta: statusLabel(row.status),
+      tone: row.status === "under_review" ? "blue" : "coral",
+      href: `/staff/sessions?exceptionId=${row.id}`,
+    }));
+
+    const recentStudents = recentStudentRows.map((row) => ({
+      id: row.id,
+      initials: initialsFromName(row.displayName),
+      title: row.displayName,
+      copy: [row.householdName, row.gradeLabel, row.schoolName].filter(Boolean).join(" · ") || "Student",
+      meta: row.lifecycle,
+      href: `/staff/students/${row.id}`,
+    }));
 
     return {
       onboardingFamilies: pendingHouseholds.length,
@@ -142,7 +211,8 @@ async function loadDashboardData() {
       tutorOpeningsLive: slotRows.length > 0,
       billingExceptions: exceptionRows.length,
       billingExceptionsLive: true,
-      attention,
+      familyRequests,
+      recentStudents,
       weekBars,
       weekBarsLive: slotRows.length > 0,
     };
@@ -176,26 +246,8 @@ export default async function StaffDashboardPage() {
           <h2>
             {greeting}, {firstName}.
           </h2>
-          <p>
-            Here is the operational picture for today—what needs placement, what is moving, and what
-            needs a human decision.
-          </p>
         </div>
-        <Link href="/staff/families" className="primary-button" style={{ textDecoration: "none" }}>
-          + New Family
-        </Link>
-      </section>
-
-      <section className="recommendation-banner">
-        <span>i</span>
-        <div>
-          <strong>Direct service onboarding</strong>
-          <p>
-            General inquiries stay in Zoho CRM. A submission from any of the five Professional Tutoring
-            service forms starts work here by creating the Family and Student records together—there is
-            no duplicate lead stage.
-          </p>
-        </div>
+        <StaffHomeCreateMenu />
       </section>
 
       <section className="metric-grid" aria-label="Dashboard metrics">
@@ -235,26 +287,24 @@ export default async function StaffDashboardPage() {
         </article>
       </section>
 
-      <div className="two-column">
+      <div className="dashboard-triptych">
         <section className="panel">
           <div className="panel-heading">
             <div>
               <span className="eyebrow">Priority queue</span>
-              <h3>Needs attention</h3>
+              <h3>Family requests</h3>
             </div>
-            <Link href="/staff/families" className="text-button">
-              Open families
+            <Link href="/staff/sessions" className="text-button">
+              Open sessions
             </Link>
           </div>
           <div className="attention-list">
-            {data.attention.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>
-                Nothing pending right now. New family and prospect student items will appear here.
-              </p>
+            {data.familyRequests.length === 0 ? (
+              <p className="dashboard-empty">No open cancellation or change requests right now.</p>
             ) : (
-              data.attention.map((item) => (
+              data.familyRequests.map((item) => (
                 <Link
-                  key={`${item.title}-${item.initials}`}
+                  key={item.id}
                   href={item.href}
                   className="attention-row"
                   style={{ textDecoration: "none", color: "inherit" }}
@@ -274,8 +324,41 @@ export default async function StaffDashboardPage() {
         <section className="panel">
           <div className="panel-heading">
             <div>
+              <span className="eyebrow">Students</span>
+              <h3>Recently added</h3>
+            </div>
+            <Link href="/staff/students" className="text-button">
+              Open students
+            </Link>
+          </div>
+          <div className="attention-list">
+            {data.recentStudents.length === 0 ? (
+              <p className="dashboard-empty">No students yet. Use + to add one.</p>
+            ) : (
+              data.recentStudents.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className="attention-row"
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  <span className="avatar blue">{item.initials}</span>
+                  <span>
+                    <strong>{item.title}</strong>
+                    <small>{item.copy}</small>
+                  </span>
+                  <span className="pill">{item.meta}</span>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
               <span className="eyebrow">Capacity</span>
-              <h3>Week at a glance</h3>
+              <h3>This week</h3>
             </div>
             <Link href="/staff/scheduling" className="text-button">
               Open schedule
@@ -283,13 +366,18 @@ export default async function StaffDashboardPage() {
           </div>
           <div className="capacity-bars">
             {data.weekBars.map((row) => (
-              <div className="capacity-row" key={row.day}>
+              <Link
+                key={row.day}
+                href="/staff/scheduling"
+                className="capacity-row"
+                style={{ textDecoration: "none", color: "inherit", display: "grid" }}
+              >
                 <span>{row.day}</span>
                 <div className="bar-track">
                   <span style={{ width: `${row.width}%` }} />
                 </div>
                 <small>{row.count}</small>
-              </div>
+              </Link>
             ))}
           </div>
           <div className="capacity-note">
@@ -300,7 +388,6 @@ export default async function StaffDashboardPage() {
           </div>
         </section>
       </div>
-
     </>
   );
 }

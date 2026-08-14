@@ -39,11 +39,11 @@ export function MetricGrid({
     <section className="metric-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 16 }}>
       {items.map((item) => (
         <article key={item.label} className="panel" style={{ background: "var(--paper)", border: "1px solid var(--line)", padding: 17 }}>
-          <small style={{ display: "block", fontSize: 8, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <small style={{ display: "block", fontSize: 14, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             {item.label}
           </small>
           <strong style={{ display: "block", font: "700 24px Georgia, serif", margin: "8px 0" }}>{item.value}</strong>
-          <span style={{ display: "block", fontSize: 9, color: "var(--muted)" }}>{item.detail}</span>
+          <span style={{ display: "block", fontSize: 14, color: "var(--muted)" }}>{item.detail}</span>
         </article>
       ))}
     </section>

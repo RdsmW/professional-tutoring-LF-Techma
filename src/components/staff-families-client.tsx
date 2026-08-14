@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { StaffNewFamilyWizard } from "@/components/staff-new-family-wizard";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
+import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 
 type ListFilter = "active" | "archived" | "all";
 
@@ -13,11 +15,28 @@ export function StaffFamiliesClient({
 }: {
   initialFamilies?: StaffFamilyListRow[];
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [families, setFamilies] = useState<StaffFamilyListRow[]>(initialFamilies);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [addingGuardian, setAddingGuardian] = useState(false);
+  const [savingGuardian, setSavingGuardian] = useState(false);
   const [filter, setFilter] = useState<ListFilter>("active");
+  const [guardianForm, setGuardianForm] = useState({
+    householdId: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    isBillingOwner: false,
+  });
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") setCreating(true);
+    if (searchParams.get("newGuardian") === "1") setAddingGuardian(true);
+  }, [searchParams]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -43,8 +62,143 @@ export function StaffFamiliesClient({
     return families.filter((row) => row.status !== "archived");
   }, [families, filter]);
 
+  async function createGuardian(event: React.FormEvent) {
+    event.preventDefault();
+    if (savingGuardian) return;
+    if (!isValidEmail(guardianForm.email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (guardianForm.phone.trim() && !isValidPhone(guardianForm.phone)) {
+      setError("Enter a valid phone number.");
+      return;
+    }
+    setSavingGuardian(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${guardianForm.householdId}/guardians`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(guardianForm),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to create guardian.");
+        return;
+      }
+      router.push(`/staff/families/${guardianForm.householdId}`);
+    } catch {
+      setError("Unable to create guardian.");
+    } finally {
+      setSavingGuardian(false);
+    }
+  }
+
   if (creating) {
-    return <StaffNewFamilyWizard onCancel={() => setCreating(false)} />;
+    return (
+      <StaffNewFamilyWizard
+        onCancel={() => {
+          setCreating(false);
+          router.replace("/staff/families");
+        }}
+      />
+    );
+  }
+
+  if (addingGuardian) {
+    return (
+      <section className="wizard-shell panel">
+        <button
+          type="button"
+          className="page-back"
+          onClick={() => {
+            setAddingGuardian(false);
+            router.replace("/staff/families");
+          }}
+        >
+          ← Families
+        </button>
+        <h2>New guardian</h2>
+        <form className="wizard-stage" onSubmit={createGuardian}>
+          <div className="input-grid">
+            <label>
+              Household
+              <select
+                value={guardianForm.householdId}
+                onChange={(e) => setGuardianForm({ ...guardianForm, householdId: e.target.value })}
+                required
+              >
+                <option value="">Select family</option>
+                {families.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              First name
+              <input
+                value={guardianForm.firstName}
+                onChange={(e) => setGuardianForm({ ...guardianForm, firstName: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Last name
+              <input
+                value={guardianForm.lastName}
+                onChange={(e) => setGuardianForm({ ...guardianForm, lastName: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Email
+              <input
+                type="email"
+                value={guardianForm.email}
+                onChange={(e) => setGuardianForm({ ...guardianForm, email: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Phone
+              <input
+                type="tel"
+                value={guardianForm.phone}
+                onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
+              />
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={guardianForm.isBillingOwner}
+                onChange={(e) =>
+                  setGuardianForm({ ...guardianForm, isBillingOwner: e.target.checked })
+                }
+              />
+              Billing owner
+            </label>
+          </div>
+          {error ? <div className="validation-hint">{error}</div> : null}
+          <div className="wizard-footer">
+            <button
+              type="button"
+              className="wizard-back"
+              onClick={() => {
+                setAddingGuardian(false);
+                router.replace("/staff/families");
+              }}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="primary-button" disabled={savingGuardian}>
+              {savingGuardian ? "Creating…" : "Create guardian"}
+            </button>
+          </div>
+        </form>
+      </section>
+    );
   }
 
   return (
@@ -84,10 +238,10 @@ export function StaffFamiliesClient({
         </button>
       </div>
       {error ? <p className="form-error">{error}</p> : null}
-      {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading families…</p> : null}
-      <Panel title="Household directory" eyebrow="Live database">
+      {loading ? <p className="dashboard-empty">Loading families…</p> : null}
+      <Panel title="Household directory">
         {visible.length === 0 && !loading ? (
-          <p style={{ color: "var(--muted)" }}>
+          <p className="dashboard-empty">
             {filter === "archived" ? "No archived households." : "No households yet."}
           </p>
         ) : (

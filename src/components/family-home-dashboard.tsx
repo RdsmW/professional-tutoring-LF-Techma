@@ -181,7 +181,6 @@ export function FamilyHomeDashboard() {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">Household</span>
               <h3>Your students</h3>
             </div>
             <Link href="/family/students" className="text-button" style={{ textDecoration: "none" }}>
@@ -220,8 +219,7 @@ export function FamilyHomeDashboard() {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">Upcoming</span>
-              <h3>Family schedule</h3>
+              <h3>Upcoming</h3>
             </div>
             <Link href="/family/calendar" className="text-button" style={{ textDecoration: "none" }}>
               View calendar
@@ -250,14 +248,14 @@ export function FamilyHomeDashboard() {
                 >
                   <span className="date-block">{booking.timeLabel.slice(0, 3) || "PT"}</span>
                   <span>
-                    <strong style={{ display: "block", fontSize: 9 }}>
+                    <strong style={{ display: "block", fontSize: 14 }}>
                       {booking.subjectName ?? "Tutoring"} · {booking.studentName}
                     </strong>
-                    <small style={{ color: "var(--muted)", fontSize: 8 }}>
+                    <small style={{ color: "var(--muted)", fontSize: 14 }}>
                       {booking.tutorName ?? "Tutor TBD"} · {booking.status.replace(/_/g, " ")}
                     </small>
                   </span>
-                  <b style={{ fontSize: 8, color: "var(--blue)" }}>Open →</b>
+                  <b style={{ fontSize: 14, color: "var(--blue)" }}>Open →</b>
                 </Link>
               ))}
               {enrollments.slice(0, 2).map((enrollment) => (
@@ -277,14 +275,14 @@ export function FamilyHomeDashboard() {
                 >
                   <span className="date-block">CR</span>
                   <span>
-                    <strong style={{ display: "block", fontSize: 9 }}>
+                    <strong style={{ display: "block", fontSize: 14 }}>
                       {enrollment.courseName} · {enrollment.studentName}
                     </strong>
-                    <small style={{ color: "var(--muted)", fontSize: 8 }}>
+                    <small style={{ color: "var(--muted)", fontSize: 14 }}>
                       {enrollment.scheduleLabel} · {enrollment.status.replace(/_/g, " ")}
                     </small>
                   </span>
-                  <b style={{ fontSize: 8, color: "var(--blue)" }}>Open →</b>
+                  <b style={{ fontSize: 14, color: "var(--blue)" }}>Open →</b>
                 </Link>
               ))}
             </div>

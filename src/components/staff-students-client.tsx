@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 
 type StudentRow = {
@@ -14,17 +15,32 @@ type StudentRow = {
   householdDisplayName: string;
 };
 
+type HouseholdOption = {
+  id: string;
+  displayName: string;
+};
+
 const LIFECYCLE_OPTIONS = ["", "prospect", "active", "paused", "completed", "archived"];
 
 export function StaffStudentsClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [students, setStudents] = useState<StudentRow[]>([]);
+  const [households, setHouseholds] = useState<HouseholdOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ householdId: "", displayName: "", gradeLabel: "" });
   const [q, setQ] = useState("");
   const [lifecycle, setLifecycle] = useState("");
   const [grade, setGrade] = useState("");
   const [school, setSchool] = useState("");
   const [applied, setApplied] = useState({ q: "", lifecycle: "", grade: "", school: "" });
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") setCreating(true);
+  }, [searchParams]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -54,6 +70,26 @@ export function StaffStudentsClient() {
     void reload();
   }, [reload]);
 
+  useEffect(() => {
+    if (!creating) return;
+    void (async () => {
+      try {
+        const response = await fetch("/api/staff/families");
+        const data = await response.json();
+        if (response.ok && data.ok) {
+          setHouseholds(
+            (data.families ?? []).map((row: { id: string; displayName: string }) => ({
+              id: row.id,
+              displayName: row.displayName,
+            })),
+          );
+        }
+      } catch {
+        // leave empty; form will show error on save if needed
+      }
+    })();
+  }, [creating]);
+
   function applyFilters(event: React.FormEvent) {
     event.preventDefault();
     setApplied({
@@ -72,9 +108,108 @@ export function StaffStudentsClient() {
     setApplied({ q: "", lifecycle: "", grade: "", school: "" });
   }
 
+  async function createStudent(event: React.FormEvent) {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/staff/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to create student.");
+        return;
+      }
+      router.push(`/staff/students/${data.studentId}`);
+    } catch {
+      setError("Unable to create student.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (creating) {
+    return (
+      <section className="wizard-shell panel">
+        <button
+          type="button"
+          className="page-back"
+          onClick={() => {
+            setCreating(false);
+            router.replace("/staff/students");
+          }}
+        >
+          ← Students
+        </button>
+        <h2>New student</h2>
+        <form className="wizard-stage" onSubmit={createStudent}>
+          <div className="input-grid">
+            <label>
+              Household
+              <select
+                value={form.householdId}
+                onChange={(e) => setForm({ ...form, householdId: e.target.value })}
+                required
+              >
+                <option value="">Select family</option>
+                {households.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Student name
+              <input
+                value={form.displayName}
+                onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Grade (optional)
+              <input
+                value={form.gradeLabel}
+                onChange={(e) => setForm({ ...form, gradeLabel: e.target.value })}
+              />
+            </label>
+          </div>
+          {error ? <div className="validation-hint">{error}</div> : null}
+          <div className="wizard-footer">
+            <button
+              type="button"
+              className="wizard-back"
+              onClick={() => {
+                setCreating(false);
+                router.replace("/staff/students");
+              }}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="primary-button" disabled={saving}>
+              {saving ? "Creating…" : "Create student"}
+            </button>
+          </div>
+        </form>
+      </section>
+    );
+  }
+
   return (
     <>
-      <PageIntro title="Students" />
+      <PageIntro
+        title="Students"
+        action={
+          <button type="button" className="primary-button" onClick={() => setCreating(true)}>
+            + New Student
+          </button>
+        }
+      />
       {error ? <p className="form-error">{error}</p> : null}
 
       <Panel title="Student directory">
@@ -113,9 +248,9 @@ export function StaffStudentsClient() {
           </button>
         </form>
 
-        {loading ? <p style={{ color: "var(--muted)", fontSize: 12 }}>Loading students…</p> : null}
+        {loading ? <p className="dashboard-empty">Loading students…</p> : null}
         {students.length === 0 && !loading ? (
-          <p style={{ color: "var(--muted)" }}>No students match these filters.</p>
+          <p className="dashboard-empty">No students match these filters.</p>
         ) : (
           <div className="table-panel students-table compact-table">
             <div
