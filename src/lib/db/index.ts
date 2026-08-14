@@ -18,13 +18,31 @@ if (!connectionString) {
   );
 }
 
-const client = connectionString
-  ? postgres(connectionString, {
-      prepare: false,
-      max: 10,
-      connect_timeout: 5,
-    })
+type PgClient = ReturnType<typeof postgres>;
+
+const globalForDb = globalThis as unknown as {
+  __ptPgClient?: PgClient | null;
+};
+
+function createClient(url: string): PgClient {
+  // Keep the pool tiny: Supabase session pooler caps around 15 clients.
+  // Next.js HMR must reuse one client via globalThis or connections leak.
+  return postgres(url, {
+    prepare: false,
+    max: 3,
+    idle_timeout: 20,
+    max_lifetime: 60 * 5,
+    connect_timeout: 10,
+  });
+}
+
+const client: PgClient | null = connectionString
+  ? (globalForDb.__ptPgClient ?? createClient(connectionString))
   : null;
+
+if (client && process.env.NODE_ENV !== "production") {
+  globalForDb.__ptPgClient = client;
+}
 
 export const db = client ? drizzle(client, { schema }) : null;
 
