@@ -47,6 +47,8 @@ export async function GET(
       body: string;
       authorDisplayName: string;
       createdAt: Date;
+      editorDisplayName: string | null;
+      updatedAt: Date | null;
     }> = [];
     try {
       noteRows = await database
@@ -55,6 +57,8 @@ export async function GET(
           body: householdNotes.body,
           authorDisplayName: householdNotes.authorDisplayName,
           createdAt: householdNotes.createdAt,
+          editorDisplayName: householdNotes.editorDisplayName,
+          updatedAt: householdNotes.updatedAt,
         })
         .from(householdNotes)
         .where(eq(householdNotes.householdId, id))
@@ -181,6 +185,8 @@ export async function GET(
           body: row.body,
           authorDisplayName: row.authorDisplayName,
           createdAt: row.createdAt.toISOString(),
+          editorDisplayName: row.editorDisplayName ?? null,
+          updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
         })),
         guardians: guardianRows.map((g) => ({
           id: g.id,

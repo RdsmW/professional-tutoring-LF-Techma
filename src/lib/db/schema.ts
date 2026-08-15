@@ -457,7 +457,7 @@ export const identityMergeRequests = pgTable("identity_merge_requests", {
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 });
 
-/** Append-only staff notes on a household (never shown in family portal). */
+/** Staff notes on a household (never shown in family portal). Editable with audit trail. */
 export const householdNotes = pgTable("household_notes", {
   id: uuid("id").defaultRandom().primaryKey(),
   householdId: uuid("household_id")
@@ -467,4 +467,7 @@ export const householdNotes = pgTable("household_notes", {
   authorDisplayName: text("author_display_name").notNull(),
   body: text("body").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  editorStaffId: uuid("editor_staff_id").references(() => staffProfiles.id),
+  editorDisplayName: text("editor_display_name"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });

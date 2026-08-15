@@ -4,6 +4,17 @@ import { requireDb } from "@/lib/db";
 import { householdNotes, households } from "@/lib/db/schema";
 import { getStaffContext } from "@/lib/staff/session";
 
+function serializeNote(note: typeof householdNotes.$inferSelect) {
+  return {
+    id: note.id,
+    body: note.body,
+    authorDisplayName: note.authorDisplayName,
+    createdAt: note.createdAt.toISOString(),
+    editorDisplayName: note.editorDisplayName ?? null,
+    updatedAt: note.updatedAt ? note.updatedAt.toISOString() : null,
+  };
+}
+
 export async function PATCH(
   request: Request,
   contextParams: { params: Promise<{ id: string; noteId: string }> },
@@ -31,9 +42,15 @@ export async function PATCH(
       return NextResponse.json({ ok: false, error: "Family not found." }, { status: 404 });
     }
 
+    const now = new Date();
     const [note] = await database
       .update(householdNotes)
-      .set({ body: text })
+      .set({
+        body: text,
+        editorStaffId: context.staff.id,
+        editorDisplayName: context.staff.fullName,
+        updatedAt: now,
+      })
       .where(and(eq(householdNotes.id, noteId), eq(householdNotes.householdId, id)))
       .returning();
 
@@ -43,12 +60,7 @@ export async function PATCH(
 
     return NextResponse.json({
       ok: true,
-      note: {
-        id: note.id,
-        body: note.body,
-        authorDisplayName: note.authorDisplayName,
-        createdAt: note.createdAt.toISOString(),
-      },
+      note: serializeNote(note),
     });
   } catch (error) {
     console.warn("[staff/families/id/notes/noteId] PATCH soft-fail", error);

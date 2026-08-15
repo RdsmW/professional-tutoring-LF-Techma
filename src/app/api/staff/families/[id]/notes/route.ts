@@ -4,6 +4,17 @@ import { requireDb } from "@/lib/db";
 import { householdNotes, households } from "@/lib/db/schema";
 import { getStaffContext } from "@/lib/staff/session";
 
+function serializeNote(note: typeof householdNotes.$inferSelect) {
+  return {
+    id: note.id,
+    body: note.body,
+    authorDisplayName: note.authorDisplayName,
+    createdAt: note.createdAt.toISOString(),
+    editorDisplayName: note.editorDisplayName ?? null,
+    updatedAt: note.updatedAt ? note.updatedAt.toISOString() : null,
+  };
+}
+
 export async function POST(
   request: Request,
   contextParams: { params: Promise<{ id: string }> },
@@ -39,12 +50,7 @@ export async function POST(
 
     return NextResponse.json({
       ok: true,
-      note: {
-        id: note.id,
-        body: note.body,
-        authorDisplayName: note.authorDisplayName,
-        createdAt: note.createdAt.toISOString(),
-      },
+      note: serializeNote(note),
     });
   } catch (error) {
     console.warn("[staff/families/id/notes] POST soft-fail", error);

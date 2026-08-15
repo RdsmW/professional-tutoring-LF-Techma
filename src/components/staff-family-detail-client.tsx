@@ -25,6 +25,8 @@ type NoteRow = {
   body: string;
   authorDisplayName: string;
   createdAt: string;
+  editorDisplayName: string | null;
+  updatedAt: string | null;
 };
 
 type GuardianRow = {
@@ -132,7 +134,8 @@ function initials(name: string) {
   );
 }
 
-function formatWhen(value: string) {
+function formatWhen(value: string | null | undefined) {
+  if (!value) return "—";
   try {
     const date = new Date(value);
     const now = new Date();
@@ -311,10 +314,12 @@ function FamilyListModal({
   title,
   onClose,
   children,
+  className,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  className?: string;
 }) {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -333,7 +338,7 @@ function FamilyListModal({
       }}
     >
       <div
-        className="staff-modal family-list-modal"
+        className={["staff-modal", "family-list-modal", className].filter(Boolean).join(" ")}
         role="dialog"
         aria-modal="true"
         aria-labelledby="family-list-modal-title"
@@ -1051,6 +1056,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const previewEnrollments = family.activity.enrollments.slice(0, PREVIEW_LIMIT);
   const previewBookings = family.activity.bookings.slice(0, PREVIEW_LIMIT);
   const previewNotes = family.notes.slice(0, PREVIEW_LIMIT);
+  const editingNote = editingNoteId ? family.notes.find((note) => note.id === editingNoteId) : null;
 
   const householdLifecycleButtons = (() => {
     const buttons: Array<{
@@ -1270,6 +1276,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <th className="family-notes-col-content">Note</th>
               <th className="family-notes-col-who">Creator</th>
               <th className="family-notes-col-when">Created</th>
+              <th className="family-notes-col-who">Editor</th>
+              <th className="family-notes-col-when">Updated</th>
               <th className="family-notes-col-edit" aria-label="Actions" />
             </tr>
           </thead>
@@ -1277,10 +1285,12 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             {notes.map((note) => (
               <tr key={note.id}>
                 <td className="family-notes-col-content">
-                  <span style={{ whiteSpace: "pre-wrap" }}>{note.body}</span>
+                  <span className="family-notes-body">{note.body}</span>
                 </td>
                 <td className="family-notes-col-who">{note.authorDisplayName}</td>
                 <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
+                <td className="family-notes-col-who">{note.editorDisplayName || "—"}</td>
+                <td className="family-notes-col-when">{formatWhen(note.updatedAt)}</td>
                 <td className="family-notes-col-edit">
                   <StaffIconButton
                     label="Edit"
@@ -1714,7 +1724,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </FamilyListModal>
       ) : null}
       {listModal === "notes" ? (
-        <FamilyListModal title="Notes" onClose={() => setListModal(null)}>
+        <FamilyListModal title="Notes" className="family-notes-list-modal" onClose={() => setListModal(null)}>
           {renderNotesTable(family.notes)}
         </FamilyListModal>
       ) : null}
@@ -1739,7 +1749,25 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 <IconClose size={18} />
               </StaffIconButton>
             </div>
-            <form onSubmit={saveNoteEdit} className="staff-modal-form">
+            <dl className="family-note-edit-meta">
+              <div>
+                <dt>Creator</dt>
+                <dd>{editingNote?.authorDisplayName || "—"}</dd>
+              </div>
+              <div>
+                <dt>Created</dt>
+                <dd>{formatWhen(editingNote?.createdAt)}</dd>
+              </div>
+              <div>
+                <dt>Editor</dt>
+                <dd>{editingNote?.editorDisplayName || "—"}</dd>
+              </div>
+              <div>
+                <dt>Updated</dt>
+                <dd>{formatWhen(editingNote?.updatedAt)}</dd>
+              </div>
+            </dl>
+            <form onSubmit={saveNoteEdit} className="staff-modal-form family-note-edit-form">
               <label className="family-note-edit-field">
                 Note
                 <textarea
