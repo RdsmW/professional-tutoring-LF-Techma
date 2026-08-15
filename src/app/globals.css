@@ -1649,6 +1649,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .family-detail-layout.family-detail-stack > .panel{
   margin-bottom:0;
+  width:100%;
+  min-width:0;
 }
 .profile-privacy-callout strong{font-size: 12px}
 .profile-privacy-callout p{font-size: 12px;line-height:1.45}
@@ -1698,6 +1700,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .metric-grid,.student-grid,.exception-grid{grid-template-columns:repeat(2,1fr)}
   .family-status-key,.family-summary-grid{grid-template-columns:repeat(2,1fr)}
   .family-detail-layout{grid-template-columns:1fr 1fr}.family-detail-layout .family-history{grid-column:1/3}
+  /* Keep Household → Guardians → Students stacked full-width (do not fall back to 2-col). */
+  .family-detail-layout.family-detail-stack{grid-template-columns:minmax(0,1fr)}
   .family-activity-band,.family-notes-layout{grid-template-columns:1fr 1fr}
   .match-directory{grid-template-columns:1fr}.report-filter-panel{grid-template-columns:1fr 1fr}.report-controls{grid-column:1/3}.report-metrics{grid-template-columns:1fr 1fr}
   .integration-strip{grid-template-columns:1fr 1fr}

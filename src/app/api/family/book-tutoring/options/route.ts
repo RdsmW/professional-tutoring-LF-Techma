@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       description: FORM_META[id].url,
     }));
 
-    let matchedTutors: Array<{
+    const matchedTutors: Array<{
       id: string;
       displayName: string;
       notes: string | null;
