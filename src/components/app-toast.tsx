@@ -10,6 +10,11 @@ export type AppToast = {
   tone: AppToastTone;
 };
 
+export type AppToastOptions = {
+  /** Auto-dismiss delay. Use 0 to keep until manually dismissed. */
+  durationMs?: number;
+};
+
 const DEFAULT_DURATION_MS = 4200;
 
 export function useAppToast(durationMs = DEFAULT_DURATION_MS) {
@@ -26,19 +31,31 @@ export function useAppToast(durationMs = DEFAULT_DURATION_MS) {
   }, []);
 
   const push = useCallback(
-    (message: string, tone: AppToastTone = "info") => {
+    (message: string, tone: AppToastTone = "info", options?: AppToastOptions) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       setToasts((prev) => [...prev.slice(-4), { id, message, tone }]);
-      const timer = window.setTimeout(() => dismiss(id), durationMs);
-      timers.current.set(id, timer);
+      const ms = options?.durationMs ?? durationMs;
+      if (ms > 0) {
+        const timer = window.setTimeout(() => dismiss(id), ms);
+        timers.current.set(id, timer);
+      }
       return id;
     },
     [dismiss, durationMs],
   );
 
-  const success = useCallback((message: string) => push(message, "success"), [push]);
-  const error = useCallback((message: string) => push(message, "error"), [push]);
-  const info = useCallback((message: string) => push(message, "info"), [push]);
+  const success = useCallback(
+    (message: string, options?: AppToastOptions) => push(message, "success", options),
+    [push],
+  );
+  const error = useCallback(
+    (message: string, options?: AppToastOptions) => push(message, "error", options),
+    [push],
+  );
+  const info = useCallback(
+    (message: string, options?: AppToastOptions) => push(message, "info", options),
+    [push],
+  );
 
   useEffect(() => {
     return () => {

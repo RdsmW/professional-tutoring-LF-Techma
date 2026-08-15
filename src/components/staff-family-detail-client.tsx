@@ -420,7 +420,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     deepLinkHandled.current = deepLinkedGuardianId;
     setGuardianForm({ ...match });
     setEditingGuardianId(match.id);
-
     router.replace(`/staff/families/${familyId}`, { scroll: false });
   }, [family, deepLinkedGuardianId, familyId, router]);
 
@@ -440,7 +439,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   }
 
   async function refreshInvite(guardianId: string) {
-
     try {
       const response = await fetch(`/api/staff/families/${familyId}/invite`, {
         method: "POST",
@@ -452,7 +450,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         toast.error(data.error || "Unable to refresh invite.");
         return;
       }
-      toast.info(`Invite link: ${window.location.origin}${data.invitePath}`);
+      const inviteLink = `${window.location.origin}${data.invitePath}`;
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+        toast.success("Invite link copied.");
+      } catch {
+        // Keep invite URLs on-screen until dismissed — auto-dismiss would lose the link.
+        toast.info(`Invite link: ${inviteLink}`, { durationMs: 0 });
+      }
       await softReload();
     } catch {
       toast.error("Unable to refresh invite.");
@@ -463,8 +468,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     event.preventDefault();
     if (!noteDraft.trim() || savingNotes) return;
     setSavingNotes(true);
-
-
     try {
       const response = await fetch(`/api/staff/families/${familyId}/notes`, {
         method: "POST",
@@ -497,7 +500,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   function startEditNote(note: NoteRow) {
     setEditingNoteId(note.id);
     setNoteEditDraft(note.body);
-
   }
 
   function cancelEditNote() {
@@ -509,7 +511,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     event.preventDefault();
     if (!editingNoteId || !noteEditDraft.trim() || savingNoteEdit) return;
     setSavingNoteEdit(true);
-
     try {
       const response = await fetch(`/api/staff/families/${familyId}/notes/${editingNoteId}`, {
         method: "PATCH",
@@ -544,7 +545,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     if (!family) return;
     setHouseholdForm(householdFormFromFamily(family));
     setEditingHousehold(true);
-
   }
 
   useEffect(() => {
@@ -552,7 +552,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     editDeepLinkHandled.current = true;
     setHouseholdForm(householdFormFromFamily(family));
     setEditingHousehold(true);
-
     router.replace(`/staff/families/${familyId}`, { scroll: false });
   }, [family, deepLinkEdit, familyId, router]);
 
@@ -607,8 +606,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     setListModal(null);
     setGuardianForm({ ...guardian });
     setEditingGuardianId(guardian.id);
-
-
   }
 
   function closeGuardianEdit() {
