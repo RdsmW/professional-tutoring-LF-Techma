@@ -1577,7 +1577,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: 14px 200px;
+  gap: 14px 300px;
   width: auto;
   max-width: 100%;
   min-width: 0;
