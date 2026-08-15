@@ -36,11 +36,12 @@ export async function POST() {
     let householdStatus: string | null = null;
     let householdName: string | null = null;
 
-    if (guardian && db) {
+    const householdId = guardian?.householdId ?? null;
+    if (guardian && householdId && db) {
       const [household] = await db
         .select()
         .from(households)
-        .where(eq(households.id, guardian.householdId))
+        .where(eq(households.id, householdId))
         .limit(1);
       householdStatus = household?.status ?? null;
       householdName = household?.displayName ?? null;

@@ -22,11 +22,13 @@ export async function getFamilyContext(): Promise<FamilyContext | null> {
       .limit(1);
 
     if (!guardian) return null;
+    const householdId = guardian.householdId;
+    if (!householdId) return null;
 
     const [household] = await database
       .select()
       .from(households)
-      .where(eq(households.id, guardian.householdId))
+      .where(eq(households.id, householdId))
       .limit(1);
 
     if (!household) return null;

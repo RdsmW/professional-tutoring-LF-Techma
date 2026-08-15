@@ -55,7 +55,7 @@ export async function GET(request: Request) {
         enrollmentCount: sql<number>`count(distinct ${courseEnrollments.id})::int`.mapWith(Number),
       })
       .from(students)
-      .innerJoin(households, eq(students.householdId, households.id))
+      .leftJoin(households, eq(students.householdId, households.id))
       .leftJoin(bookings, eq(bookings.studentId, students.id))
       .leftJoin(courseEnrollments, eq(courseEnrollments.studentId, students.id))
       .where(filters.length > 0 ? and(...filters) : undefined)
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
           graduationYear: row.graduationYear,
           lifecycle: row.lifecycle,
           householdId: row.householdId,
-          householdDisplayName: row.householdDisplayName,
+          householdDisplayName: row.householdDisplayName || "Unassigned",
           canDelete: bookingCount === 0 && enrollmentCount === 0,
           updatedAt: row.updatedAt.toISOString(),
         };
@@ -147,6 +147,9 @@ export async function POST(request: Request) {
         updatedAt: new Date(),
       })
       .returning({ id: students.id });
+
+    const { refreshHouseholdDisplayNameIfAuto } = await import("@/lib/staff/household-display-name");
+    await refreshHouseholdDisplayNameIfAuto(householdId);
 
     return NextResponse.json({ ok: true, studentId: student.id });
   } catch (error) {

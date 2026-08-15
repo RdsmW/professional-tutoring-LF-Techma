@@ -12,6 +12,10 @@ import {
   students,
   tutors,
 } from "@/lib/db/schema";
+import {
+  HOUSEHOLD_COUNTRY_US,
+  refreshHouseholdDisplayNameIfAuto,
+} from "@/lib/staff/household-display-name";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 import { isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
@@ -151,6 +155,7 @@ export async function GET(
       family: {
         id: household.id,
         displayName: household.displayName,
+        displayNameManual: household.displayNameManual,
         status: household.status,
         primaryPhone: household.primaryPhone,
         addressLine1: household.addressLine1,
@@ -158,14 +163,19 @@ export async function GET(
         city: household.city,
         state: household.state,
         postalCode: household.postalCode,
+        country: household.country || HOUSEHOLD_COUNTRY_US,
+        zohoCrmId: household.zohoCrmId,
+        zohoCrmUrl: household.zohoCrmUrl,
         billingOwnerGuardianId: household.billingOwnerGuardianId,
         billingOwnerName: billingOwner
           ? `${billingOwner.firstName} ${billingOwner.lastName}`.trim()
           : null,
+        billingEmail: billingOwner?.email ?? null,
         cardOnFile: card.cardOnFile,
         cardBrand: card.cardBrand,
         cardLast4: card.cardLast4,
         canDelete,
+        maxGuardians: 2,
         notes: noteRows.map((row) => ({
           id: row.id,
           body: row.body,
@@ -234,12 +244,16 @@ export async function PATCH(
     const body = (await request.json()) as {
       status?: "active" | "pending" | "inactive" | "archived";
       displayName?: string;
+      displayNameManual?: boolean;
       primaryPhone?: string | null;
       addressLine1?: string | null;
       addressLine2?: string | null;
       city?: string | null;
       state?: string | null;
       postalCode?: string | null;
+      country?: string | null;
+      zohoCrmId?: string | null;
+      zohoCrmUrl?: string | null;
       billingOwnerGuardianId?: string | null;
     };
 
@@ -250,6 +264,7 @@ export async function PATCH(
     }
 
     const updates: Partial<typeof households.$inferInsert> = { updatedAt: new Date() };
+    let displayNameTouched = false;
 
     if (typeof body.displayName === "string") {
       const displayName = body.displayName.trim();
@@ -257,6 +272,12 @@ export async function PATCH(
         return NextResponse.json({ ok: false, error: "Household name is required." }, { status: 400 });
       }
       updates.displayName = displayName;
+      displayNameTouched = true;
+      // Staff edit of name locks auto-refresh unless they explicitly clear the flag.
+      updates.displayNameManual =
+        typeof body.displayNameManual === "boolean" ? body.displayNameManual : true;
+    } else if (typeof body.displayNameManual === "boolean") {
+      updates.displayNameManual = body.displayNameManual;
     }
 
     if (body.primaryPhone !== undefined) {
@@ -281,6 +302,22 @@ export async function PATCH(
     }
     if (body.postalCode !== undefined) {
       updates.postalCode = typeof body.postalCode === "string" ? body.postalCode.trim() || null : null;
+    }
+    // Country is always United States for this product.
+    updates.country = HOUSEHOLD_COUNTRY_US;
+
+    if (body.zohoCrmId !== undefined) {
+      updates.zohoCrmId = typeof body.zohoCrmId === "string" ? body.zohoCrmId.trim() || null : null;
+    }
+    if (body.zohoCrmUrl !== undefined) {
+      const url = typeof body.zohoCrmUrl === "string" ? body.zohoCrmUrl.trim() : "";
+      if (url && !/^https?:\/\//i.test(url)) {
+        return NextResponse.json(
+          { ok: false, error: "Zoho CRM URL must start with http:// or https://." },
+          { status: 400 },
+        );
+      }
+      updates.zohoCrmUrl = url || null;
     }
 
     if (body.status && ["active", "pending", "inactive", "archived"].includes(body.status)) {
@@ -321,19 +358,31 @@ export async function PATCH(
       .where(eq(households.id, id))
       .returning();
 
+    if (!displayNameTouched && !updated.displayNameManual) {
+      await refreshHouseholdDisplayNameIfAuto(id);
+    } else if (body.billingOwnerGuardianId !== undefined && !updated.displayNameManual) {
+      await refreshHouseholdDisplayNameIfAuto(id);
+    }
+
+    const [fresh] = await database.select().from(households).where(eq(households.id, id)).limit(1);
+
     return NextResponse.json({
       ok: true,
       family: {
-        id: updated.id,
-        displayName: updated.displayName,
-        status: updated.status,
-        primaryPhone: updated.primaryPhone,
-        addressLine1: updated.addressLine1,
-        addressLine2: updated.addressLine2,
-        city: updated.city,
-        state: updated.state,
-        postalCode: updated.postalCode,
-        billingOwnerGuardianId: updated.billingOwnerGuardianId,
+        id: fresh.id,
+        displayName: fresh.displayName,
+        displayNameManual: fresh.displayNameManual,
+        status: fresh.status,
+        primaryPhone: fresh.primaryPhone,
+        addressLine1: fresh.addressLine1,
+        addressLine2: fresh.addressLine2,
+        city: fresh.city,
+        state: fresh.state,
+        postalCode: fresh.postalCode,
+        country: fresh.country || HOUSEHOLD_COUNTRY_US,
+        zohoCrmId: fresh.zohoCrmId,
+        zohoCrmUrl: fresh.zohoCrmUrl,
+        billingOwnerGuardianId: fresh.billingOwnerGuardianId,
       },
     });
   } catch (error) {

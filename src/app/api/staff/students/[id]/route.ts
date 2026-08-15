@@ -39,7 +39,7 @@ async function loadStudentDetail(studentId: string) {
       householdDisplayName: households.displayName,
     })
     .from(students)
-    .innerJoin(households, eq(students.householdId, households.id))
+    .leftJoin(households, eq(students.householdId, households.id))
     .where(eq(students.id, studentId))
     .limit(1);
 
@@ -94,10 +94,12 @@ async function loadStudentDetail(studentId: string) {
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
     canDelete,
-    household: {
-      id: joined.householdId,
-      displayName: joined.householdDisplayName,
-    },
+    household: joined.householdId
+      ? {
+          id: joined.householdId,
+          displayName: joined.householdDisplayName || "Family",
+        }
+      : null,
     bookings: bookingRows.map((b) => ({
       id: b.id,
       status: b.status,
@@ -212,6 +214,11 @@ export async function PATCH(
     }
 
     await database.update(students).set(updates).where(eq(students.id, id));
+
+    if (existing.householdId && (body.lastName !== undefined || body.displayName !== undefined)) {
+      const { refreshHouseholdDisplayNameIfAuto } = await import("@/lib/staff/household-display-name");
+      await refreshHouseholdDisplayNameIfAuto(existing.householdId);
+    }
 
     const detail = await loadStudentDetail(id);
     return NextResponse.json({ ok: true, student: detail });

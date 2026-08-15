@@ -15,7 +15,7 @@ export type StaffGuardianListRow = {
   canManageStudents: boolean;
   canRequestServices: boolean;
   household: {
-    id: string;
+    id: string | null;
     displayName: string;
     status: string;
   };
@@ -67,7 +67,6 @@ export async function listStaffGuardians(
       and(isNotNull(guardians.inviteToken), isNull(guardians.inviteAcceptedAt), isNull(guardians.clerkUserId))!,
     );
   }
-  // `all` / empty / unknown → no link-status filter
 
   const rows = await database
     .select({
@@ -88,7 +87,7 @@ export async function listStaffGuardians(
       householdStatus: households.status,
     })
     .from(guardians)
-    .innerJoin(households, eq(guardians.householdId, households.id))
+    .leftJoin(households, eq(guardians.householdId, households.id))
     .where(whereParts.length > 0 ? and(...whereParts) : undefined)
     .orderBy(desc(guardians.updatedAt));
 
@@ -104,8 +103,8 @@ export async function listStaffGuardians(
     canRequestServices: row.canRequestServices,
     household: {
       id: row.householdId,
-      displayName: row.householdDisplayName,
-      status: row.householdStatus,
+      displayName: row.householdDisplayName || "Unassigned",
+      status: row.householdStatus || "pending",
     },
     updatedAt: row.updatedAt.toISOString(),
   }));

@@ -36,6 +36,8 @@ export const studentLifecycleEnum = pgEnum("student_lifecycle", [
 export const households = pgTable("households", {
   id: uuid("id").defaultRandom().primaryKey(),
   displayName: text("display_name").notNull(),
+  /** When true, staff edited the name — do not overwrite with auto `{StudentLastName} - {billingEmail}`. */
+  displayNameManual: boolean("display_name_manual").notNull().default(false),
   status: householdStatusEnum("status").notNull().default("pending"),
   billingOwnerGuardianId: uuid("billing_owner_guardian_id"),
   primaryPhone: varchar("primary_phone", { length: 64 }),
@@ -44,6 +46,10 @@ export const households = pgTable("households", {
   city: text("city"),
   state: varchar("state", { length: 32 }),
   postalCode: varchar("postal_code", { length: 32 }),
+  /** Always United States for this product; locked in UI/API. */
+  country: text("country").notNull().default("United States"),
+  zohoCrmId: text("zoho_crm_id"),
+  zohoCrmUrl: text("zoho_crm_url"),
   timezone: text("timezone").notNull().default("America/New_York"),
   notes: text("notes"),
   stripeCustomerId: text("stripe_customer_id"),
@@ -58,9 +64,8 @@ export const households = pgTable("households", {
 
 export const guardians = pgTable("guardians", {
   id: uuid("id").defaultRandom().primaryKey(),
-  householdId: uuid("household_id")
-    .notNull()
-    .references(() => households.id),
+  /** Null = unassigned orphan until staff assigns to a family. */
+  householdId: uuid("household_id").references(() => households.id),
   clerkUserId: text("clerk_user_id"),
   email: text("email").notNull(),
   firstName: text("first_name").notNull(),
@@ -77,9 +82,8 @@ export const guardians = pgTable("guardians", {
 
 export const students = pgTable("students", {
   id: uuid("id").defaultRandom().primaryKey(),
-  householdId: uuid("household_id")
-    .notNull()
-    .references(() => households.id),
+  /** Null = unassigned orphan until staff assigns to a family. */
+  householdId: uuid("household_id").references(() => households.id),
   displayName: text("display_name").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),

@@ -105,6 +105,9 @@ export async function PATCH(
       .where(eq(guardians.id, guardianId))
       .returning();
 
+    const { refreshHouseholdDisplayNameIfAuto } = await import("@/lib/staff/household-display-name");
+    await refreshHouseholdDisplayNameIfAuto(id);
+
     return NextResponse.json({
       ok: true,
       guardian: {

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardians, households } from "@/lib/db/schema";
+import {
+  MAX_GUARDIANS_PER_HOUSEHOLD,
+  refreshHouseholdDisplayNameIfAuto,
+} from "@/lib/staff/household-display-name";
 import { getStaffContext } from "@/lib/staff/session";
 import { isValidEmail, isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
@@ -48,6 +52,20 @@ export async function POST(
       return NextResponse.json({ ok: false, error: "Family not found." }, { status: 404 });
     }
 
+    const [guardianCount] = await database
+      .select({ value: count() })
+      .from(guardians)
+      .where(eq(guardians.householdId, id));
+    if (Number(guardianCount?.value ?? 0) >= MAX_GUARDIANS_PER_HOUSEHOLD) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `This family already has ${MAX_GUARDIANS_PER_HOUSEHOLD} guardians. Unassign one before adding another.`,
+        },
+        { status: 400 },
+      );
+    }
+
     const makeBillingOwner = Boolean(body.isBillingOwner);
     if (makeBillingOwner) {
       await database
@@ -77,6 +95,8 @@ export async function POST(
         .set({ billingOwnerGuardianId: guardian.id, updatedAt: new Date() })
         .where(eq(households.id, id));
     }
+
+    await refreshHouseholdDisplayNameIfAuto(id);
 
     return NextResponse.json({ ok: true, guardianId: guardian.id });
   } catch (error) {

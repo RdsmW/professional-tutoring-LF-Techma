@@ -103,6 +103,7 @@ export async function POST(request: Request) {
       .insert(households)
       .values({
         displayName,
+        displayNameManual: true,
         status: "pending",
         primaryPhone: primaryPhone || null,
         addressLine1: optionalText(body.addressLine1),
@@ -110,6 +111,7 @@ export async function POST(request: Request) {
         city: optionalText(body.city),
         state: optionalText(body.state),
         postalCode: optionalText(body.postalCode),
+        country: "United States",
         notes: optionalText(body.notes),
         timezone: "America/New_York",
         updatedAt: now,

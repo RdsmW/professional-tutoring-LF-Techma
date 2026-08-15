@@ -16,10 +16,14 @@ export async function GET(
     if (!guardian || guardian.inviteAcceptedAt) {
       return NextResponse.json({ ok: false, error: "Invite not found or already used." }, { status: 404 });
     }
+    const householdId = guardian.householdId;
+    if (!householdId) {
+      return NextResponse.json({ ok: false, error: "Invite is not linked to a family." }, { status: 400 });
+    }
     const [household] = await database
       .select()
       .from(households)
-      .where(eq(households.id, guardian.householdId))
+      .where(eq(households.id, householdId))
       .limit(1);
 
     return NextResponse.json({
