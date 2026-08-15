@@ -143,10 +143,10 @@ function formatDate(value: string) {
   }
 }
 
-function guardianLinkLabel(g: GuardianRow) {
-  if (g.linked) return "Linked";
+/** Quiet badge only for non-default portal states (Clerk link itself is not shown). */
+function guardianPortalBadge(g: GuardianRow) {
   if (g.invitePending) return "Invite pending";
-  return "Unlinked";
+  return null;
 }
 
 function yesNo(value: boolean) {
@@ -223,7 +223,7 @@ function FamilyListModal({
       >
         <div className="family-list-modal-header">
           <h3 id="family-list-modal-title">{title}</h3>
-          <StaffIconButton label="Close" tone="muted" onClick={onClose}>
+          <StaffIconButton label="Close" title="Cancel" tone="muted" onClick={onClose}>
             <IconClose size={18} />
           </StaffIconButton>
         </div>
@@ -914,9 +914,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     onArchive: () => void setStatus("archived"),
     onRestore: () => void setStatus("active"),
     onDelete: () => void deleteFamily(),
-  }).map((action) =>
-    action.id === "edit" ? { ...action, label: "Edit household" } : action,
-  );
+  }).filter((action) => action.id !== "edit");
 
   function guardianActions(g: GuardianRow): StaffRowAction[] {
     const actions: StaffRowAction[] = [
@@ -973,13 +971,17 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           <span className="family-detail-col-flag">Request services</span>
           <span className="staff-dir-col-actions" aria-label="Actions" />
         </div>
-        {rows.map((g) => (
+        {rows.map((g) => {
+          const portalBadge = guardianPortalBadge(g);
+          return (
           <div key={g.id} className="table-row family-detail-cols-guardians family-detail-table-row">
             <span>
               <strong>
                 {g.firstName} {g.lastName}
               </strong>
-              <small className="family-guardian-link-status">{guardianLinkLabel(g)}</small>
+              {portalBadge ? (
+                <small className="family-guardian-link-status">{portalBadge}</small>
+              ) : null}
             </span>
             <span>{g.email}</span>
             <span className="family-detail-col-flag">{yesNo(g.isBillingOwner)}</span>
@@ -989,7 +991,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <StaffRowActions label="Guardian actions" actions={guardianActions(g)} />
             </span>
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
@@ -1079,43 +1082,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             {notes.map((note) => (
               <tr key={note.id}>
                 <td className="family-notes-col-content">
-                  {editingNoteId === note.id ? (
-                    <form className="family-notes-edit-inline" onSubmit={saveNoteEdit}>
-                      <textarea
-                        value={noteEditDraft}
-                        onChange={(event) => setNoteEditDraft(event.target.value)}
-                        rows={3}
-                      />
-                      <div className="family-notes-edit-actions">
-                        <button
-                          type="submit"
-                          className="primary-button"
-                          disabled={savingNoteEdit || !noteEditDraft.trim()}
-                        >
-                          {savingNoteEdit ? "Saving…" : "Save"}
-                        </button>
-                        <button type="button" className="secondary-button" onClick={cancelEditNote}>
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <span style={{ whiteSpace: "pre-wrap" }}>{note.body}</span>
-                  )}
+                  <span style={{ whiteSpace: "pre-wrap" }}>{note.body}</span>
                 </td>
                 <td className="family-notes-col-who">{note.authorDisplayName}</td>
                 <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
                 <td className="family-notes-col-edit">
-                  {editingNoteId === note.id ? null : (
-                    <StaffIconButton
-                      label="Edit"
-                      title="Edit note"
-                      tone="edit"
-                      onClick={() => startEditNote(note)}
-                    >
-                      <IconPencil size={15} />
-                    </StaffIconButton>
-                  )}
+                  <StaffIconButton
+                    label="Edit"
+                    title="Edit"
+                    tone="edit"
+                    onClick={() => startEditNote(note)}
+                  >
+                    <IconPencil size={15} />
+                  </StaffIconButton>
                 </td>
               </tr>
             ))}
@@ -1269,7 +1248,17 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Household</h2>
-            <StaffRowActions label="Household actions" actions={householdActions} />
+            <div className="family-panel-heading-actions">
+              <StaffIconButton
+                label="Edit"
+                title="Edit"
+                tone="edit"
+                onClick={openHouseholdEdit}
+              >
+                <IconPencil size={15} />
+              </StaffIconButton>
+              <StaffRowActions label="Household actions" actions={householdActions} />
+            </div>
           </div>
           <div className="family-household-summary">
             <div className="family-household-summary-title">
@@ -1490,6 +1479,50 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </FamilyListModal>
       ) : null}
 
+      {editingNoteId ? (
+        <div
+          className="staff-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) cancelEditNote();
+          }}
+        >
+          <div
+            className="staff-modal family-note-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="family-note-edit-title"
+          >
+            <div className="family-list-modal-header">
+              <h3 id="family-note-edit-title">Edit note</h3>
+              <StaffIconButton label="Close" title="Cancel" tone="muted" onClick={cancelEditNote}>
+                <IconClose size={18} />
+              </StaffIconButton>
+            </div>
+            <form onSubmit={saveNoteEdit} className="staff-modal-form">
+              <label className="family-note-edit-field">
+                Note
+                <textarea
+                  value={noteEditDraft}
+                  onChange={(event) => setNoteEditDraft(event.target.value)}
+                  rows={5}
+                  autoFocus
+                />
+              </label>
+              <div className="staff-modal-actions">
+                <button
+                  type="submit"
+                  className="action-btn action-btn-edit"
+                  disabled={savingNoteEdit || !noteEditDraft.trim()}
+                >
+                  {savingNoteEdit ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       {assignModal ? (
         <div
           className="staff-modal-backdrop"
@@ -1508,7 +1541,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <h3 id="family-assign-title">
                 {assignModal === "guardians" ? "Assign guardian" : "Assign student"}
               </h3>
-              <StaffIconButton label="Close" tone="muted" onClick={() => setAssignModal(null)}>
+              <StaffIconButton label="Close" title="Cancel" tone="muted" onClick={() => setAssignModal(null)}>
                 <IconClose size={18} />
               </StaffIconButton>
             </div>
@@ -1614,7 +1647,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <h3 id="guardian-edit-title">
                 Edit guardian · {guardianForm.firstName} {guardianForm.lastName}
               </h3>
-              <StaffIconButton label="Close" tone="muted" onClick={closeGuardianEdit}>
+              <StaffIconButton label="Close" title="Cancel" tone="muted" onClick={closeGuardianEdit}>
                 <IconClose size={18} />
               </StaffIconButton>
             </div>

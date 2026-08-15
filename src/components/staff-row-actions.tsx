@@ -11,7 +11,14 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { IconClose, IconPencil } from "@/components/staff-action-icons";
+import {
+  IconArchive,
+  IconClose,
+  IconInvite,
+  IconPencil,
+  IconRestore,
+  IconTrash,
+} from "@/components/staff-action-icons";
 
 export type StaffRowActionTone = "edit" | "restore" | "archive" | "danger" | "default";
 
@@ -52,8 +59,20 @@ function actionLeadingIcon(action: StaffRowAction) {
   if (action.id === "edit" || action.tone === "edit") {
     return <IconPencil size={14} />;
   }
-  if (action.id === "unassign") {
+  if (action.id === "unassign" || action.id === "close") {
     return <IconClose size={14} />;
+  }
+  if (action.id === "archive" || action.tone === "archive") {
+    return <IconArchive size={14} />;
+  }
+  if (action.id === "delete" || action.tone === "danger") {
+    return <IconTrash size={14} />;
+  }
+  if (action.id === "restore" || action.tone === "restore") {
+    return <IconRestore size={14} />;
+  }
+  if (action.id === "invite") {
+    return <IconInvite size={14} />;
   }
   return null;
 }
@@ -90,8 +109,8 @@ export function StaffRowActions({ label = "Row actions", actions }: StaffRowActi
       const menu = menuRef.current;
       const gap = 4;
       const pad = 8;
-      const menuHeight = menu?.offsetHeight ?? Math.max(44, actions.length * 42 + 14);
-      const menuWidth = menu?.offsetWidth ?? 148;
+      const menuHeight = menu?.offsetHeight ?? Math.max(36, actions.length * 32 + 8);
+      const menuWidth = menu?.offsetWidth ?? 132;
       const spaceBelow = window.innerHeight - rect.bottom - gap;
       const spaceAbove = rect.top - gap;
       const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
@@ -175,28 +194,29 @@ export function StaffRowActions({ label = "Row actions", actions }: StaffRowActi
             role="menu"
             style={menuStyle}
           >
-            {actions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                role="menuitem"
-                className={toneClass(action.tone)}
-                disabled={action.disabled}
-                title={action.label}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  runAction(action);
-                }}
-              >
-                {actionLeadingIcon(action) ? (
+            {actions.map((action) => {
+              const icon = actionLeadingIcon(action);
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  role="menuitem"
+                  className={toneClass(action.tone)}
+                  disabled={action.disabled}
+                  title={action.label}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    runAction(action);
+                  }}
+                >
                   <span className="staff-row-actions-item-icon" aria-hidden="true">
-                    {actionLeadingIcon(action)}
+                    {icon}
                   </span>
-                ) : null}
-                <span>{action.label}</span>
-              </button>
-            ))}
+                  <span className="staff-row-actions-item-label">{action.label}</span>
+                </button>
+              );
+            })}
           </div>,
           document.body,
         )
