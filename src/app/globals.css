@@ -1421,8 +1421,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   width: 100%;
 }
 .family-household-dense > span,
-.family-household-lower > span,
-.family-household-zoho-stack > span {
+.family-household-lower > span {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1467,13 +1466,15 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-lower {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px 20px;
   align-items: start;
   width: 100%;
   min-width: 0;
 }
-.family-household-field-address {
+.family-household-field-address,
+.family-household-field-zoho-id,
+.family-household-field-zoho-url {
   min-width: 0;
 }
 .family-household-address-lines {
@@ -1503,17 +1504,14 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   margin: 0;
   color: var(--muted);
 }
-.family-household-zoho-stack {
-  display: grid;
-  gap: 14px;
-  min-width: 0;
-}
-.family-household-field-zoho-url {
-  min-width: 0;
-}
 .family-household-field-zoho-url .family-zoho-url-link {
   display: block;
   width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 @media (max-width: 900px) {
   .family-household-dense {
@@ -1524,6 +1522,12 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .family-household-field-owner,
   .family-household-field-card {
     grid-column: span 3;
+  }
+  .family-household-lower {
+    grid-template-columns: 1fr 1fr;
+  }
+  .family-household-field-address {
+    grid-column: 1 / -1;
   }
   .family-household-field-email strong {
     white-space: nowrap;
@@ -1544,6 +1548,16 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   }
   .family-household-lower {
     grid-template-columns: 1fr;
+  }
+  .family-household-field-address {
+    grid-column: auto;
+  }
+  .family-household-field-zoho-url .family-zoho-url-link {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .family-household-field-email strong {
     white-space: normal;

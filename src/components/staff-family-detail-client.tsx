@@ -190,9 +190,8 @@ function formatHouseholdAddressLines(family: {
   city: string | null;
   state: string | null;
   postalCode: string | null;
-  country: string;
 }): string[] {
-  // Country alone is not a real address (product always stores United States).
+  // Country is always US — omit from summary card.
   const hasLocalAddress = Boolean(
     family.addressLine1 ||
       family.addressLine2 ||
@@ -205,8 +204,9 @@ function formatHouseholdAddressLines(family: {
   const lines: string[] = [];
   const line1 = (family.addressLine1 || "").trim();
   const line2 = (family.addressLine2 || "").trim();
+  // Max 2 address lines on the card: street (line1 + optional line2), then City, ST ZIP.
   if (line1 && line2) {
-    lines.push(line1, line2);
+    lines.push(`${line1}, ${line2}`);
   } else if (line1 || line2) {
     lines.push(line1 || line2);
   }
@@ -219,7 +219,6 @@ function formatHouseholdAddressLines(family: {
     .join(", ");
   if (cityStateZip) lines.push(cityStateZip);
 
-  lines.push((family.country || "").trim() || "United States");
   return lines;
 }
 
@@ -1529,28 +1528,26 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                     <strong>—</strong>
                   )}
                 </span>
-                <div className="family-household-zoho-stack">
-                  <span className="family-household-field-zoho-id">
-                    <small>Zoho CRM ID</small>
-                    <strong>{family.zohoCrmId || "—"}</strong>
-                  </span>
-                  <span className="family-household-field-zoho-url">
-                    <small>Zoho CRM URL</small>
-                    {zohoLink ? (
-                      <a
-                        href={zohoLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="family-zoho-url-link"
-                        title={zohoLink}
-                      >
-                        {zohoLink}
-                      </a>
-                    ) : (
-                      <strong>—</strong>
-                    )}
-                  </span>
-                </div>
+                <span className="family-household-field-zoho-id">
+                  <small>Zoho CRM ID</small>
+                  <strong>{family.zohoCrmId || "—"}</strong>
+                </span>
+                <span className="family-household-field-zoho-url">
+                  <small>Zoho CRM URL</small>
+                  {zohoLink ? (
+                    <a
+                      href={zohoLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="family-zoho-url-link"
+                      title={zohoLink}
+                    >
+                      {zohoLink}
+                    </a>
+                  ) : (
+                    <strong>—</strong>
+                  )}
+                </span>
               </div>
             </div>
           </div>
