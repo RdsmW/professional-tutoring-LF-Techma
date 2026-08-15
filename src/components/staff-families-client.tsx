@@ -53,6 +53,10 @@ export function StaffFamiliesClient({
   useEffect(() => {
     if (searchParams.get("new") === "1") setCreating(true);
     if (searchParams.get("newGuardian") === "1") setAddingGuardian(true);
+    const householdId = searchParams.get("householdId") || searchParams.get("household") || "";
+    if (householdId) {
+      setGuardianForm((prev) => ({ ...prev, householdId }));
+    }
   }, [searchParams]);
 
   const reload = useCallback(async () => {

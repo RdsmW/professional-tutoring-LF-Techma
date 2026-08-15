@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { IconClose, IconPencil } from "@/components/staff-action-icons";
 
 export type StaffRowActionTone = "edit" | "restore" | "archive" | "danger" | "default";
 
@@ -45,6 +46,16 @@ function toneClass(tone: StaffRowActionTone | undefined) {
     default:
       return "staff-row-actions-item";
   }
+}
+
+function actionLeadingIcon(action: StaffRowAction) {
+  if (action.id === "edit" || action.tone === "edit") {
+    return <IconPencil size={14} />;
+  }
+  if (action.id === "unassign") {
+    return <IconClose size={14} />;
+  }
+  return null;
 }
 
 /**
@@ -171,13 +182,19 @@ export function StaffRowActions({ label = "Row actions", actions }: StaffRowActi
                 role="menuitem"
                 className={toneClass(action.tone)}
                 disabled={action.disabled}
+                title={action.label}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
                   runAction(action);
                 }}
               >
-                {action.label}
+                {actionLeadingIcon(action) ? (
+                  <span className="staff-row-actions-item-icon" aria-hidden="true">
+                    {actionLeadingIcon(action)}
+                  </span>
+                ) : null}
+                <span>{action.label}</span>
               </button>
             ))}
           </div>,

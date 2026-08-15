@@ -55,6 +55,10 @@ export function StaffStudentsClient() {
 
   useEffect(() => {
     if (searchParams.get("new") === "1") setCreating(true);
+    const householdId = searchParams.get("householdId") || searchParams.get("household") || "";
+    if (householdId) {
+      setForm((prev) => ({ ...prev, householdId }));
+    }
   }, [searchParams]);
 
   const reload = useCallback(async () => {

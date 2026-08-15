@@ -1,9 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Panel } from "@/components/ui";
+import {
+  IconClose,
+  IconExternalLink,
+  IconPencil,
+  IconPlus,
+  StaffIconButton,
+} from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -41,6 +48,7 @@ type StudentRow = {
 type FamilyDetail = {
   id: string;
   displayName: string;
+  displayNameManual: boolean;
   status: string;
   primaryPhone: string | null;
   addressLine1: string | null;
@@ -48,12 +56,17 @@ type FamilyDetail = {
   city: string | null;
   state: string | null;
   postalCode: string | null;
+  country: string;
+  zohoCrmId: string | null;
+  zohoCrmUrl: string | null;
   billingOwnerGuardianId: string | null;
   billingOwnerName: string | null;
+  billingEmail: string | null;
   cardOnFile: boolean;
   cardBrand: string | null;
   cardLast4: string | null;
   canDelete: boolean;
+  maxGuardians: number;
   notes: NoteRow[];
   guardians: GuardianRow[];
   students: StudentRow[];
@@ -83,7 +96,24 @@ type HouseholdEdit = {
   city: string;
   state: string;
   postalCode: string;
+  zohoCrmId: string;
+  zohoCrmUrl: string;
   billingOwnerGuardianId: string;
+};
+
+type AssignGuardianOption = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  householdDisplayName: string;
+};
+
+type AssignStudentOption = {
+  id: string;
+  displayName: string;
+  gradeLabel: string | null;
+  householdDisplayName: string;
 };
 
 function initials(name: string) {
@@ -123,9 +153,18 @@ function yesNo(value: boolean) {
   return value ? "Yes" : "No";
 }
 
+function zohoHref(family: FamilyDetail) {
+  const url = (family.zohoCrmUrl || "").trim();
+  if (url) return url;
+  return null;
+}
+
 const PREVIEW_LIMIT = 3;
+const MAX_GUARDIANS = 2;
 
 type FamilyListModalKind = "guardians" | "students" | "enrollments" | "bookings" | "notes";
+type AssignModalKind = "guardians" | "students" | null;
+type SectionMenuKind = "guardians" | "students" | null;
 
 function FamilyListPreview({
   total,
@@ -134,9 +173,9 @@ function FamilyListPreview({
   children,
 }: {
   total: number;
-  empty: React.ReactNode;
+  empty: ReactNode;
   onViewMore: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   if (total === 0) return <>{empty}</>;
   return (
@@ -158,7 +197,7 @@ function FamilyListModal({
 }: {
   title: string;
   onClose: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -184,12 +223,81 @@ function FamilyListModal({
       >
         <div className="family-list-modal-header">
           <h3 id="family-list-modal-title">{title}</h3>
-          <button type="button" className="staff-modal-close" aria-label="Close" onClick={onClose}>
-            ×
-          </button>
+          <StaffIconButton label="Close" tone="muted" onClick={onClose}>
+            <IconClose size={18} />
+          </StaffIconButton>
         </div>
         <div className="family-list-modal-body">{children}</div>
       </div>
+    </div>
+  );
+}
+
+function SectionPlusMenu({
+  open,
+  onToggle,
+  onClose,
+  disabled,
+  disabledReason,
+  items,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
+  items: Array<{ id: string; label: string; onSelect: () => void; disabled?: boolean }>;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) onClose();
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
+  return (
+    <div className="family-section-plus" ref={rootRef}>
+      <StaffIconButton
+        label="Add"
+        title={disabled ? disabledReason || "Cannot add" : "Add"}
+        disabled={disabled}
+        onClick={onToggle}
+      >
+        <IconPlus size={16} />
+      </StaffIconButton>
+      {disabled && disabledReason ? (
+        <span className="family-section-plus-hint">{disabledReason}</span>
+      ) : null}
+      {open && !disabled ? (
+        <div className="family-section-plus-menu" role="menu">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="menuitem"
+              className="family-section-plus-item"
+              disabled={item.disabled}
+              onClick={() => {
+                onClose();
+                item.onSelect();
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -219,7 +327,15 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [savingGuardian, setSavingGuardian] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [studentBusyId, setStudentBusyId] = useState<string | null>(null);
+  const [memberBusyId, setMemberBusyId] = useState<string | null>(null);
   const [listModal, setListModal] = useState<FamilyListModalKind | null>(null);
+  const [sectionMenu, setSectionMenu] = useState<SectionMenuKind>(null);
+  const [assignModal, setAssignModal] = useState<AssignModalKind>(null);
+  const [assignQuery, setAssignQuery] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignGuardians, setAssignGuardians] = useState<AssignGuardianOption[]>([]);
+  const [assignStudents, setAssignStudents] = useState<AssignStudentOption[]>([]);
+  const [assignBusyId, setAssignBusyId] = useState<string | null>(null);
 
   const softReload = useCallback(async () => {
     setError(null);
@@ -282,6 +398,21 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     router.replace(`/staff/families/${familyId}`, { scroll: false });
   }, [family, deepLinkedGuardianId, familyId, router]);
 
+  function householdFormFromFamily(next: FamilyDetail): HouseholdEdit {
+    return {
+      displayName: next.displayName,
+      primaryPhone: next.primaryPhone || "",
+      addressLine1: next.addressLine1 || "",
+      addressLine2: next.addressLine2 || "",
+      city: next.city || "",
+      state: next.state || "",
+      postalCode: next.postalCode || "",
+      zohoCrmId: next.zohoCrmId || "",
+      zohoCrmUrl: next.zohoCrmUrl || "",
+      billingOwnerGuardianId: next.billingOwnerGuardianId || "",
+    };
+  }
+
   async function refreshInvite(guardianId: string) {
     setInviteMessage(null);
     try {
@@ -302,7 +433,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     }
   }
 
-  async function addNote(event: React.FormEvent) {
+  async function addNote(event: FormEvent) {
     event.preventDefault();
     if (!noteDraft.trim() || savingNotes) return;
     setSavingNotes(true);
@@ -348,7 +479,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     setNoteEditDraft("");
   }
 
-  async function saveNoteEdit(event: React.FormEvent) {
+  async function saveNoteEdit(event: FormEvent) {
     event.preventDefault();
     if (!editingNoteId || !noteEditDraft.trim() || savingNoteEdit) return;
     setSavingNoteEdit(true);
@@ -385,16 +516,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
   function openHouseholdEdit() {
     if (!family) return;
-    setHouseholdForm({
-      displayName: family.displayName,
-      primaryPhone: family.primaryPhone || "",
-      addressLine1: family.addressLine1 || "",
-      addressLine2: family.addressLine2 || "",
-      city: family.city || "",
-      state: family.state || "",
-      postalCode: family.postalCode || "",
-      billingOwnerGuardianId: family.billingOwnerGuardianId || "",
-    });
+    setHouseholdForm(householdFormFromFamily(family));
     setEditingHousehold(true);
     setSavedMessage(null);
   }
@@ -402,22 +524,13 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   useEffect(() => {
     if (!family || !deepLinkEdit || editDeepLinkHandled.current) return;
     editDeepLinkHandled.current = true;
-    setHouseholdForm({
-      displayName: family.displayName,
-      primaryPhone: family.primaryPhone || "",
-      addressLine1: family.addressLine1 || "",
-      addressLine2: family.addressLine2 || "",
-      city: family.city || "",
-      state: family.state || "",
-      postalCode: family.postalCode || "",
-      billingOwnerGuardianId: family.billingOwnerGuardianId || "",
-    });
+    setHouseholdForm(householdFormFromFamily(family));
     setEditingHousehold(true);
     setSavedMessage(null);
     router.replace(`/staff/families/${familyId}`, { scroll: false });
   }, [family, deepLinkEdit, familyId, router]);
 
-  async function saveHousehold(event: React.FormEvent) {
+  async function saveHousehold(event: FormEvent) {
     event.preventDefault();
     if (!householdForm || savingHousehold) return;
     if (!householdForm.displayName.trim()) {
@@ -436,12 +549,16 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           displayName: householdForm.displayName,
+          displayNameManual: true,
           primaryPhone: householdForm.primaryPhone,
           addressLine1: householdForm.addressLine1,
           addressLine2: householdForm.addressLine2,
           city: householdForm.city,
           state: householdForm.state,
           postalCode: householdForm.postalCode,
+          country: "United States",
+          zohoCrmId: householdForm.zohoCrmId,
+          zohoCrmUrl: householdForm.zohoCrmUrl,
           billingOwnerGuardianId: householdForm.billingOwnerGuardianId || null,
         }),
       });
@@ -473,7 +590,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     setGuardianForm(null);
   }
 
-  async function saveGuardian(event: React.FormEvent) {
+  async function saveGuardian(event: FormEvent) {
     event.preventDefault();
     if (!guardianForm || !editingGuardianId || savingGuardian) return;
     if (!guardianForm.firstName.trim() || !guardianForm.lastName.trim()) {
@@ -608,17 +725,180 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     }
   }
 
+  async function unassignGuardian(guardianId: string) {
+    if (memberBusyId) return;
+    if (
+      !window.confirm(
+        "Unassign this guardian from the family? They become an orphan until reassigned (not deleted).",
+      )
+    ) {
+      return;
+    }
+    setMemberBusyId(guardianId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${familyId}/guardians/${guardianId}/unassign`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to unassign guardian.");
+        return;
+      }
+      setSavedMessage("Guardian unassigned.");
+      await softReload();
+    } catch {
+      setError("Unable to unassign guardian.");
+    } finally {
+      setMemberBusyId(null);
+    }
+  }
+
+  async function unassignStudent(studentId: string) {
+    if (memberBusyId) return;
+    if (
+      !window.confirm(
+        "Unassign this student from the family? They become an orphan until reassigned. Historical bookings stay on this family.",
+      )
+    ) {
+      return;
+    }
+    setMemberBusyId(studentId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${familyId}/students/${studentId}/unassign`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to unassign student.");
+        return;
+      }
+      setSavedMessage("Student unassigned.");
+      await softReload();
+    } catch {
+      setError("Unable to unassign student.");
+    } finally {
+      setMemberBusyId(null);
+    }
+  }
+
+  async function openAssignModal(kind: "guardians" | "students") {
+    setAssignModal(kind);
+    setAssignQuery("");
+    setAssignGuardians([]);
+    setAssignStudents([]);
+    setSectionMenu(null);
+    setAssignLoading(true);
+    setError(null);
+    try {
+      const path =
+        kind === "guardians"
+          ? `/api/staff/families/${familyId}/guardians/assign`
+          : `/api/staff/families/${familyId}/students/assign`;
+      const response = await fetch(path);
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to load assign options.");
+        return;
+      }
+      if (kind === "guardians") setAssignGuardians(data.guardians ?? []);
+      else setAssignStudents(data.students ?? []);
+    } catch {
+      setError("Unable to load assign options.");
+    } finally {
+      setAssignLoading(false);
+    }
+  }
+
+  async function searchAssign(kind: "guardians" | "students", q: string) {
+    setAssignQuery(q);
+    setAssignLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (q.trim()) params.set("q", q.trim());
+      const path =
+        kind === "guardians"
+          ? `/api/staff/families/${familyId}/guardians/assign?${params}`
+          : `/api/staff/families/${familyId}/students/assign?${params}`;
+      const response = await fetch(path);
+      const data = await response.json();
+      if (!response.ok || !data.ok) return;
+      if (kind === "guardians") setAssignGuardians(data.guardians ?? []);
+      else setAssignStudents(data.students ?? []);
+    } finally {
+      setAssignLoading(false);
+    }
+  }
+
+  async function assignGuardian(guardianId: string) {
+    if (assignBusyId) return;
+    setAssignBusyId(guardianId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${familyId}/guardians/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guardianId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to assign guardian.");
+        return;
+      }
+      setAssignModal(null);
+      setSavedMessage("Guardian assigned.");
+      await softReload();
+    } catch {
+      setError("Unable to assign guardian.");
+    } finally {
+      setAssignBusyId(null);
+    }
+  }
+
+  async function assignStudent(studentId: string) {
+    if (assignBusyId) return;
+    setAssignBusyId(studentId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/families/${familyId}/students/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to assign student.");
+        return;
+      }
+      setAssignModal(null);
+      setSavedMessage("Student assigned.");
+      await softReload();
+    } catch {
+      setError("Unable to assign student.");
+    } finally {
+      setAssignBusyId(null);
+    }
+  }
+
   if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading family…</p>;
   if (error && !family) return <p className="form-error">{error}</p>;
   if (!family) return null;
 
-  const address = [family.addressLine1, family.addressLine2, family.city, family.state, family.postalCode]
+  const addressLine = [
+    family.addressLine1,
+    family.addressLine2,
+    [family.city, family.state, family.postalCode].filter(Boolean).join(", "),
+    family.country || "United States",
+  ]
     .filter(Boolean)
-    .join(", ");
+    .join(" · ");
   const billingCue = family.cardLast4
     ? `${(family.cardBrand || "Card").toUpperCase()} ···· ${family.cardLast4}`
     : "No card on file";
   const isArchived = family.status === "archived";
+  const guardiansAtMax = family.guardians.length >= (family.maxGuardians || MAX_GUARDIANS);
+  const zohoLink = zohoHref(family);
 
   const previewGuardians = family.guardians.slice(0, PREVIEW_LIMIT);
   const previewStudents = family.students.slice(0, PREVIEW_LIMIT);
@@ -646,6 +926,12 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         tone: "edit",
         onSelect: () => openGuardianEdit(g),
       },
+      {
+        id: "unassign",
+        label: "Unassign",
+        disabled: memberBusyId === g.id,
+        onSelect: () => void unassignGuardian(g.id),
+      },
     ];
     if (!g.linked) {
       actions.push({
@@ -654,6 +940,25 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         onSelect: () => void refreshInvite(g.id),
       });
     }
+    return actions;
+  }
+
+  function studentActions(s: StudentRow): StaffRowAction[] {
+    const actions = lifecycleActions({
+      isArchived: s.lifecycle === "archived",
+      canDelete: Boolean(s.canDelete),
+      busy: studentBusyId === s.id || memberBusyId === s.id,
+      onEdit: () => router.push(`/staff/students/${s.id}?edit=1`),
+      onArchive: () => void setStudentLifecycle(s.id, "archived"),
+      onRestore: () => void setStudentLifecycle(s.id, "active"),
+      onDelete: () => void deleteStudent(s.id),
+    });
+    actions.splice(1, 0, {
+      id: "unassign",
+      label: "Unassign",
+      disabled: memberBusyId === s.id,
+      onSelect: () => void unassignStudent(s.id),
+    });
     return actions;
   }
 
@@ -708,18 +1013,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <span className={`pill ${statusTone(s.lifecycle)}`}>{formatStatusLabel(s.lifecycle)}</span>
             </span>
             <span className="staff-dir-col-actions">
-              <StaffRowActions
-                label="Student actions"
-                actions={lifecycleActions({
-                  isArchived: s.lifecycle === "archived",
-                  canDelete: Boolean(s.canDelete),
-                  busy: studentBusyId === s.id,
-                  onEdit: () => router.push(`/staff/students/${s.id}?edit=1`),
-                  onArchive: () => void setStudentLifecycle(s.id, "archived"),
-                  onRestore: () => void setStudentLifecycle(s.id, "active"),
-                  onDelete: () => void deleteStudent(s.id),
-                })}
-              />
+              <StaffRowActions label="Student actions" actions={studentActions(s)} />
             </span>
           </div>
         ))}
@@ -777,7 +1071,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             <tr>
               <th className="family-notes-col-content">Note</th>
               <th className="family-notes-col-who">Creator</th>
-              <th className="family-notes-col-when">Creation Date</th>
+              <th className="family-notes-col-when">Created</th>
               <th className="family-notes-col-edit" aria-label="Actions" />
             </tr>
           </thead>
@@ -813,14 +1107,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
                 <td className="family-notes-col-edit">
                   {editingNoteId === note.id ? null : (
-                    <button
-                      type="button"
-                      className="action-btn action-btn-edit"
-                      style={{ padding: "8px 12px" }}
+                    <StaffIconButton
+                      label="Edit"
+                      title="Edit note"
+                      tone="edit"
                       onClick={() => startEditNote(note)}
                     >
-                      Edit
-                    </button>
+                      <IconPencil size={15} />
+                    </StaffIconButton>
                   )}
                 </td>
               </tr>
@@ -847,7 +1141,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             <span className={`pill ${statusTone(family.status)}`}>{formatStatusLabel(family.status)}</span>
           </div>
           <p>
-            {[family.billingOwnerName ? `Billing: ${family.billingOwnerName}` : null, billingCue]
+            {[
+              family.billingEmail ? `Billing: ${family.billingEmail}` : null,
+              family.billingOwnerName,
+              billingCue,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </p>
@@ -861,18 +1159,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       ) : null}
 
       {editingHousehold && householdForm ? (
-        <Panel title="Edit household">
-          <form onSubmit={saveHousehold} className="input-grid" style={{ gap: 12 }}>
+        <Panel title="Edit household" className="family-equal-panel">
+          <form onSubmit={saveHousehold} className="input-grid family-household-edit-grid">
             <label>
-              Household name
+              Family name
               <input
                 value={householdForm.displayName}
                 onChange={(e) => setHouseholdForm({ ...householdForm, displayName: e.target.value })}
                 required
               />
+              <small className="field-hint">Editing locks auto-name (`LastName - billing@email`).</small>
             </label>
             <label>
-              Primary phone
+              Phone
               <input
                 type="tel"
                 value={householdForm.primaryPhone}
@@ -880,7 +1179,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               />
             </label>
             <label>
-              Address line 1
+              Street
               <input
                 value={householdForm.addressLine1}
                 onChange={(e) => setHouseholdForm({ ...householdForm, addressLine1: e.target.value })}
@@ -908,10 +1207,30 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               />
             </label>
             <label>
-              Postal code
+              ZIP
               <input
                 value={householdForm.postalCode}
                 onChange={(e) => setHouseholdForm({ ...householdForm, postalCode: e.target.value })}
+              />
+            </label>
+            <label>
+              Country
+              <input value="United States" disabled readOnly />
+            </label>
+            <label>
+              Zoho CRM ID
+              <input
+                value={householdForm.zohoCrmId}
+                onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmId: e.target.value })}
+              />
+            </label>
+            <label>
+              Zoho CRM URL
+              <input
+                type="url"
+                placeholder="https://…"
+                value={householdForm.zohoCrmUrl}
+                onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmUrl: e.target.value })}
               />
             </label>
             <label>
@@ -930,7 +1249,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 ))}
               </select>
             </label>
-            <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
+            <div className="family-household-edit-actions">
               <button type="submit" className="primary-button" disabled={savingHousehold}>
                 {savingHousehold ? "Saving…" : "Save household"}
               </button>
@@ -949,48 +1268,93 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       <div className="family-detail-layout family-detail-stack">
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
-            <h2>Household summary</h2>
+            <h2>Household</h2>
             <StaffRowActions label="Household actions" actions={householdActions} />
           </div>
-          <div className="family-household-dense">
-            <span>
-              <small>Household</small>
+          <div className="family-household-summary">
+            <div className="family-household-summary-title">
               <strong>{family.displayName}</strong>
-            </span>
-            <span>
-              <small>Status</small>
-              <strong>
-                <span className={`pill ${statusTone(family.status)}`}>
-                  {formatStatusLabel(family.status)}
-                </span>
-              </strong>
-            </span>
-            <span>
-              <small>Phone</small>
-              <strong>{family.primaryPhone || "—"}</strong>
-            </span>
-            <span>
-              <small>Billing owner</small>
-              <strong>{family.billingOwnerName || "—"}</strong>
-            </span>
-            <span>
-              <small>Card on file</small>
-              <strong>{billingCue}</strong>
-            </span>
-            <span className="family-household-dense-wide">
-              <small>Address</small>
-              <strong>{address || "—"}</strong>
-            </span>
+              <span className={`pill ${statusTone(family.status)}`}>
+                {formatStatusLabel(family.status)}
+              </span>
+            </div>
+            <div className="family-household-dense">
+              <span>
+                <small>Phone</small>
+                <strong>{family.primaryPhone || "—"}</strong>
+              </span>
+              <span>
+                <small>Billing email</small>
+                <strong>{family.billingEmail || "—"}</strong>
+              </span>
+              <span>
+                <small>Billing owner</small>
+                <strong>{family.billingOwnerName || "—"}</strong>
+              </span>
+              <span>
+                <small>Card</small>
+                <strong>{billingCue}</strong>
+              </span>
+              <span className="family-household-dense-wide">
+                <small>Address</small>
+                <strong>{addressLine || "—"}</strong>
+              </span>
+              <span className="family-household-dense-wide">
+                <small>Zoho CRM</small>
+                <strong className="family-zoho-value">
+                  {family.zohoCrmId || zohoLink ? (
+                    <>
+                      <span>{family.zohoCrmId || "Linked"}</span>
+                      {zohoLink ? (
+                        <a
+                          href={zohoLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="family-zoho-link"
+                          title="Open in Zoho CRM"
+                          aria-label="Open in Zoho CRM"
+                        >
+                          <IconExternalLink size={15} />
+                          <span>Open</span>
+                        </a>
+                      ) : null}
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </strong>
+              </span>
+            </div>
           </div>
         </Panel>
 
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Guardians</h2>
+            <SectionPlusMenu
+              open={sectionMenu === "guardians"}
+              onToggle={() => setSectionMenu((v) => (v === "guardians" ? null : "guardians"))}
+              onClose={() => setSectionMenu(null)}
+              disabled={guardiansAtMax}
+              disabledReason={`Max ${MAX_GUARDIANS} guardians — unassign one to add or assign.`}
+              items={[
+                {
+                  id: "add-new",
+                  label: "Add new",
+                  onSelect: () =>
+                    router.push(`/staff/families?newGuardian=1&householdId=${encodeURIComponent(familyId)}`),
+                },
+                {
+                  id: "assign",
+                  label: "Assign existing",
+                  onSelect: () => void openAssignModal("guardians"),
+                },
+              ]}
+            />
           </div>
           <FamilyListPreview
             total={family.guardians.length}
-            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No guardians yet.</p>}
+            empty={<p className="family-empty">No guardians yet.</p>}
             onViewMore={() => setListModal("guardians")}
           >
             {renderGuardiansTable(previewGuardians)}
@@ -1000,10 +1364,28 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <Panel className="family-equal-panel family-students-band">
           <div className="family-panel-heading">
             <h2>Students</h2>
+            <SectionPlusMenu
+              open={sectionMenu === "students"}
+              onToggle={() => setSectionMenu((v) => (v === "students" ? null : "students"))}
+              onClose={() => setSectionMenu(null)}
+              items={[
+                {
+                  id: "add-new",
+                  label: "Add new",
+                  onSelect: () =>
+                    router.push(`/staff/students?new=1&householdId=${encodeURIComponent(familyId)}`),
+                },
+                {
+                  id: "assign",
+                  label: "Assign existing",
+                  onSelect: () => void openAssignModal("students"),
+                },
+              ]}
+            />
           </div>
           <FamilyListPreview
             total={family.students.length}
-            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No students yet.</p>}
+            empty={<p className="family-empty">No students yet.</p>}
             onViewMore={() => setListModal("students")}
           >
             {renderStudentsTable(previewStudents)}
@@ -1012,19 +1394,25 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       </div>
 
       <div className="family-activity-band">
-        <Panel title="Course enrollments" className="family-equal-panel">
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Course enrollments</h2>
+          </div>
           <FamilyListPreview
             total={family.activity.enrollments.length}
-            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No course enrollments yet.</p>}
+            empty={<p className="family-empty">No course enrollments yet.</p>}
             onViewMore={() => setListModal("enrollments")}
           >
             <div className="staff-detail-list">{previewEnrollments.map(renderEnrollmentRow)}</div>
           </FamilyListPreview>
         </Panel>
-        <Panel title="Bookings" className="family-equal-panel">
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Bookings</h2>
+          </div>
           <FamilyListPreview
             total={family.activity.bookings.length}
-            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No tutoring bookings yet.</p>}
+            empty={<p className="family-empty">No tutoring bookings yet.</p>}
             onViewMore={() => setListModal("bookings")}
           >
             <div className="staff-detail-list">{previewBookings.map(renderBookingRow)}</div>
@@ -1033,18 +1421,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       </div>
 
       <div className="family-notes-layout">
-        <Panel title="Add note" className="family-notes-panel family-equal-panel">
+        <Panel className="family-notes-panel family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Add note</h2>
+          </div>
           <div className="family-add-note-stretch">
-            <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 8 }}>
-              Internal notes only. Not visible in the family portal.
-            </p>
+            <p className="family-add-note-helper">Internal only — not visible in the family portal.</p>
             <form onSubmit={addNote}>
-              <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--muted)" }}>
-                Note
+              <label className="family-add-note-label">
+                <span className="sr-only">Note</span>
                 <textarea
                   value={noteDraft}
                   onChange={(event) => setNoteDraft(event.target.value)}
-                  rows={3}
+                  rows={4}
+                  placeholder="Add a staff note…"
                 />
               </label>
               <div className="family-add-note-footer">
@@ -1060,10 +1450,13 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </div>
         </Panel>
 
-        <Panel title="Notes" className="family-notes-panel family-equal-panel">
+        <Panel className="family-notes-panel family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Notes</h2>
+          </div>
           <FamilyListPreview
             total={family.notes.length}
-            empty={<p style={{ color: "var(--muted)", fontSize: 14 }}>No notes yet.</p>}
+            empty={<p className="family-empty">No notes yet.</p>}
             onViewMore={() => setListModal("notes")}
           >
             {renderNotesTable(previewNotes)}
@@ -1097,6 +1490,109 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </FamilyListModal>
       ) : null}
 
+      {assignModal ? (
+        <div
+          className="staff-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setAssignModal(null);
+          }}
+        >
+          <div
+            className="staff-modal family-list-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="family-assign-title"
+          >
+            <div className="family-list-modal-header">
+              <h3 id="family-assign-title">
+                {assignModal === "guardians" ? "Assign guardian" : "Assign student"}
+              </h3>
+              <StaffIconButton label="Close" tone="muted" onClick={() => setAssignModal(null)}>
+                <IconClose size={18} />
+              </StaffIconButton>
+            </div>
+            <div className="family-list-modal-body">
+              <label className="family-assign-search">
+                Search
+                <input
+                  value={assignQuery}
+                  onChange={(e) => void searchAssign(assignModal, e.target.value)}
+                  placeholder={
+                    assignModal === "guardians" ? "Name or email…" : "Student name…"
+                  }
+                />
+              </label>
+              {assignLoading ? <p className="family-empty">Loading…</p> : null}
+              {!assignLoading && assignModal === "guardians" ? (
+                assignGuardians.length === 0 ? (
+                  <p className="family-empty">No available guardians to assign.</p>
+                ) : (
+                  <div className="family-assign-list">
+                    {assignGuardians.map((g) => (
+                      <div key={g.id} className="family-assign-row">
+                        <span>
+                          <strong>
+                            {g.firstName} {g.lastName}
+                          </strong>
+                          <small>
+                            {g.email} · {g.householdDisplayName}
+                          </small>
+                        </span>
+                        <button
+                          type="button"
+                          className="primary-button family-add-note-btn"
+                          disabled={assignBusyId === g.id || guardiansAtMax}
+                          title={
+                            guardiansAtMax
+                              ? `Max ${MAX_GUARDIANS} guardians — unassign one first.`
+                              : "Assign"
+                          }
+                          onClick={() => void assignGuardian(g.id)}
+                        >
+                          {assignBusyId === g.id ? "Assigning…" : "Assign"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : null}
+              {!assignLoading && assignModal === "students" ? (
+                assignStudents.length === 0 ? (
+                  <p className="family-empty">No available students to assign.</p>
+                ) : (
+                  <div className="family-assign-list">
+                    {assignStudents.map((s) => (
+                      <div key={s.id} className="family-assign-row">
+                        <span>
+                          <strong>{s.displayName}</strong>
+                          <small>
+                            {s.gradeLabel || "—"} · {s.householdDisplayName}
+                          </small>
+                        </span>
+                        <button
+                          type="button"
+                          className="primary-button family-add-note-btn"
+                          disabled={assignBusyId === s.id}
+                          onClick={() => void assignStudent(s.id)}
+                        >
+                          {assignBusyId === s.id ? "Assigning…" : "Assign"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : null}
+              {guardiansAtMax && assignModal === "guardians" ? (
+                <p className="family-section-plus-hint" style={{ marginTop: 12 }}>
+                  Max {MAX_GUARDIANS} guardians — unassign one before assigning another.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {editingGuardianId && guardianForm ? (
         <div
           className="staff-modal-backdrop"
@@ -1118,14 +1614,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <h3 id="guardian-edit-title">
                 Edit guardian · {guardianForm.firstName} {guardianForm.lastName}
               </h3>
-              <button
-                type="button"
-                className="staff-modal-close"
-                aria-label="Close"
-                onClick={closeGuardianEdit}
-              >
-                ×
-              </button>
+              <StaffIconButton label="Close" tone="muted" onClick={closeGuardianEdit}>
+                <IconClose size={18} />
+              </StaffIconButton>
             </div>
             <form onSubmit={saveGuardian} className="staff-modal-form">
               <div className="input-grid staff-modal-fields">

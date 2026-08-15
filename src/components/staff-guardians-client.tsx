@@ -21,7 +21,7 @@ type GuardianRow = {
   canManageStudents: boolean;
   canRequestServices: boolean;
   household: {
-    id: string;
+    id: string | null;
     displayName: string;
     status: string;
   };
@@ -86,7 +86,8 @@ export function StaffGuardiansClient() {
     setApplied({ q: "", status: "all" });
   }
 
-  function openFamily(householdId: string) {
+  function openFamily(householdId: string | null) {
+    if (!householdId) return;
     router.push(`/staff/families/${householdId}`);
   }
 
@@ -158,18 +159,23 @@ export function StaffGuardiansClient() {
           <div className="staff-dir-card-grid">
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
+              const familyId = row.household.id;
               const actions = [
                 {
                   id: "edit",
                   label: "Edit",
                   tone: "edit" as const,
-                  onSelect: () =>
-                    router.push(`/staff/families/${row.household.id}?guardianId=${row.id}`),
+                  disabled: !familyId,
+                  onSelect: () => {
+                    if (!familyId) return;
+                    router.push(`/staff/families/${familyId}?guardianId=${row.id}`);
+                  },
                 },
                 {
                   id: "open-family",
-                  label: "Open family",
-                  onSelect: () => openFamily(row.household.id),
+                  label: familyId ? "Open family" : "Unassigned",
+                  disabled: !familyId,
+                  onSelect: () => openFamily(familyId),
                 },
               ];
               return (
@@ -184,7 +190,7 @@ export function StaffGuardiansClient() {
                   }
                   fields={[{ label: "Family", value: row.household.displayName }]}
                   actions={actions}
-                  onOpen={() => openFamily(row.household.id)}
+                  onOpen={() => openFamily(familyId)}
                 />
               );
             })}
@@ -200,17 +206,19 @@ export function StaffGuardiansClient() {
             </div>
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
+              const familyId = row.household.id;
               return (
                 <div
                   key={row.id}
                   className="table-row staff-dir-cols-guardians"
-                  role="link"
-                  tabIndex={0}
-                  onClick={() => openFamily(row.household.id)}
+                  role={familyId ? "link" : undefined}
+                  tabIndex={familyId ? 0 : undefined}
+                  onClick={() => openFamily(familyId)}
                   onKeyDown={(event) => {
+                    if (!familyId) return;
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      openFamily(row.household.id);
+                      openFamily(familyId);
                     }
                   }}
                 >
@@ -230,13 +238,17 @@ export function StaffGuardiansClient() {
                           id: "edit",
                           label: "Edit",
                           tone: "edit",
-                          onSelect: () =>
-                            router.push(`/staff/families/${row.household.id}?guardianId=${row.id}`),
+                          disabled: !familyId,
+                          onSelect: () => {
+                            if (!familyId) return;
+                            router.push(`/staff/families/${familyId}?guardianId=${row.id}`);
+                          },
                         },
                         {
                           id: "open-family",
-                          label: "Open family",
-                          onSelect: () => openFamily(row.household.id),
+                          label: familyId ? "Open family" : "Unassigned",
+                          disabled: !familyId,
+                          onSelect: () => openFamily(familyId),
                         },
                       ]}
                     />
