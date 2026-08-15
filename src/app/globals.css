@@ -1389,6 +1389,13 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-detail-topbar .page-back {
   padding-bottom: 0;
 }
+.family-detail-topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
 .family-panel-heading {
   display: flex;
   align-items: center;

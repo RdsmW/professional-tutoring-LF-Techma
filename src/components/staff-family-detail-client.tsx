@@ -1180,6 +1180,35 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <Link href="/staff/families" className="page-back">
           ← Families
         </Link>
+        <div className="family-detail-topbar-actions">
+          <StaffIconButton
+            label="Edit"
+            title="Edit"
+            tone="edit"
+            disabled={lifecycleBusy}
+            onClick={openHouseholdEdit}
+          >
+            <IconPencil size={15} />
+          </StaffIconButton>
+          {householdLifecycleButtons.map((action) => (
+            <StaffIconButton
+              key={action.id}
+              label={action.label}
+              title={action.label}
+              tone={action.tone}
+              disabled={lifecycleBusy}
+              onClick={action.onClick}
+            >
+              {action.icon === "archive" ? (
+                <IconArchive size={15} />
+              ) : action.icon === "restore" ? (
+                <IconRestore size={15} />
+              ) : (
+                <IconTrash size={15} />
+              )}
+            </StaffIconButton>
+          ))}
+        </div>
       </div>
 
       <section className="family-record-hero">
@@ -1313,35 +1342,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Household</h2>
-            <div className="family-panel-heading-actions">
-              <StaffIconButton
-                label="Edit"
-                title="Edit"
-                tone="edit"
-                disabled={lifecycleBusy}
-                onClick={openHouseholdEdit}
-              >
-                <IconPencil size={15} />
-              </StaffIconButton>
-              {householdLifecycleButtons.map((action) => (
-                <StaffIconButton
-                  key={action.id}
-                  label={action.label}
-                  title={action.label}
-                  tone={action.tone}
-                  disabled={lifecycleBusy}
-                  onClick={action.onClick}
-                >
-                  {action.icon === "archive" ? (
-                    <IconArchive size={15} />
-                  ) : action.icon === "restore" ? (
-                    <IconRestore size={15} />
-                  ) : (
-                    <IconTrash size={15} />
-                  )}
-                </StaffIconButton>
-              ))}
-            </div>
           </div>
           <div className="family-household-summary">
             <div className="family-household-summary-title">
