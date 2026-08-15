@@ -17,6 +17,7 @@ import {
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
+import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type NoteRow = {
@@ -330,6 +331,8 @@ function SectionPlusMenu({
 export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useAppToast();
+  const toastError = toast.error;
   const deepLinkedGuardianId = searchParams.get("guardianId");
   const deepLinkEdit = searchParams.get("edit") === "1";
   const deepLinkHandled = useRef<string | null>(null);
@@ -337,13 +340,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteEditDraft, setNoteEditDraft] = useState("");
   const [savingNoteEdit, setSavingNoteEdit] = useState(false);
-  const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [editingHousehold, setEditingHousehold] = useState(false);
   const [householdForm, setHouseholdForm] = useState<HouseholdEdit | null>(null);
   const [savingHousehold, setSavingHousehold] = useState(false);
@@ -364,19 +365,18 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [assignBusyId, setAssignBusyId] = useState<string | null>(null);
 
   const softReload = useCallback(async () => {
-    setError(null);
     try {
       const response = await fetch(`/api/staff/families/${familyId}`);
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to load family.");
+        toastError(data.error || "Unable to load family.");
         return;
       }
       setFamily(data.family);
     } catch {
-      setError("Unable to load family.");
+      toastError("Unable to load family.");
     }
-  }, [familyId]);
+  }, [familyId, toastError]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -420,7 +420,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     deepLinkHandled.current = deepLinkedGuardianId;
     setGuardianForm({ ...match });
     setEditingGuardianId(match.id);
-    setSavedMessage(null);
+
     router.replace(`/staff/families/${familyId}`, { scroll: false });
   }, [family, deepLinkedGuardianId, familyId, router]);
 
@@ -440,7 +440,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   }
 
   async function refreshInvite(guardianId: string) {
-    setInviteMessage(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}/invite`, {
         method: "POST",
@@ -449,13 +449,13 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to refresh invite.");
+        toast.error(data.error || "Unable to refresh invite.");
         return;
       }
-      setInviteMessage(`Invite link: ${window.location.origin}${data.invitePath}`);
+      toast.info(`Invite link: ${window.location.origin}${data.invitePath}`);
       await softReload();
     } catch {
-      setError("Unable to refresh invite.");
+      toast.error("Unable to refresh invite.");
     }
   }
 
@@ -463,8 +463,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     event.preventDefault();
     if (!noteDraft.trim() || savingNotes) return;
     setSavingNotes(true);
-    setSavedMessage(null);
-    setError(null);
+
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}/notes`, {
         method: "POST",
@@ -473,7 +473,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok || !data.note) {
-        setError(data.error || "Unable to add note.");
+        toast.error(data.error || "Unable to add note.");
         return;
       }
       const nextNote = data.note as NoteRow;
@@ -486,9 +486,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           : prev,
       );
       setNoteDraft("");
-      setSavedMessage("Note added.");
+      toast.success("Note added.");
     } catch {
-      setError("Unable to add note.");
+      toast.error("Unable to add note.");
     } finally {
       setSavingNotes(false);
     }
@@ -497,7 +497,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   function startEditNote(note: NoteRow) {
     setEditingNoteId(note.id);
     setNoteEditDraft(note.body);
-    setError(null);
+
   }
 
   function cancelEditNote() {
@@ -509,7 +509,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     event.preventDefault();
     if (!editingNoteId || !noteEditDraft.trim() || savingNoteEdit) return;
     setSavingNoteEdit(true);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}/notes/${editingNoteId}`, {
         method: "PATCH",
@@ -518,7 +518,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok || !data.note) {
-        setError(data.error || "Unable to update note.");
+        toast.error(data.error || "Unable to update note.");
         return;
       }
       const nextNote = data.note as NoteRow;
@@ -532,9 +532,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       );
       setEditingNoteId(null);
       setNoteEditDraft("");
-      setSavedMessage("Note updated.");
+      toast.success("Note updated.");
     } catch {
-      setError("Unable to update note.");
+      toast.error("Unable to update note.");
     } finally {
       setSavingNoteEdit(false);
     }
@@ -544,7 +544,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     if (!family) return;
     setHouseholdForm(householdFormFromFamily(family));
     setEditingHousehold(true);
-    setSavedMessage(null);
+
   }
 
   useEffect(() => {
@@ -552,7 +552,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     editDeepLinkHandled.current = true;
     setHouseholdForm(householdFormFromFamily(family));
     setEditingHousehold(true);
-    setSavedMessage(null);
+
     router.replace(`/staff/families/${familyId}`, { scroll: false });
   }, [family, deepLinkEdit, familyId, router]);
 
@@ -560,15 +560,15 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     event.preventDefault();
     if (!householdForm || savingHousehold) return;
     if (!householdForm.displayName.trim()) {
-      setError("Household name is required.");
+      toast.error("Household name is required.");
       return;
     }
     if (householdForm.primaryPhone.trim() && !isValidPhone(householdForm.primaryPhone)) {
-      setError("Enter a valid household phone number.");
+      toast.error("Enter a valid household phone number.");
       return;
     }
     setSavingHousehold(true);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}`, {
         method: "PATCH",
@@ -590,14 +590,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to save household.");
+        toast.error(data.error || "Unable to save household.");
         return;
       }
       setEditingHousehold(false);
-      setSavedMessage("Household updated.");
+      toast.success("Household updated.");
       await softReload();
     } catch {
-      setError("Unable to save household.");
+      toast.error("Unable to save household.");
     } finally {
       setSavingHousehold(false);
     }
@@ -607,8 +607,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     setListModal(null);
     setGuardianForm({ ...guardian });
     setEditingGuardianId(guardian.id);
-    setSavedMessage(null);
-    setError(null);
+
+
   }
 
   function closeGuardianEdit() {
@@ -620,19 +620,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     event.preventDefault();
     if (!guardianForm || !editingGuardianId || savingGuardian) return;
     if (!guardianForm.firstName.trim() || !guardianForm.lastName.trim()) {
-      setError("Guardian first and last name are required.");
+      toast.error("Guardian first and last name are required.");
       return;
     }
     if (!isValidEmail(guardianForm.email)) {
-      setError("Enter a valid guardian email.");
+      toast.error("Enter a valid guardian email.");
       return;
     }
     if (guardianForm.phone?.trim() && !isValidPhone(guardianForm.phone)) {
-      setError("Enter a valid guardian phone number.");
+      toast.error("Enter a valid guardian phone number.");
       return;
     }
     setSavingGuardian(true);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}/guardians/${editingGuardianId}`, {
         method: "PATCH",
@@ -649,14 +649,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to save guardian.");
+        toast.error(data.error || "Unable to save guardian.");
         return;
       }
       closeGuardianEdit();
-      setSavedMessage("Guardian updated.");
+      toast.success("Guardian updated.");
       await softReload();
     } catch {
-      setError("Unable to save guardian.");
+      toast.error("Unable to save guardian.");
     } finally {
       setSavingGuardian(false);
     }
@@ -665,7 +665,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   async function setStatus(status: "active" | "archived") {
     if (lifecycleBusy) return;
     setLifecycleBusy(true);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}`, {
         method: "PATCH",
@@ -674,13 +674,13 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to update status.");
+        toast.error(data.error || "Unable to update status.");
         return;
       }
-      setSavedMessage(status === "archived" ? "Family archived." : "Family restored.");
+      toast.success(status === "archived" ? "Family archived." : "Family restored.");
       await softReload();
     } catch {
-      setError("Unable to update status.");
+      toast.error("Unable to update status.");
     } finally {
       setLifecycleBusy(false);
     }
@@ -690,17 +690,17 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     if (!family?.canDelete || lifecycleBusy) return;
     if (!window.confirm("Permanently delete this empty household? This cannot be undone.")) return;
     setLifecycleBusy(true);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to delete family.");
+        toast.error(data.error || "Unable to delete family.");
         return;
       }
       router.push("/staff/families");
     } catch {
-      setError("Unable to delete family.");
+      toast.error("Unable to delete family.");
     } finally {
       setLifecycleBusy(false);
     }
@@ -709,7 +709,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   async function setStudentLifecycle(studentId: string, nextLifecycle: string) {
     if (studentBusyId) return;
     setStudentBusyId(studentId);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/students/${studentId}`, {
         method: "PATCH",
@@ -718,13 +718,13 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to update student.");
+        toast.error(data.error || "Unable to update student.");
         return;
       }
-      setSavedMessage(nextLifecycle === "archived" ? "Student archived." : "Student restored.");
+      toast.success(nextLifecycle === "archived" ? "Student archived." : "Student restored.");
       await softReload();
     } catch {
-      setError("Unable to update student.");
+      toast.error("Unable to update student.");
     } finally {
       setStudentBusyId(null);
     }
@@ -734,18 +734,18 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     if (studentBusyId) return;
     if (!window.confirm("Permanently delete this student? This cannot be undone.")) return;
     setStudentBusyId(studentId);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/students/${studentId}`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to delete student.");
+        toast.error(data.error || "Unable to delete student.");
         return;
       }
-      setSavedMessage("Student deleted.");
+      toast.success("Student deleted.");
       await softReload();
     } catch {
-      setError("Unable to delete student.");
+      toast.error("Unable to delete student.");
     } finally {
       setStudentBusyId(null);
     }
@@ -761,20 +761,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       return;
     }
     setMemberBusyId(guardianId);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}/guardians/${guardianId}/unassign`, {
         method: "POST",
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to unassign guardian.");
+        toast.error(data.error || "Unable to unassign guardian.");
         return;
       }
-      setSavedMessage("Guardian unassigned.");
+      toast.success("Guardian unassigned.");
       await softReload();
     } catch {
-      setError("Unable to unassign guardian.");
+      toast.error("Unable to unassign guardian.");
     } finally {
       setMemberBusyId(null);
     }
@@ -790,20 +790,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       return;
     }
     setMemberBusyId(studentId);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}/students/${studentId}/unassign`, {
         method: "POST",
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to unassign student.");
+        toast.error(data.error || "Unable to unassign student.");
         return;
       }
-      setSavedMessage("Student unassigned.");
+      toast.success("Student unassigned.");
       await softReload();
     } catch {
-      setError("Unable to unassign student.");
+      toast.error("Unable to unassign student.");
     } finally {
       setMemberBusyId(null);
     }
@@ -826,7 +826,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     setAssignStudents([]);
     setSectionMenu(null);
     setAssignLoading(true);
-    setError(null);
+
     try {
       const path =
         kind === "guardians"
@@ -835,13 +835,13 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       const response = await fetch(path);
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to load assign options.");
+        toast.error(data.error || "Unable to load assign options.");
         return;
       }
       if (kind === "guardians") setAssignGuardians(data.guardians ?? []);
       else setAssignStudents(data.students ?? []);
     } catch {
-      setError("Unable to load assign options.");
+      toast.error("Unable to load assign options.");
     } finally {
       setAssignLoading(false);
     }
@@ -877,7 +877,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   async function assignGuardian(guardianId: string) {
     if (assignBusyId) return;
     setAssignBusyId(guardianId);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}/guardians/assign`, {
         method: "POST",
@@ -886,14 +886,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to assign guardian.");
+        toast.error(data.error || "Unable to assign guardian.");
         return;
       }
       closeAssignModal();
-      setSavedMessage("Guardian assigned.");
+      toast.success("Guardian assigned.");
       await softReload();
     } catch {
-      setError("Unable to assign guardian.");
+      toast.error("Unable to assign guardian.");
     } finally {
       setAssignBusyId(null);
     }
@@ -902,7 +902,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   async function assignStudent(studentId: string) {
     if (assignBusyId) return;
     setAssignBusyId(studentId);
-    setError(null);
+
     try {
       const response = await fetch(`/api/staff/families/${familyId}/students/assign`, {
         method: "POST",
@@ -911,14 +911,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to assign student.");
+        toast.error(data.error || "Unable to assign student.");
         return;
       }
       closeAssignModal();
-      setSavedMessage("Student assigned.");
+      toast.success("Student assigned.");
       await softReload();
     } catch {
-      setError("Unable to assign student.");
+      toast.error("Unable to assign student.");
     } finally {
       setAssignBusyId(null);
     }
@@ -1177,6 +1177,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
   return (
     <>
+      <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
+
       <div className="family-detail-topbar">
         <Link href="/staff/families" className="page-back">
           ← Families
@@ -1187,7 +1189,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <span className="avatar navy">{initials(family.displayName)}</span>
         <div className="family-record-hero-copy">
           <h2>{family.displayName}</h2>
-          <p className="family-record-hero-status">{formatStatusLabel(family.status)}</p>
           <p className="family-record-hero-meta">
             {[
               family.billingEmail ? `Billing: ${family.billingEmail}` : null,
@@ -1198,13 +1199,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               .join(" · ")}
           </p>
         </div>
+        <span className={`pill family-record-hero-status-pill ${statusTone(family.status)}`}>
+          {formatStatusLabel(family.status)}
+        </span>
       </section>
-
-      {error ? <p className="form-error">{error}</p> : null}
-      {inviteMessage ? <p style={{ fontSize: 14, marginBottom: 12 }}>{inviteMessage}</p> : null}
-      {savedMessage ? (
-        <p style={{ color: "var(--mint, #2f6b4f)", fontSize: 14, marginBottom: 12 }}>{savedMessage}</p>
-      ) : null}
 
       {editingHousehold && householdForm ? (
         <Panel title="Edit household" className="family-equal-panel">
@@ -1350,8 +1348,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           <div className="family-household-summary">
             <div className="family-household-summary-title">
               <strong>{family.displayName}</strong>
+              <span className={`pill ${statusTone(family.status)}`}>
+                {formatStatusLabel(family.status)}
+              </span>
             </div>
-            <p className="family-household-status-meta">{formatStatusLabel(family.status)}</p>
             <div className="family-household-dense">
               <span className="family-household-field-phone">
                 <small>Phone</small>
