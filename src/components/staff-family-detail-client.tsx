@@ -182,6 +182,107 @@ const MAX_GUARDIANS = 2;
 type FamilyListModalKind = "guardians" | "students" | "enrollments" | "bookings" | "notes";
 type AssignModalKind = "guardians" | "students" | null;
 type SectionMenuKind = "guardians" | "students" | null;
+type HouseholdLifecycleConfirm = "archive" | "restore" | "delete";
+
+function formatHouseholdAddressLines(family: {
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string;
+}): string[] {
+  // Country alone is not a real address (product always stores United States).
+  const hasLocalAddress = Boolean(
+    family.addressLine1 ||
+      family.addressLine2 ||
+      family.city ||
+      family.state ||
+      family.postalCode,
+  );
+  if (!hasLocalAddress) return [];
+
+  const lines: string[] = [];
+  const line1 = (family.addressLine1 || "").trim();
+  const line2 = (family.addressLine2 || "").trim();
+  if (line1 && line2) {
+    lines.push(line1, line2);
+  } else if (line1 || line2) {
+    lines.push(line1 || line2);
+  }
+
+  const city = (family.city || "").trim();
+  const state = (family.state || "").trim();
+  const postal = (family.postalCode || "").trim();
+  const cityStateZip = [city, [state, postal].filter(Boolean).join(" ").trim()]
+    .filter(Boolean)
+    .join(", ");
+  if (cityStateZip) lines.push(cityStateZip);
+
+  lines.push((family.country || "").trim() || "United States");
+  return lines;
+}
+
+function ConfirmActionModal({
+  title,
+  body,
+  confirmLabel,
+  destructive,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onCancel();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [busy, onCancel]);
+
+  return (
+    <div
+      className="staff-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onCancel();
+      }}
+    >
+      <div
+        className="staff-modal staff-confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="staff-confirm-modal-title"
+      >
+        <h3 id="staff-confirm-modal-title">{title}</h3>
+        <div className="staff-confirm-modal-body">
+          <p>{body}</p>
+        </div>
+        <div className="staff-modal-actions">
+          <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={destructive ? "danger-button" : "primary-button"}
+            disabled={busy}
+            onClick={onConfirm}
+          >
+            {busy ? "Working…" : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FamilyListPreview({
   total,
@@ -363,6 +464,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [assignStudents, setAssignStudents] = useState<AssignStudentOption[]>([]);
   const [assignSelectedId, setAssignSelectedId] = useState<string | null>(null);
   const [assignBusyId, setAssignBusyId] = useState<string | null>(null);
+  const [lifecycleConfirm, setLifecycleConfirm] = useState<HouseholdLifecycleConfirm | null>(null);
 
   const softReload = useCallback(async () => {
     try {
@@ -659,7 +761,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     }
   }
 
-  async function setStatus(status: "active" | "archived") {
+  async function setStatus(status: "active" | "archived", options?: { fromUndo?: boolean }) {
     if (lifecycleBusy) return;
     setLifecycleBusy(true);
 
@@ -674,7 +776,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         toast.error(data.error || "Unable to update status.");
         return;
       }
-      toast.success(status === "archived" ? "Family archived." : "Family restored.");
+      setLifecycleConfirm(null);
+      const message = status === "archived" ? "Family archived." : "Family restored.";
+      if (options?.fromUndo) {
+        toast.success(message);
+      } else {
+        const reverse: "active" | "archived" = status === "archived" ? "active" : "archived";
+        toast.success(message, {
+          action: {
+            label: "Undo",
+            onClick: () => void setStatus(reverse, { fromUndo: true }),
+          },
+        });
+      }
       await softReload();
     } catch {
       toast.error("Unable to update status.");
@@ -685,7 +799,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
   async function deleteFamily() {
     if (!family?.canDelete || lifecycleBusy) return;
-    if (!window.confirm("Permanently delete this empty household? This cannot be undone.")) return;
     setLifecycleBusy(true);
 
     try {
@@ -695,6 +808,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         toast.error(data.error || "Unable to delete family.");
         return;
       }
+      setLifecycleConfirm(null);
       router.push("/staff/families");
     } catch {
       toast.error("Unable to delete family.");
@@ -925,24 +1039,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   if (error && !family) return <p className="form-error">{error}</p>;
   if (!family) return null;
 
-  // Country alone is not a real address (product always stores United States).
-  const hasLocalAddress = Boolean(
-    family.addressLine1 ||
-      family.addressLine2 ||
-      family.city ||
-      family.state ||
-      family.postalCode,
-  );
-  const addressLine = hasLocalAddress
-    ? [
-        family.addressLine1,
-        family.addressLine2,
-        [family.city, family.state, family.postalCode].filter(Boolean).join(", "),
-        family.country || "United States",
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
+  const addressLines = formatHouseholdAddressLines(family);
   const billingCue = family.cardLast4
     ? `${(family.cardBrand || "Card").toUpperCase()} ···· ${family.cardLast4}`
     : "No card on file";
@@ -969,7 +1066,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         id: "restore",
         label: "Restore",
         tone: "restore",
-        onClick: () => void setStatus("active"),
+        onClick: () => setLifecycleConfirm("restore"),
         icon: "restore",
       });
     } else {
@@ -977,7 +1074,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         id: "archive",
         label: "Archive",
         tone: "archive",
-        onClick: () => void setStatus("archived"),
+        onClick: () => setLifecycleConfirm("archive"),
         icon: "archive",
       });
     }
@@ -986,12 +1083,34 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         id: "delete",
         label: "Delete",
         tone: "danger",
-        onClick: () => void deleteFamily(),
+        onClick: () => setLifecycleConfirm("delete"),
         icon: "delete",
       });
     }
     return buttons;
   })();
+
+  const lifecycleConfirmCopy: Record<
+    HouseholdLifecycleConfirm,
+    { title: string; body: string; confirmLabel: string; destructive?: boolean }
+  > = {
+    archive: {
+      title: "Archive this household?",
+      body: "Archived households are hidden from the default Families list. You can restore them later.",
+      confirmLabel: "Archive",
+    },
+    restore: {
+      title: "Restore this household?",
+      body: "This household will appear as active again in the Families list.",
+      confirmLabel: "Restore",
+    },
+    delete: {
+      title: "Delete this household?",
+      body: "Permanently delete this empty household? This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    },
+  };
 
   function guardianActions(g: GuardianRow): StaffRowAction[] {
     const actions: StaffRowAction[] = [
@@ -1185,6 +1304,24 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   return (
     <>
       <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
+
+      {lifecycleConfirm ? (
+        <ConfirmActionModal
+          title={lifecycleConfirmCopy[lifecycleConfirm].title}
+          body={lifecycleConfirmCopy[lifecycleConfirm].body}
+          confirmLabel={lifecycleConfirmCopy[lifecycleConfirm].confirmLabel}
+          destructive={lifecycleConfirmCopy[lifecycleConfirm].destructive}
+          busy={lifecycleBusy}
+          onCancel={() => {
+            if (!lifecycleBusy) setLifecycleConfirm(null);
+          }}
+          onConfirm={() => {
+            if (lifecycleConfirm === "archive") void setStatus("archived");
+            else if (lifecycleConfirm === "restore") void setStatus("active");
+            else void deleteFamily();
+          }}
+        />
+      ) : null}
 
       <div className="family-detail-topbar">
         <Link href="/staff/families" className="page-back">
@@ -1382,7 +1519,15 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <div className="family-household-lower">
                 <span className="family-household-field-address">
                   <small>Address</small>
-                  <strong>{addressLine || "—"}</strong>
+                  {addressLines.length ? (
+                    <div className="family-household-address-lines">
+                      {addressLines.map((line, index) => (
+                        <span key={`${index}-${line}`}>{line}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <strong>—</strong>
+                  )}
                 </span>
                 <div className="family-household-zoho-stack">
                   <span className="family-household-field-zoho-id">

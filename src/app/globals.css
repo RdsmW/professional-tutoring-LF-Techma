@@ -1476,6 +1476,33 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-field-address {
   min-width: 0;
 }
+.family-household-address-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-content);
+  font-weight: 700;
+  line-height: 1.4;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+.family-household-address-lines span {
+  display: block;
+}
+.staff-confirm-modal {
+  width: min(420px, 100%);
+}
+.staff-confirm-modal-body {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-content);
+  line-height: 1.45;
+  color: var(--ink);
+}
+.staff-confirm-modal-body p {
+  margin: 0;
+  color: var(--muted);
+}
 .family-household-zoho-stack {
   display: grid;
   gap: 14px;
@@ -1997,12 +2024,36 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   box-shadow:0 12px 28px rgba(1,3,69,.18);
   animation:app-toast-in .18s ease-out;
 }
+.app-toast--with-action{
+  grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:center;
+}
 .app-toast-message{
   margin:0;
   font-size:13px;
   font-weight:700;
   line-height:1.35;
   overflow-wrap:anywhere;
+}
+.app-toast-action{
+  border:0;
+  background:transparent;
+  color:inherit;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  cursor:pointer;
+  padding:4px 6px;
+  border-radius:6px;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+.app-toast-action:hover{
+  background:rgba(0,0,0,.06);
+}
+.app-toast--info .app-toast-action:hover{
+  background:rgba(255,255,255,.12);
 }
 .app-toast-dismiss{
   border:0;

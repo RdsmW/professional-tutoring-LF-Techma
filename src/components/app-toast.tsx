@@ -4,18 +4,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type AppToastTone = "success" | "error" | "info";
 
+export type AppToastAction = {
+  label: string;
+  onClick: () => void;
+};
+
 export type AppToast = {
   id: string;
   message: string;
   tone: AppToastTone;
+  action?: AppToastAction;
 };
 
 export type AppToastOptions = {
   /** Auto-dismiss delay. Use 0 to keep until manually dismissed. */
   durationMs?: number;
+  action?: AppToastAction;
 };
 
 const DEFAULT_DURATION_MS = 4200;
+const UNDO_DURATION_MS = 6000;
 
 export function useAppToast(durationMs = DEFAULT_DURATION_MS) {
   const [toasts, setToasts] = useState<AppToast[]>([]);
@@ -33,8 +41,10 @@ export function useAppToast(durationMs = DEFAULT_DURATION_MS) {
   const push = useCallback(
     (message: string, tone: AppToastTone = "info", options?: AppToastOptions) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      setToasts((prev) => [...prev.slice(-4), { id, message, tone }]);
-      const ms = options?.durationMs ?? durationMs;
+      const action = options?.action;
+      setToasts((prev) => [...prev.slice(-4), { id, message, tone, action }]);
+      const defaultMs = action ? UNDO_DURATION_MS : durationMs;
+      const ms = options?.durationMs ?? defaultMs;
       if (ms > 0) {
         const timer = window.setTimeout(() => dismiss(id), ms);
         timers.current.set(id, timer);
@@ -88,10 +98,22 @@ export function AppToastHost({
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`app-toast app-toast--${toast.tone}`}
+          className={`app-toast app-toast--${toast.tone}${toast.action ? " app-toast--with-action" : ""}`}
           role={toast.tone === "error" ? "alert" : "status"}
         >
           <p className="app-toast-message">{toast.message}</p>
+          {toast.action ? (
+            <button
+              type="button"
+              className="app-toast-action"
+              onClick={() => {
+                onDismiss(toast.id);
+                toast.action?.onClick();
+              }}
+            >
+              {toast.action.label}
+            </button>
+          ) : null}
           <button
             type="button"
             className="app-toast-dismiss"
