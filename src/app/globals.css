@@ -1571,20 +1571,23 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .family-household-lower {
   grid-column: 1 / -1;
-  /* Pack Address + Zoho ID adjacent — no 1fr/2fr canyon pinning ID to the far right */
-  display: flex;
+  /* Content-sized group (not stretched): Address + Zoho sit adjacent with a fixed gap */
+  justify-self: start;
+  display: inline-flex;
   flex-wrap: wrap;
-  align-items: start;
-  gap: 14px 28px;
-  width: 100%;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 14px 24px;
+  width: auto;
+  max-width: 100%;
   min-width: 0;
 }
 .family-household-field-address {
-  flex: 1 1 auto;
+  /* Never grow — flex:1 was the canyon (oversized box pushed Zoho to the far right) */
+  flex: 0 1 auto;
   min-width: 0;
-  /* Content-sized so Zoho sits immediately after; never grow into a hollow center */
-  width: max-content;
-  max-width: min(100%, max-content);
+  width: auto;
+  max-width: min(100%, 22rem);
 }
 .family-household-field-zoho-id {
   flex: 0 0 auto;
@@ -1638,9 +1641,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .family-household-field-card {
     grid-column: span 3;
   }
-  .family-household-lower {
-    gap: 14px 24px;
-  }
   .family-household-field-email strong {
     white-space: nowrap;
     overflow: hidden;
@@ -1660,12 +1660,16 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
     grid-column: 1 / -1;
   }
   .family-household-lower {
+    justify-self: stretch;
+    display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
     gap: 14px;
   }
   .family-household-field-address,
   .family-household-field-zoho-id {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     width: auto;
     max-width: 100%;
   }
