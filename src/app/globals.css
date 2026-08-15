@@ -1413,7 +1413,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   align-items: start;
   width: 100%;
 }
-.family-household-dense > span {
+.family-household-dense > span,
+.family-household-lower > span,
+.family-household-zoho-stack > span {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1455,14 +1457,29 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.family-household-dense-wide {
+.family-household-lower {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px 20px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
 }
-.family-household-field-zoho-id {
-  grid-column: span 4;
+.family-household-field-address {
+  min-width: 0;
+}
+.family-household-zoho-stack {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
 }
 .family-household-field-zoho-url {
-  grid-column: span 8;
+  min-width: 0;
+}
+.family-household-field-zoho-url .family-zoho-url-link {
+  display: block;
+  width: 100%;
 }
 @media (max-width: 900px) {
   .family-household-dense {
@@ -1472,10 +1489,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .family-household-field-email,
   .family-household-field-owner,
   .family-household-field-card {
-    grid-column: span 3;
-  }
-  .family-household-field-zoho-id,
-  .family-household-field-zoho-url {
     grid-column: span 3;
   }
   .family-household-field-email strong {
@@ -1492,10 +1505,11 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .family-household-field-email,
   .family-household-field-owner,
   .family-household-field-card,
-  .family-household-field-zoho-id,
-  .family-household-field-zoho-url,
-  .family-household-dense-wide {
+  .family-household-lower {
     grid-column: 1 / -1;
+  }
+  .family-household-lower {
+    grid-template-columns: 1fr;
   }
   .family-household-field-email strong {
     white-space: normal;
@@ -1739,8 +1753,16 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-edit-grid {
   gap: 12px;
 }
-.family-household-edit-zoho-url {
+.family-household-edit-zoho-row {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+.family-household-edit-zoho-url {
+  min-width: 0;
 }
 .family-household-edit-actions {
   grid-column: 1 / -1;
@@ -1748,12 +1770,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   gap: 8px;
   flex-wrap: wrap;
 }
-.field-hint {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
+@media (max-width: 640px) {
+  .family-household-edit-zoho-row {
+    grid-template-columns: 1fr;
+  }
 }
 .family-assign-modal {
   width: min(440px, 100%);

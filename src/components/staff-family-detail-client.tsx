@@ -1211,7 +1211,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 onChange={(e) => setHouseholdForm({ ...householdForm, displayName: e.target.value })}
                 required
               />
-              <small className="field-hint">Name won’t auto-update after you edit it.</small>
             </label>
             <label>
               Phone
@@ -1260,22 +1259,24 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               Country
               <input value="United States" disabled readOnly />
             </label>
-            <label>
-              Zoho CRM ID
-              <input
-                value={householdForm.zohoCrmId}
-                onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmId: e.target.value })}
-              />
-            </label>
-            <label className="family-household-edit-zoho-url">
-              Zoho CRM URL
-              <input
-                type="url"
-                placeholder="https://…"
-                value={householdForm.zohoCrmUrl}
-                onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmUrl: e.target.value })}
-              />
-            </label>
+            <div className="family-household-edit-zoho-row">
+              <label>
+                Zoho CRM ID
+                <input
+                  value={householdForm.zohoCrmId}
+                  onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmId: e.target.value })}
+                />
+              </label>
+              <label className="family-household-edit-zoho-url">
+                Zoho CRM URL
+                <input
+                  type="url"
+                  placeholder="https://…"
+                  value={householdForm.zohoCrmUrl}
+                  onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmUrl: e.target.value })}
+                />
+              </label>
+            </div>
             <label>
               Billing owner
               <select
@@ -1368,30 +1369,34 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 <small>Card</small>
                 <strong>{billingCue}</strong>
               </span>
-              <span className="family-household-dense-wide">
-                <small>Address</small>
-                <strong>{addressLine || "—"}</strong>
-              </span>
-              <span className="family-household-field-zoho-id">
-                <small>Zoho CRM ID</small>
-                <strong>{family.zohoCrmId || "—"}</strong>
-              </span>
-              <span className="family-household-field-zoho-url">
-                <small>Zoho CRM URL</small>
-                {zohoLink ? (
-                  <a
-                    href={zohoLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="family-zoho-url-link"
-                    title={zohoLink}
-                  >
-                    {zohoLink}
-                  </a>
-                ) : (
-                  <strong>—</strong>
-                )}
-              </span>
+              <div className="family-household-lower">
+                <span className="family-household-field-address">
+                  <small>Address</small>
+                  <strong>{addressLine || "—"}</strong>
+                </span>
+                <div className="family-household-zoho-stack">
+                  <span className="family-household-field-zoho-id">
+                    <small>Zoho CRM ID</small>
+                    <strong>{family.zohoCrmId || "—"}</strong>
+                  </span>
+                  <span className="family-household-field-zoho-url">
+                    <small>Zoho CRM URL</small>
+                    {zohoLink ? (
+                      <a
+                        href={zohoLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="family-zoho-url-link"
+                        title={zohoLink}
+                      >
+                        {zohoLink}
+                      </a>
+                    ) : (
+                      <strong>—</strong>
+                    )}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </Panel>
