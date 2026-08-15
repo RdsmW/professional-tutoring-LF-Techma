@@ -5,10 +5,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Panel } from "@/components/ui";
 import {
+  IconArchive,
   IconClose,
-  IconExternalLink,
+  IconLink,
   IconPencil,
   IconPlus,
+  IconRestore,
+  IconTrash,
+  IconUserPlus,
   StaffIconButton,
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
@@ -129,7 +133,19 @@ function initials(name: string) {
 
 function formatWhen(value: string) {
   try {
-    return new Date(value).toLocaleString();
+    const date = new Date(value);
+    const now = new Date();
+    const sameYear = date.getFullYear() === now.getFullYear();
+    const day = date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      ...(sameYear ? {} : { year: "numeric" }),
+    });
+    const time = date.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return `${day} · ${time}`;
   } catch {
     return "—";
   }
@@ -246,7 +262,13 @@ function SectionPlusMenu({
   onClose: () => void;
   disabled?: boolean;
   disabledReason?: string;
-  items: Array<{ id: string; label: string; onSelect: () => void; disabled?: boolean }>;
+  items: Array<{
+    id: string;
+    label: string;
+    onSelect: () => void;
+    disabled?: boolean;
+    icon?: ReactNode;
+  }>;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -293,7 +315,10 @@ function SectionPlusMenu({
                 item.onSelect();
               }}
             >
-              {item.label}
+              <span className="family-section-plus-item-icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="family-section-plus-item-label">{item.label}</span>
             </button>
           ))}
         </div>
@@ -906,15 +931,42 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const previewBookings = family.activity.bookings.slice(0, PREVIEW_LIMIT);
   const previewNotes = family.notes.slice(0, PREVIEW_LIMIT);
 
-  const householdActions = lifecycleActions({
-    isArchived,
-    canDelete: family.canDelete,
-    busy: lifecycleBusy,
-    onEdit: openHouseholdEdit,
-    onArchive: () => void setStatus("archived"),
-    onRestore: () => void setStatus("active"),
-    onDelete: () => void deleteFamily(),
-  }).filter((action) => action.id !== "edit");
+  const householdLifecycleButtons = (() => {
+    const buttons: Array<{
+      id: string;
+      label: string;
+      tone: "archive" | "restore" | "danger";
+      onClick: () => void;
+      icon: "archive" | "restore" | "delete";
+    }> = [];
+    if (isArchived) {
+      buttons.push({
+        id: "restore",
+        label: "Restore",
+        tone: "restore",
+        onClick: () => void setStatus("active"),
+        icon: "restore",
+      });
+    } else {
+      buttons.push({
+        id: "archive",
+        label: "Archive",
+        tone: "archive",
+        onClick: () => void setStatus("archived"),
+        icon: "archive",
+      });
+    }
+    if (family.canDelete) {
+      buttons.push({
+        id: "delete",
+        label: "Delete",
+        tone: "danger",
+        onClick: () => void deleteFamily(),
+        icon: "delete",
+      });
+    }
+    return buttons;
+  })();
 
   function guardianActions(g: GuardianRow): StaffRowAction[] {
     const actions: StaffRowAction[] = [
@@ -1090,10 +1142,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                   <StaffIconButton
                     label="Edit"
                     title="Edit"
-                    tone="edit"
+                    tone="muted"
+                    className="family-notes-edit-btn"
                     onClick={() => startEditNote(note)}
                   >
-                    <IconPencil size={15} />
+                    <IconPencil size={14} />
                   </StaffIconButton>
                 </td>
               </tr>
@@ -1115,11 +1168,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       <section className="family-record-hero">
         <span className="avatar navy">{initials(family.displayName)}</span>
         <div className="family-record-hero-copy">
-          <div className="family-record-hero-title">
-            <h2>{family.displayName}</h2>
-            <span className={`pill ${statusTone(family.status)}`}>{formatStatusLabel(family.status)}</span>
-          </div>
-          <p>
+          <h2>{family.displayName}</h2>
+          <p className="family-record-hero-status">{formatStatusLabel(family.status)}</p>
+          <p className="family-record-hero-meta">
             {[
               family.billingEmail ? `Billing: ${family.billingEmail}` : null,
               family.billingOwnerName,
@@ -1147,7 +1198,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 onChange={(e) => setHouseholdForm({ ...householdForm, displayName: e.target.value })}
                 required
               />
-              <small className="field-hint">Editing locks auto-name (`LastName - billing@email`).</small>
+              <small className="field-hint">Name won’t auto-update after you edit it.</small>
             </label>
             <label>
               Phone
@@ -1203,7 +1254,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmId: e.target.value })}
               />
             </label>
-            <label>
+            <label className="family-household-edit-zoho-url">
               Zoho CRM URL
               <input
                 type="url"
@@ -1253,34 +1304,52 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 label="Edit"
                 title="Edit"
                 tone="edit"
+                disabled={lifecycleBusy}
                 onClick={openHouseholdEdit}
               >
                 <IconPencil size={15} />
               </StaffIconButton>
-              <StaffRowActions label="Household actions" actions={householdActions} />
+              {householdLifecycleButtons.map((action) => (
+                <StaffIconButton
+                  key={action.id}
+                  label={action.label}
+                  title={action.label}
+                  tone={action.tone}
+                  disabled={lifecycleBusy}
+                  onClick={action.onClick}
+                >
+                  {action.icon === "archive" ? (
+                    <IconArchive size={15} />
+                  ) : action.icon === "restore" ? (
+                    <IconRestore size={15} />
+                  ) : (
+                    <IconTrash size={15} />
+                  )}
+                </StaffIconButton>
+              ))}
             </div>
           </div>
           <div className="family-household-summary">
             <div className="family-household-summary-title">
               <strong>{family.displayName}</strong>
-              <span className={`pill ${statusTone(family.status)}`}>
-                {formatStatusLabel(family.status)}
-              </span>
             </div>
+            <p className="family-household-status-meta">{formatStatusLabel(family.status)}</p>
             <div className="family-household-dense">
-              <span>
+              <span className="family-household-field-phone">
                 <small>Phone</small>
                 <strong>{family.primaryPhone || "—"}</strong>
               </span>
-              <span>
+              <span className="family-household-field-email">
                 <small>Billing email</small>
-                <strong>{family.billingEmail || "—"}</strong>
+                <strong title={family.billingEmail || undefined}>
+                  {family.billingEmail || "—"}
+                </strong>
               </span>
-              <span>
+              <span className="family-household-field-owner">
                 <small>Billing owner</small>
                 <strong>{family.billingOwnerName || "—"}</strong>
               </span>
-              <span>
+              <span className="family-household-field-card">
                 <small>Card</small>
                 <strong>{billingCue}</strong>
               </span>
@@ -1288,30 +1357,25 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 <small>Address</small>
                 <strong>{addressLine || "—"}</strong>
               </span>
-              <span className="family-household-dense-wide">
-                <small>Zoho CRM</small>
-                <strong className="family-zoho-value">
-                  {family.zohoCrmId || zohoLink ? (
-                    <>
-                      <span>{family.zohoCrmId || "Linked"}</span>
-                      {zohoLink ? (
-                        <a
-                          href={zohoLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="family-zoho-link"
-                          title="Open in Zoho CRM"
-                          aria-label="Open in Zoho CRM"
-                        >
-                          <IconExternalLink size={15} />
-                          <span>Open</span>
-                        </a>
-                      ) : null}
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </strong>
+              <span className="family-household-field-zoho-id">
+                <small>Zoho CRM ID</small>
+                <strong>{family.zohoCrmId || "—"}</strong>
+              </span>
+              <span className="family-household-field-zoho-url">
+                <small>Zoho CRM URL</small>
+                {zohoLink ? (
+                  <a
+                    href={zohoLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="family-zoho-url-link"
+                    title={zohoLink}
+                  >
+                    {zohoLink}
+                  </a>
+                ) : (
+                  <strong>—</strong>
+                )}
               </span>
             </div>
           </div>
@@ -1330,12 +1394,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 {
                   id: "add-new",
                   label: "Add new",
+                  icon: <IconUserPlus size={14} />,
                   onSelect: () =>
                     router.push(`/staff/families?newGuardian=1&householdId=${encodeURIComponent(familyId)}`),
                 },
                 {
                   id: "assign",
                   label: "Assign existing",
+                  icon: <IconLink size={14} />,
                   onSelect: () => void openAssignModal("guardians"),
                 },
               ]}
@@ -1361,12 +1427,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 {
                   id: "add-new",
                   label: "Add new",
+                  icon: <IconUserPlus size={14} />,
                   onSelect: () =>
                     router.push(`/staff/students?new=1&householdId=${encodeURIComponent(familyId)}`),
                 },
                 {
                   id: "assign",
                   label: "Assign existing",
+                  icon: <IconLink size={14} />,
                   onSelect: () => void openAssignModal("students"),
                 },
               ]}
