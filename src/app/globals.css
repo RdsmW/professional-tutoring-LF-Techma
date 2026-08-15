@@ -1741,37 +1741,123 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   color: var(--muted);
   font-weight: 600;
 }
+.family-assign-modal {
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 560px);
+  overflow: hidden;
+  padding: var(--space-5);
+}
+.family-assign-modal .family-list-modal-header {
+  margin-bottom: var(--space-3);
+}
+.family-assign-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 0 1 auto;
+}
 .family-assign-search {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  margin-bottom: 12px;
-  font-size: 13px;
+  margin: 0;
+  font-size: var(--text-content);
   font-weight: 800;
   color: var(--muted);
 }
+.family-assign-search input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fbfcfa;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: var(--text-content);
+  font-weight: 400;
+  color: var(--ink);
+  outline: none;
+}
+.family-assign-search input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-soft);
+}
+.family-assign-search input::placeholder {
+  color: #9aa3ad;
+  font-weight: 400;
+}
 .family-assign-list {
-  display: grid;
-  gap: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: min(280px, 42vh);
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
 }
 .family-assign-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
+  align-items: flex-start;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
 }
-.family-assign-row:first-child {
-  border-top: 0;
+.family-assign-row:hover:not(:disabled) {
+  background: var(--blue-soft);
 }
-.family-assign-row strong,
-.family-assign-row small {
+.family-assign-row.is-selected {
+  background: var(--edit-action-soft);
+  border-color: #c5d0da;
+}
+.family-assign-row:focus-visible {
+  outline: 2px solid rgba(60, 104, 145, 0.35);
+  outline-offset: 1px;
+}
+.family-assign-row:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.family-assign-row-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.family-assign-row-copy strong {
   display: block;
+  font-size: var(--text-content);
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.3;
 }
-.family-assign-row small {
-  margin-top: 3px;
+.family-assign-row-copy small {
+  display: block;
   color: var(--muted);
   font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.family-assign-modal .staff-modal-actions {
+  flex: 0 0 auto;
+  margin-top: var(--space-3);
+  padding-top: 12px;
+}
+.family-assign-modal .family-section-plus-hint {
+  margin: 0;
 }
 .sr-only {
   position: absolute;

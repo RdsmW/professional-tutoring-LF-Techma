@@ -360,6 +360,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignGuardians, setAssignGuardians] = useState<AssignGuardianOption[]>([]);
   const [assignStudents, setAssignStudents] = useState<AssignStudentOption[]>([]);
+  const [assignSelectedId, setAssignSelectedId] = useState<string | null>(null);
   const [assignBusyId, setAssignBusyId] = useState<string | null>(null);
 
   const softReload = useCallback(async () => {
@@ -808,9 +809,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     }
   }
 
+  function closeAssignModal() {
+    setAssignModal(null);
+    setAssignQuery("");
+    setAssignSelectedId(null);
+    setAssignGuardians([]);
+    setAssignStudents([]);
+    setAssignBusyId(null);
+  }
+
   async function openAssignModal(kind: "guardians" | "students") {
     setAssignModal(kind);
     setAssignQuery("");
+    setAssignSelectedId(null);
     setAssignGuardians([]);
     setAssignStudents([]);
     setSectionMenu(null);
@@ -838,6 +849,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
   async function searchAssign(kind: "guardians" | "students", q: string) {
     setAssignQuery(q);
+    setAssignSelectedId(null);
     setAssignLoading(true);
     try {
       const params = new URLSearchParams();
@@ -856,6 +868,12 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     }
   }
 
+  async function confirmAssign() {
+    if (!assignModal || !assignSelectedId || assignBusyId) return;
+    if (assignModal === "guardians") await assignGuardian(assignSelectedId);
+    else await assignStudent(assignSelectedId);
+  }
+
   async function assignGuardian(guardianId: string) {
     if (assignBusyId) return;
     setAssignBusyId(guardianId);
@@ -871,7 +889,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         setError(data.error || "Unable to assign guardian.");
         return;
       }
-      setAssignModal(null);
+      closeAssignModal();
       setSavedMessage("Guardian assigned.");
       await softReload();
     } catch {
@@ -896,7 +914,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         setError(data.error || "Unable to assign student.");
         return;
       }
-      setAssignModal(null);
+      closeAssignModal();
       setSavedMessage("Student assigned.");
       await softReload();
     } catch {
@@ -1596,24 +1614,27 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           className="staff-modal-backdrop"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setAssignModal(null);
+            if (event.target === event.currentTarget) closeAssignModal();
           }}
         >
           <div
-            className="staff-modal family-list-modal"
+            className="staff-modal family-assign-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="family-assign-title"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") closeAssignModal();
+            }}
           >
             <div className="family-list-modal-header">
               <h3 id="family-assign-title">
                 {assignModal === "guardians" ? "Assign guardian" : "Assign student"}
               </h3>
-              <StaffIconButton label="Close" title="Cancel" tone="muted" onClick={() => setAssignModal(null)}>
+              <StaffIconButton label="Close" title="Close" tone="muted" onClick={closeAssignModal}>
                 <IconClose size={18} />
               </StaffIconButton>
             </div>
-            <div className="family-list-modal-body">
+            <div className="family-assign-modal-body">
               <label className="family-assign-search">
                 Search
                 <input
@@ -1622,6 +1643,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                   placeholder={
                     assignModal === "guardians" ? "Name or email…" : "Student name…"
                   }
+                  autoFocus
                 />
               </label>
               {assignLoading ? <p className="family-empty">Loading…</p> : null}
@@ -1629,32 +1651,30 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 assignGuardians.length === 0 ? (
                   <p className="family-empty">No available guardians to assign.</p>
                 ) : (
-                  <div className="family-assign-list">
-                    {assignGuardians.map((g) => (
-                      <div key={g.id} className="family-assign-row">
-                        <span>
-                          <strong>
-                            {g.firstName} {g.lastName}
-                          </strong>
-                          <small>
-                            {g.email} · {g.householdDisplayName}
-                          </small>
-                        </span>
+                  <div className="family-assign-list" role="listbox" aria-label="Available guardians">
+                    {assignGuardians.map((g) => {
+                      const selected = assignSelectedId === g.id;
+                      return (
                         <button
+                          key={g.id}
                           type="button"
-                          className="primary-button family-add-note-btn"
-                          disabled={assignBusyId === g.id || guardiansAtMax}
-                          title={
-                            guardiansAtMax
-                              ? `Max ${MAX_GUARDIANS} guardians — unassign one first.`
-                              : "Assign"
-                          }
-                          onClick={() => void assignGuardian(g.id)}
+                          role="option"
+                          aria-selected={selected}
+                          className={`family-assign-row${selected ? " is-selected" : ""}`}
+                          disabled={guardiansAtMax || !!assignBusyId}
+                          onClick={() => setAssignSelectedId(g.id)}
                         >
-                          {assignBusyId === g.id ? "Assigning…" : "Assign"}
+                          <span className="family-assign-row-copy">
+                            <strong>
+                              {g.firstName} {g.lastName}
+                            </strong>
+                            <small>
+                              {g.email} · {g.householdDisplayName}
+                            </small>
+                          </span>
                         </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )
               ) : null}
@@ -1662,33 +1682,50 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 assignStudents.length === 0 ? (
                   <p className="family-empty">No available students to assign.</p>
                 ) : (
-                  <div className="family-assign-list">
-                    {assignStudents.map((s) => (
-                      <div key={s.id} className="family-assign-row">
-                        <span>
-                          <strong>{s.displayName}</strong>
-                          <small>
-                            {s.gradeLabel || "—"} · {s.householdDisplayName}
-                          </small>
-                        </span>
+                  <div className="family-assign-list" role="listbox" aria-label="Available students">
+                    {assignStudents.map((s) => {
+                      const selected = assignSelectedId === s.id;
+                      return (
                         <button
+                          key={s.id}
                           type="button"
-                          className="primary-button family-add-note-btn"
-                          disabled={assignBusyId === s.id}
-                          onClick={() => void assignStudent(s.id)}
+                          role="option"
+                          aria-selected={selected}
+                          className={`family-assign-row${selected ? " is-selected" : ""}`}
+                          disabled={!!assignBusyId}
+                          onClick={() => setAssignSelectedId(s.id)}
                         >
-                          {assignBusyId === s.id ? "Assigning…" : "Assign"}
+                          <span className="family-assign-row-copy">
+                            <strong>{s.displayName}</strong>
+                            <small>
+                              {s.gradeLabel || "—"} · {s.householdDisplayName}
+                            </small>
+                          </span>
                         </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )
               ) : null}
               {guardiansAtMax && assignModal === "guardians" ? (
-                <p className="family-section-plus-hint" style={{ marginTop: 12 }}>
+                <p className="family-section-plus-hint">
                   Max {MAX_GUARDIANS} guardians — unassign one before assigning another.
                 </p>
               ) : null}
+            </div>
+            <div className="staff-modal-actions">
+              <button
+                type="button"
+                className="action-btn action-btn-edit"
+                disabled={
+                  !assignSelectedId ||
+                  !!assignBusyId ||
+                  (assignModal === "guardians" && guardiansAtMax)
+                }
+                onClick={() => void confirmAssign()}
+              >
+                {assignBusyId ? "Assigning…" : "Assign"}
+              </button>
             </div>
           </div>
         </div>
