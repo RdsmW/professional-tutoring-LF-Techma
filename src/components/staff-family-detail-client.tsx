@@ -1274,10 +1274,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           <thead>
             <tr>
               <th className="family-notes-col-content">Note</th>
-              <th className="family-notes-col-who">Creator</th>
-              <th className="family-notes-col-when">Created</th>
-              <th className="family-notes-col-who">Editor</th>
-              <th className="family-notes-col-when">Updated</th>
+              <th className="family-notes-col-who">Created By</th>
+              <th className="family-notes-col-when">Created Time</th>
               <th className="family-notes-col-edit" aria-label="Actions" />
             </tr>
           </thead>
@@ -1289,8 +1287,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 </td>
                 <td className="family-notes-col-who">{note.authorDisplayName}</td>
                 <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
-                <td className="family-notes-col-who">{note.editorDisplayName || "—"}</td>
-                <td className="family-notes-col-when">{formatWhen(note.updatedAt)}</td>
                 <td className="family-notes-col-edit">
                   <StaffIconButton
                     label="Edit"
@@ -1542,23 +1538,23 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                   <small>Zoho CRM ID</small>
                   <strong>{family.zohoCrmId || "—"}</strong>
                 </span>
-                <span className="family-household-field-zoho-url">
-                  <small>Zoho CRM URL</small>
-                  {zohoLink ? (
-                    <a
-                      href={zohoLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="family-zoho-url-link"
-                      title={zohoLink}
-                    >
-                      {zohoLink}
-                    </a>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
               </div>
+              <span className="family-household-field-zoho-url">
+                <small>Zoho CRM URL</small>
+                {zohoLink ? (
+                  <a
+                    href={zohoLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="family-zoho-url-link"
+                    title={zohoLink}
+                  >
+                    {zohoLink}
+                  </a>
+                ) : (
+                  <strong>—</strong>
+                )}
+              </span>
             </div>
           </div>
         </Panel>
@@ -1751,19 +1747,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             </div>
             <dl className="family-note-edit-meta">
               <div>
-                <dt>Creator</dt>
+                <dt>Created By</dt>
                 <dd>{editingNote?.authorDisplayName || "—"}</dd>
               </div>
               <div>
-                <dt>Created</dt>
+                <dt>Created Time</dt>
                 <dd>{formatWhen(editingNote?.createdAt)}</dd>
               </div>
               <div>
-                <dt>Editor</dt>
+                <dt>Edited By</dt>
                 <dd>{editingNote?.editorDisplayName || "—"}</dd>
               </div>
               <div>
-                <dt>Updated</dt>
+                <dt>Edited Time</dt>
                 <dd>{formatWhen(editingNote?.updatedAt)}</dd>
               </div>
             </dl>
