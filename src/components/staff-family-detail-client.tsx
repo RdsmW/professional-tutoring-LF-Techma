@@ -925,14 +925,24 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   if (error && !family) return <p className="form-error">{error}</p>;
   if (!family) return null;
 
-  const addressLine = [
-    family.addressLine1,
-    family.addressLine2,
-    [family.city, family.state, family.postalCode].filter(Boolean).join(", "),
-    family.country || "United States",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // Country alone is not a real address (product always stores United States).
+  const hasLocalAddress = Boolean(
+    family.addressLine1 ||
+      family.addressLine2 ||
+      family.city ||
+      family.state ||
+      family.postalCode,
+  );
+  const addressLine = hasLocalAddress
+    ? [
+        family.addressLine1,
+        family.addressLine2,
+        [family.city, family.state, family.postalCode].filter(Boolean).join(", "),
+        family.country || "United States",
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
   const billingCue = family.cardLast4
     ? `${(family.cardBrand || "Card").toUpperCase()} ···· ${family.cardLast4}`
     : "No card on file";
