@@ -169,7 +169,7 @@ export const tutors = pgTable("tutors", {
 
 export const subjects = pgTable("subjects", {
   id: uuid("id").defaultRandom().primaryKey(),
-  code: varchar("code", { length: 64 }).notNull(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
   name: text("name").notNull(),
   category: text("category"),
   active: boolean("active").notNull().default(true),

@@ -68,3 +68,80 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "Unable to load courses." }, { status: 500 });
   }
 }
+
+type PostBody = {
+  code?: string;
+  name?: string;
+  description?: string | null;
+  termLabel?: string | null;
+  scheduleSummary?: string | null;
+  capacity?: number;
+  active?: boolean;
+};
+
+export async function POST(request: Request) {
+  try {
+    const context = await getStaffContext();
+    if (!context) {
+      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+    }
+
+    const body = (await request.json()) as PostBody;
+    const name = (body.name ?? "").trim();
+    const code = (body.code ?? "").trim().toUpperCase();
+    if (!name) {
+      return NextResponse.json({ ok: false, error: "Name is required." }, { status: 400 });
+    }
+    if (!code) {
+      return NextResponse.json({ ok: false, error: "Code is required." }, { status: 400 });
+    }
+
+    const capacity =
+      typeof body.capacity === "number" && Number.isFinite(body.capacity) && body.capacity > 0
+        ? Math.floor(body.capacity)
+        : 20;
+
+    const database = requireDb();
+    const [course] = await database
+      .insert(courseOfferings)
+      .values({
+        code,
+        name,
+        description: body.description == null ? null : String(body.description).trim() || null,
+        termLabel: body.termLabel == null ? null : String(body.termLabel).trim() || null,
+        scheduleSummary:
+          body.scheduleSummary == null ? null : String(body.scheduleSummary).trim() || null,
+        capacity,
+        active: body.active !== false,
+      })
+      .returning({
+        id: courseOfferings.id,
+        code: courseOfferings.code,
+        name: courseOfferings.name,
+        termLabel: courseOfferings.termLabel,
+        scheduleSummary: courseOfferings.scheduleSummary,
+        capacity: courseOfferings.capacity,
+        enrolledCount: courseOfferings.enrolledCount,
+        active: courseOfferings.active,
+        description: courseOfferings.description,
+      });
+
+    return NextResponse.json({
+      ok: true,
+      course: {
+        id: course.id,
+        code: course.code,
+        name: course.name,
+        termLabel: course.termLabel,
+        scheduleSummary: course.scheduleSummary,
+        capacity: course.capacity,
+        enrolledCount: course.enrolledCount,
+        active: course.active,
+        description: course.description,
+      },
+    });
+  } catch (error) {
+    console.warn("[staff/courses] POST soft-fail", error);
+    return NextResponse.json({ ok: false, error: "Unable to create course." }, { status: 500 });
+  }
+}

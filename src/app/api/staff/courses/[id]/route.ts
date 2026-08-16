@@ -8,6 +8,12 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 type PatchBody = {
   active?: boolean;
+  name?: string;
+  code?: string;
+  description?: string | null;
+  termLabel?: string | null;
+  scheduleSummary?: string | null;
+  capacity?: number;
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -23,13 +29,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const body = (await request.json()) as PatchBody;
-    if (typeof body.active !== "boolean") {
-      return NextResponse.json(
-        { ok: false, error: "Body must include active: boolean." },
-        { status: 400 },
-      );
-    }
-
     const database = requireDb();
     const [existing] = await database
       .select({ id: courseOfferings.id })
@@ -41,9 +40,59 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Course not found." }, { status: 404 });
     }
 
+    const patch: {
+      active?: boolean;
+      name?: string;
+      code?: string;
+      description?: string | null;
+      termLabel?: string | null;
+      scheduleSummary?: string | null;
+      capacity?: number;
+      updatedAt: Date;
+    } = { updatedAt: new Date() };
+
+    if (typeof body.active === "boolean") patch.active = body.active;
+    if (body.name !== undefined) {
+      const name = body.name.trim();
+      if (!name) {
+        return NextResponse.json({ ok: false, error: "Name cannot be empty." }, { status: 400 });
+      }
+      patch.name = name;
+    }
+    if (body.code !== undefined) {
+      const code = body.code.trim().toUpperCase();
+      if (!code) {
+        return NextResponse.json({ ok: false, error: "Code cannot be empty." }, { status: 400 });
+      }
+      patch.code = code;
+    }
+    if (body.description !== undefined) {
+      patch.description = body.description == null ? null : String(body.description).trim() || null;
+    }
+    if (body.termLabel !== undefined) {
+      patch.termLabel = body.termLabel == null ? null : String(body.termLabel).trim() || null;
+    }
+    if (body.scheduleSummary !== undefined) {
+      patch.scheduleSummary =
+        body.scheduleSummary == null ? null : String(body.scheduleSummary).trim() || null;
+    }
+    if (body.capacity !== undefined) {
+      if (typeof body.capacity !== "number" || !Number.isFinite(body.capacity) || body.capacity < 1) {
+        return NextResponse.json({ ok: false, error: "Capacity must be a positive number." }, { status: 400 });
+      }
+      patch.capacity = Math.floor(body.capacity);
+    }
+
+    if (Object.keys(patch).length === 1) {
+      return NextResponse.json(
+        { ok: false, error: "Body must include at least one editable field." },
+        { status: 400 },
+      );
+    }
+
     const [course] = await database
       .update(courseOfferings)
-      .set({ active: body.active, updatedAt: new Date() })
+      .set(patch)
       .where(eq(courseOfferings.id, id))
       .returning({
         id: courseOfferings.id,

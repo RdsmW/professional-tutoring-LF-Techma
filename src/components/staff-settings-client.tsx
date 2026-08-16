@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { IntegrationStatusPanel } from "@/components/staff-integrations-client";
+import { StaffSettingsCoursesSubjectsPanel } from "@/components/staff-settings-courses-subjects";
 import { APP_TIMEZONE } from "@/lib/constants";
 import {
   DEFAULT_CANCELLATION_POLICY_CODE,
@@ -52,6 +53,7 @@ type PriceBook = {
 const TABS = [
   { id: "policy", label: "Policy" },
   { id: "prices", label: "Prices" },
+  { id: "courses", label: "Courses / Subjects" },
   { id: "history", label: "History" },
   { id: "integrations", label: "Integrations" },
   { id: "recycle", label: "Recycle bin" },
@@ -490,6 +492,8 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
           ) : null}
         </Panel>
       ) : null}
+
+      {tab === "courses" ? <StaffSettingsCoursesSubjectsPanel /> : null}
 
       {tab === "history" ? (
         <Panel title="Policy history">
