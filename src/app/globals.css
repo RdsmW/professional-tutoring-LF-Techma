@@ -1819,15 +1819,88 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-edit-subjects-field {
   min-width: 0;
 }
-.staff-edit-subjects-cloud {
-  margin-top: 8px;
+.staff-edit-payment-tutoring-band {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px 20px;
+  align-items: stretch;
+  min-width: 0;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
 }
-.staff-edit-empty-hint {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+.staff-edit-payment-pane,
+.staff-edit-tutoring-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 100%;
+}
+.staff-edit-payment-pane .staff-edit-section-label,
+.staff-edit-tutoring-pane .staff-edit-section-label {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.staff-edit-payment-pane .staff-edit-field-row,
+.staff-edit-tutoring-pane .staff-edit-field-row {
+  grid-column: auto;
+}
+.staff-edit-subjects-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  min-height: 42px;
+  padding: 5px 8px;
+  box-sizing: border-box;
+  border: 1px solid #c9cec6;
+  background: var(--canvas);
+}
+.staff-edit-subjects-control:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-soft);
+}
+.staff-edit-subjects-chip {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: #f4f6f3;
+  color: var(--ink);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
   text-transform: none;
   letter-spacing: 0;
+}
+.staff-edit-subjects-chip:hover,
+.staff-edit-subjects-chip:focus-visible {
+  border-color: var(--navy);
+  background: var(--blue-soft);
+  outline: none;
+}
+.staff-record-edit-shell .input-grid select.staff-edit-subjects-add,
+.staff-edit-subjects-add {
+  flex: 1 1 7.5rem;
+  min-width: 7rem;
+  width: auto;
+  margin-top: 0;
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+.staff-record-edit-shell .input-grid select.staff-edit-subjects-add:focus,
+.staff-edit-subjects-add:focus {
+  border: 0;
+  box-shadow: none;
+  outline: none;
 }
 .staff-edit-chip-block {
   display: flex;
@@ -1842,12 +1915,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-}
-.staff-edit-learning-notes {
-  margin-top: 4px;
-}
-.staff-edit-payment-row {
-  max-width: 640px;
 }
 /* Long select labels: visible wrap face (~2 lines); native select stays interactive */
 .staff-edit-select-wrap-face {
@@ -1920,6 +1987,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .staff-edit-field-row--5 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .staff-edit-payment-tutoring-band {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 960px) {
   .staff-edit-field-row--4,
@@ -1936,9 +2006,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .staff-edit-field-row--4,
   .staff-edit-field-row--5 {
     grid-template-columns: 1fr;
-  }
-  .staff-edit-payment-row {
-    max-width: none;
   }
 }
 /* Guardian Household: Family 40% | Parent role 30% | Payment 30% */

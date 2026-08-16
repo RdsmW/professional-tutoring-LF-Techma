@@ -470,77 +470,104 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
           hideLabel
         />
 
-        <StaffEditSectionLabel>Tutoring</StaffEditSectionLabel>
-        <div className="staff-edit-field-row staff-edit-field-row--4">
-          <label>
-            Academic year
-            <input
-              value={profileForm.academicYear}
-              onChange={(e) => setProfileForm({ ...profileForm, academicYear: e.target.value })}
-              placeholder="2025-2026"
-            />
-          </label>
-          <label className="staff-edit-subjects-field">
-            Subjects
-            <select
-              id="student-subject-add"
-              defaultValue=""
-              onChange={(e) => {
-                const value = e.target.value;
-                if (!value) return;
-                if (!profileForm.subjectIds.includes(value)) {
-                  setProfileForm({ ...profileForm, subjectIds: [...profileForm.subjectIds, value] });
-                }
-                e.target.value = "";
-              }}
-            >
-              <option value="">Add subject…</option>
-              {availableSubjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </select>
-            <div className="field-cloud staff-edit-subjects-cloud">
-              {profileForm.subjectIds.map((subjectId) => {
-                const subject =
-                  catalogSubjects.find((row) => row.id === subjectId) ||
-                  student.subjects.find((row) => row.id === subjectId);
-                return (
-                  <button
-                    key={subjectId}
-                    type="button"
-                    onClick={() =>
-                      setProfileForm({
-                        ...profileForm,
-                        subjectIds: profileForm.subjectIds.filter((id) => id !== subjectId),
-                      })
-                    }
-                  >
-                    {subject?.name ?? subjectId} ×
-                  </button>
-                );
-              })}
-              {profileForm.subjectIds.length === 0 ? (
-                <span className="staff-edit-empty-hint">No subjects selected.</span>
-              ) : null}
+        <div className="staff-edit-payment-tutoring-band">
+          <div className="staff-edit-payment-pane">
+            <StaffEditSectionLabel>Payment</StaffEditSectionLabel>
+            <div className="staff-edit-field-row staff-edit-field-row--2">
+              <StaffWrapSelect
+                label="Payment plan"
+                value={profileForm.paymentPlan}
+                onChange={(paymentPlan) => setProfileForm({ ...profileForm, paymentPlan })}
+                options={ACADEMIC_PAYMENT_PLANS.options}
+              />
+              <label>
+                Deposit ($)
+                <input
+                  value={profileForm.depositDollars}
+                  onChange={(e) => setProfileForm({ ...profileForm, depositDollars: e.target.value })}
+                  inputMode="decimal"
+                  placeholder="0.00"
+                />
+              </label>
             </div>
-          </label>
-          <StaffWrapSelect
-            label="Hours/Rates"
-            value={profileForm.hoursRatePackage}
-            onChange={(hoursRatePackage) => setProfileForm({ ...profileForm, hoursRatePackage })}
-            options={ACADEMIC_RATE_PACKAGES.options}
-          />
-          <StaffWrapSelect
-            label="Advanced Subjects Hours/Rates"
-            value={profileForm.advancedHoursRatePackage}
-            onChange={(advancedHoursRatePackage) =>
-              setProfileForm({ ...profileForm, advancedHoursRatePackage })
-            }
-            options={ACADEMIC_ADVANCED_RATE_PACKAGES.options}
-          />
+          </div>
+          <div className="staff-edit-tutoring-pane">
+            <StaffEditSectionLabel>Tutoring</StaffEditSectionLabel>
+            <div className="staff-edit-field-row staff-edit-field-row--2">
+              <label>
+                Academic year
+                <input
+                  value={profileForm.academicYear}
+                  onChange={(e) => setProfileForm({ ...profileForm, academicYear: e.target.value })}
+                  placeholder="2025-2026"
+                />
+              </label>
+              <label className="staff-edit-subjects-field">
+                Subjects
+                <div className="staff-edit-subjects-control" role="group" aria-label="Subjects">
+                  {profileForm.subjectIds.map((subjectId) => {
+                    const subject =
+                      catalogSubjects.find((row) => row.id === subjectId) ||
+                      student.subjects.find((row) => row.id === subjectId);
+                    return (
+                      <button
+                        key={subjectId}
+                        type="button"
+                        className="staff-edit-subjects-chip"
+                        onClick={() =>
+                          setProfileForm({
+                            ...profileForm,
+                            subjectIds: profileForm.subjectIds.filter((id) => id !== subjectId),
+                          })
+                        }
+                      >
+                        {subject?.name ?? subjectId} ×
+                      </button>
+                    );
+                  })}
+                  <select
+                    id="student-subject-add"
+                    className="staff-edit-subjects-add"
+                    defaultValue=""
+                    aria-label="Add subject"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (!value) return;
+                      if (!profileForm.subjectIds.includes(value)) {
+                        setProfileForm({ ...profileForm, subjectIds: [...profileForm.subjectIds, value] });
+                      }
+                      e.target.value = "";
+                    }}
+                  >
+                    <option value="">Add subject…</option>
+                    {availableSubjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+            </div>
+            <div className="staff-edit-field-row staff-edit-field-row--2">
+              <StaffWrapSelect
+                label="Hours/Rates"
+                value={profileForm.hoursRatePackage}
+                onChange={(hoursRatePackage) => setProfileForm({ ...profileForm, hoursRatePackage })}
+                options={ACADEMIC_RATE_PACKAGES.options}
+              />
+              <StaffWrapSelect
+                label="Advanced Subjects Hours/Rates"
+                value={profileForm.advancedHoursRatePackage}
+                onChange={(advancedHoursRatePackage) =>
+                  setProfileForm({ ...profileForm, advancedHoursRatePackage })
+                }
+                options={ACADEMIC_ADVANCED_RATE_PACKAGES.options}
+              />
+            </div>
+          </div>
         </div>
+
         <div className="staff-edit-field-full staff-edit-chip-block">
           <span className="staff-edit-inline-label">Preferred schedule</span>
           <div className="subject-multi-select" role="group" aria-label="Preferred schedule">
@@ -592,35 +619,6 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
               );
             })}
           </div>
-          <div className="staff-edit-learning-notes">
-            <StaffMultilineField
-              label="Additional notes (optional)"
-              value={profileForm.learningNeedNotes}
-              onChange={(learningNeedNotes) => setProfileForm({ ...profileForm, learningNeedNotes })}
-              rows={2}
-              placeholder="Optional context beyond the chips…"
-              fullWidth={false}
-            />
-          </div>
-        </div>
-
-        <StaffEditSectionLabel>Payment</StaffEditSectionLabel>
-        <div className="staff-edit-field-row staff-edit-field-row--2 staff-edit-payment-row">
-          <StaffWrapSelect
-            label="Payment plan"
-            value={profileForm.paymentPlan}
-            onChange={(paymentPlan) => setProfileForm({ ...profileForm, paymentPlan })}
-            options={ACADEMIC_PAYMENT_PLANS.options}
-          />
-          <label>
-            Deposit ($)
-            <input
-              value={profileForm.depositDollars}
-              onChange={(e) => setProfileForm({ ...profileForm, depositDollars: e.target.value })}
-              inputMode="decimal"
-              placeholder="0.00"
-            />
-          </label>
         </div>
       </StaffRecordEditShell>
     </>
