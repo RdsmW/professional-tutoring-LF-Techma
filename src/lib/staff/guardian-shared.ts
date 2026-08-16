@@ -89,3 +89,12 @@ export function formatGuardianRelationshipRole(role: GuardianRelationshipRole | 
   if (role === "parent_2") return "Parent 2";
   return null;
 }
+
+/** Soft blue (Parent 1) / soft violet (Parent 2); null when unset. */
+export function guardianRelationshipRoleTone(
+  role: GuardianRelationshipRole | null | undefined,
+): "blue" | "violet" | null {
+  if (role === "parent_1") return "blue";
+  if (role === "parent_2") return "violet";
+  return null;
+}

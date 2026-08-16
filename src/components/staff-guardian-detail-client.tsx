@@ -22,6 +22,7 @@ import {
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
+import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import {
   formatGuardianRelationshipRole,
   type GuardianRelationshipRole,
@@ -1164,7 +1165,11 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                 </span>
                 <span>
                   <small>Parent role</small>
-                  <strong>{roleLabel || "—"}</strong>
+                  {roleLabel ? (
+                    <GuardianRelationshipRolePill role={guardian.relationshipRole} />
+                  ) : (
+                    <strong>—</strong>
+                  )}
                 </span>
                 <span>
                   <small>Responsible for payment</small>

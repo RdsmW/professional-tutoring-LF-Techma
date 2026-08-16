@@ -8,8 +8,8 @@ import { DirectoryViewToggle } from "@/components/directory-view-toggle";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
 import { StaffDirectoryFilters, StaffRowActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
-import { formatGuardianRelationshipRole } from "@/lib/staff/guardian-shared";
 
 type GuardianRow = {
   id: string;
@@ -166,7 +166,6 @@ export function StaffGuardiansClient() {
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
               const familyId = row.household.id;
-              const roleLabel = formatGuardianRelationshipRole(row.relationshipRole) ?? "—";
               const actions = [
                 {
                   id: "edit",
@@ -192,7 +191,10 @@ export function StaffGuardiansClient() {
                     </span>
                   }
                   fields={[
-                    { label: "Parent role", value: roleLabel },
+                    {
+                      label: "Parent role",
+                      value: <GuardianRelationshipRolePill role={row.relationshipRole} />,
+                    },
                     { label: "Family", value: row.household.displayName },
                   ]}
                   actions={actions}
@@ -214,7 +216,6 @@ export function StaffGuardiansClient() {
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
               const familyId = row.household.id;
-              const roleLabel = formatGuardianRelationshipRole(row.relationshipRole) ?? "—";
               return (
                 <div
                   key={row.id}
@@ -232,7 +233,9 @@ export function StaffGuardiansClient() {
                   <span>
                     <strong>{fullName}</strong>
                   </span>
-                  <span>{roleLabel}</span>
+                  <span>
+                    <GuardianRelationshipRolePill role={row.relationshipRole} />
+                  </span>
                   <span>{row.email}</span>
                   <span>{row.household.displayName}</span>
                   <span className="staff-dir-col-status">

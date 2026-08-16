@@ -18,8 +18,8 @@ import {
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { isValidPhone } from "@/lib/validation/contact";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
+import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
-import { formatGuardianRelationshipRole } from "@/lib/staff/guardian-shared";
 
 type NoteRow = {
   id: string;
@@ -1127,7 +1127,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </div>
         {rows.map((g) => {
           const portalBadge = guardianPortalBadge(g);
-          const roleLabel = formatGuardianRelationshipRole(g.relationshipRole) ?? "—";
           return (
           <div
             key={g.id}
@@ -1151,7 +1150,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 <small className="family-guardian-link-status">{portalBadge}</small>
               ) : null}
             </span>
-            <span>{roleLabel}</span>
+            <span>
+              <GuardianRelationshipRolePill role={g.relationshipRole} />
+            </span>
             <span>{g.email}</span>
             <span className="family-detail-col-flag">{yesNo(g.isBillingOwner)}</span>
             <span className="family-detail-col-flag">{yesNo(g.canManageStudents)}</span>
