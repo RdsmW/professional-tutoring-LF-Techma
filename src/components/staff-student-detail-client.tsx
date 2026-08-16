@@ -111,7 +111,6 @@ type ProfileForm = {
   gradeLabel: string;
   graduationYear: string;
   schoolName: string;
-  email: string;
   cellPhone: string;
   learningNeedSubjectIds: string[];
   learningNeedNotes: string;
@@ -132,7 +131,6 @@ type ProfileForm = {
   state: string;
   postalCode: string;
   subjectIds: string[];
-  supportNotesRestricted: string;
   lifecycle: string;
 };
 
@@ -221,7 +219,6 @@ function toProfileForm(student: StudentDetail): ProfileForm {
     gradeLabel: student.gradeLabel ?? "",
     graduationYear: student.graduationYear != null ? String(student.graduationYear) : "",
     schoolName: student.schoolName ?? "",
-    email: student.email ?? "",
     cellPhone: student.cellPhone ?? "",
     learningNeedSubjectIds: learningEdit.subjectIds,
     learningNeedNotes: learningEdit.notes,
@@ -242,7 +239,6 @@ function toProfileForm(student: StudentDetail): ProfileForm {
     state: student.state ?? "",
     postalCode: student.postalCode ?? "",
     subjectIds: student.subjects.map((subject) => subject.id),
-    supportNotesRestricted: student.supportNotesRestricted ?? "",
     lifecycle: student.lifecycle,
   };
 }
@@ -503,7 +499,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           gradeLabel: profileForm.gradeLabel || null,
           graduationYear: profileForm.graduationYear ? Number(profileForm.graduationYear) : null,
           schoolName: profileForm.schoolName || null,
-          email: profileForm.email || null,
           cellPhone: profileForm.cellPhone || null,
           learningNeeds:
             composeLearningNeeds(profileForm.learningNeedSubjectIds, profileForm.learningNeedNotes) || null,
@@ -525,7 +520,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           postalCode: profileForm.postalCode || null,
           country: "United States",
           subjectIds: profileForm.subjectIds,
-          supportNotesRestricted: profileForm.supportNotesRestricted || null,
           lifecycle: profileForm.lifecycle,
         }),
       });
@@ -844,7 +838,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               </select>
             </label>
             <label>
-              Grad year
+              Grade Year
               <select
                 value={profileForm.graduationYear}
                 onChange={(e) => setProfileForm({ ...profileForm, graduationYear: e.target.value })}
@@ -865,15 +859,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               />
             </label>
             <label>
-              Email
-              <input
-                type="email"
-                value={profileForm.email}
-                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-              />
-            </label>
-            <label>
-              Cell phone
+              Phone
               <input
                 type="tel"
                 value={profileForm.cellPhone}
@@ -987,7 +973,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               />
             </label>
             <label>
-              Hours/rates (standard)
+              Hours/Rates
               <select
                 value={profileForm.hoursRatePackage}
                 onChange={(e) => setProfileForm({ ...profileForm, hoursRatePackage: e.target.value })}
@@ -1001,7 +987,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               </select>
             </label>
             <label>
-              Hours/rates (advanced)
+              Advanced Subjects Hours/Rates
               <select
                 value={profileForm.advancedHoursRatePackage}
                 onChange={(e) => setProfileForm({ ...profileForm, advancedHoursRatePackage: e.target.value })}
@@ -1144,14 +1130,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 />
               </label>
             </div>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Restricted support notes
-              <textarea
-                value={profileForm.supportNotesRestricted}
-                onChange={(e) => setProfileForm({ ...profileForm, supportNotesRestricted: e.target.value })}
-                rows={3}
-              />
-            </label>
 
             <div className="family-household-edit-actions">
               <button type="submit" className="primary-button" disabled={savingProfile}>
@@ -1204,7 +1182,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   <strong>{student.gradeLabel || "—"}</strong>
                 </span>
                 <span>
-                  <small>Grad year</small>
+                  <small>Grade Year</small>
                   <strong>{student.graduationYear ?? "—"}</strong>
                 </span>
                 <span>
@@ -1212,11 +1190,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   <strong>{student.schoolName || "—"}</strong>
                 </span>
                 <span>
-                  <small>Email</small>
-                  <strong>{student.email || "—"}</strong>
-                </span>
-                <span>
-                  <small>Cell phone</small>
+                  <small>Phone</small>
                   <strong>{student.cellPhone || "—"}</strong>
                 </span>
                 <span>
@@ -1296,11 +1270,11 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   <strong>{scheduleLabels.length > 0 ? scheduleLabels.join(" · ") : "—"}</strong>
                 </span>
                 <span>
-                  <small>Hours/rates (standard)</small>
+                  <small>Hours/Rates</small>
                   <strong>{optionLabel(ACADEMIC_RATE_PACKAGES, student.hoursRatePackage)}</strong>
                 </span>
                 <span>
-                  <small>Hours/rates (advanced)</small>
+                  <small>Advanced Subjects Hours/Rates</small>
                   <strong>{optionLabel(ACADEMIC_ADVANCED_RATE_PACKAGES, student.advancedHoursRatePackage)}</strong>
                 </span>
               </div>
@@ -1386,14 +1360,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               </p>
             )}
             {learningNotesText ? <p className="student-learning-needs-notes">{learningNotesText}</p> : null}
-            {student.supportNotesRestricted ? (
-              <span>
-                <small style={{ display: "block", color: "var(--muted)", fontSize: 12, fontWeight: 800 }}>
-                  Restricted support notes
-                </small>
-                <strong style={{ whiteSpace: "pre-wrap" }}>{student.supportNotesRestricted}</strong>
-              </span>
-            ) : null}
           </div>
         </Panel>
       </div>
