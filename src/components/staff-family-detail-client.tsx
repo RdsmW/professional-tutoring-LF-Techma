@@ -1547,26 +1547,39 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               </span>
             </div>
             <div className="family-household-dense">
-              <span className="family-household-field-phone">
-                <small>Phone</small>
-                <strong>{family.primaryPhone || "—"}</strong>
-              </span>
-              <span className="family-household-field-payer">
-                <small>Responsible for payment</small>
-                <strong>{family.billingOwnerName || "—"}</strong>
-                <span className="family-household-payer-line" title={family.billingEmail || undefined}>
-                  {family.billingEmail || "—"}
+              <div className="family-household-upper">
+                <span className="family-household-field-phone">
+                  <small>Phone</small>
+                  <strong>{family.primaryPhone || "—"}</strong>
                 </span>
-                <span className="family-household-payer-line">{payerPhone || "—"}</span>
-              </span>
-              <span className="family-household-field-card">
-                <small>Card on file</small>
-                <strong>{cardLabel}</strong>
-              </span>
-              <span className="family-household-field-autocharge">
-                <small>Auto-charge</small>
-                <strong>{yesNo(family.autoCharge)}</strong>
-              </span>
+                <span className="family-household-field-payer">
+                  <small>Responsible for payment</small>
+                  {!family.billingOwnerName && !family.billingEmail && !payerPhone ? (
+                    <strong>—</strong>
+                  ) : (
+                    <>
+                      <strong>{family.billingOwnerName || "—"}</strong>
+                      <span
+                        className="family-household-payer-line"
+                        title={family.billingEmail || undefined}
+                      >
+                        {family.billingEmail || "—"}
+                      </span>
+                      {payerPhone ? (
+                        <span className="family-household-payer-line">{payerPhone}</span>
+                      ) : null}
+                    </>
+                  )}
+                </span>
+                <span className="family-household-field-card">
+                  <small>Card on file</small>
+                  <strong>{cardLabel}</strong>
+                </span>
+                <span className="family-household-field-autocharge">
+                  <small>Auto-charge</small>
+                  <strong>{yesNo(family.autoCharge)}</strong>
+                </span>
+              </div>
               <div className="family-household-lower">
                 <span className="family-household-field-address">
                   <small>Address</small>

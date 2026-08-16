@@ -1520,13 +1520,29 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   flex: 0 0 auto;
 }
 .family-household-dense {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+.family-household-upper,
+.family-household-lower {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 14px 20px;
   align-items: start;
   width: 100%;
+  min-width: 0;
 }
-.family-household-dense > span,
+/* Phone compact | Payer | Card | Auto-charge — balanced, no canyon */
+.family-household-upper {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr) minmax(0, 1.15fr) minmax(0, 0.95fr);
+}
+/* Address 30% | Zoho ID 30% | Zoho URL 40% */
+.family-household-lower {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 3fr) minmax(0, 4fr);
+}
+.family-household-upper > span,
 .family-household-lower > span {
   display: flex;
   flex-direction: column;
@@ -1552,18 +1568,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   overflow-wrap: break-word;
   word-break: normal;
 }
-.family-household-field-phone {
-  grid-column: span 2;
-}
-.family-household-field-payer {
-  grid-column: span 6;
-}
-.family-household-field-card {
-  grid-column: span 2;
-}
-.family-household-field-autocharge {
-  grid-column: span 2;
-}
 .family-household-payer-line {
   display: block;
   font-size: var(--text-content);
@@ -1578,15 +1582,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .family-household-field-payer strong {
   margin-bottom: 2px;
-}
-.family-household-lower {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 3fr) minmax(0, 4fr);
-  gap: 14px 20px;
-  align-items: start;
-  width: 100%;
-  min-width: 0;
 }
 .family-household-field-address,
 .family-household-field-zoho-id,
@@ -1629,16 +1624,11 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   white-space: normal;
 }
 @media (max-width: 900px) {
-  .family-household-dense {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  .family-household-field-phone,
-  .family-household-field-card,
-  .family-household-field-autocharge {
-    grid-column: span 3;
+  .family-household-upper {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .family-household-field-payer {
-    grid-column: span 6;
+    grid-column: 1 / -1;
   }
   .family-household-payer-line {
     white-space: nowrap;
@@ -1647,21 +1637,12 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   }
 }
 @media (max-width: 640px) {
-  .family-household-dense {
-    grid-template-columns: 1fr;
-  }
-  .family-household-field-phone,
-  .family-household-field-payer,
-  .family-household-field-card,
-  .family-household-field-autocharge,
-  .family-household-lower {
-    grid-column: 1 / -1;
-  }
+  .family-household-upper,
   .family-household-lower {
     grid-template-columns: 1fr;
-    width: 100%;
-    max-width: 100%;
-    gap: 14px;
+  }
+  .family-household-field-payer {
+    grid-column: auto;
   }
   .family-household-field-address,
   .family-household-field-zoho-id,
