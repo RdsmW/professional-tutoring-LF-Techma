@@ -13,6 +13,7 @@ import {
   type GuardianRelationshipRole,
 } from "@/lib/staff/guardians";
 import { getStaffContext } from "@/lib/staff/session";
+import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 import { isValidEmail, isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
 export async function POST(
@@ -51,6 +52,11 @@ export async function POST(
     }
     if (phone && !isValidPhone(phone)) {
       return NextResponse.json({ ok: false, error: "Enter a valid phone number." }, { status: 400 });
+    }
+
+    const staffBlock = await assertNotStaffAsGuardian({ email });
+    if (staffBlock) {
+      return NextResponse.json({ ok: false, error: staffBlock }, { status: 400 });
     }
 
     const database = requireDb();

@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { requireDb } from "@/lib/db";
 import { guardians, households } from "@/lib/db/schema";
 import { safeCurrentUser } from "@/lib/auth/clerk";
+import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 
 export async function GET(
   _request: Request,
@@ -70,6 +71,14 @@ export async function POST(
       user?.primaryEmailAddress?.emailAddress ??
       user?.emailAddresses?.[0]?.emailAddress ??
       guardian.email;
+
+    const staffBlock = await assertNotStaffAsGuardian({
+      email,
+      clerkUserId: session.userId,
+    });
+    if (staffBlock) {
+      return NextResponse.json({ ok: false, error: staffBlock }, { status: 400 });
+    }
 
     await database
       .update(guardians)

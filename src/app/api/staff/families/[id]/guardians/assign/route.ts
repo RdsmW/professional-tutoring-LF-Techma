@@ -9,6 +9,7 @@ import {
 } from "@/lib/staff/household-display-name";
 import { nextAvailableRelationshipRole } from "@/lib/staff/guardians";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
+import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 
 /** Assign an existing guardian (orphan or other household) to this family. */
 export async function POST(
@@ -42,6 +43,13 @@ export async function POST(
     const [guardian] = await database.select().from(guardians).where(eq(guardians.id, guardianId)).limit(1);
     if (!guardian) {
       return NextResponse.json({ ok: false, error: "Guardian not found." }, { status: 404 });
+    }
+    const staffBlock = await assertNotStaffAsGuardian({
+      email: guardian.email,
+      clerkUserId: guardian.clerkUserId,
+    });
+    if (staffBlock) {
+      return NextResponse.json({ ok: false, error: staffBlock }, { status: 400 });
     }
     if (guardian.householdId === householdId) {
       return NextResponse.json({ ok: false, error: "Guardian is already on this family." }, { status: 400 });

@@ -1407,6 +1407,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-notes-list-modal .family-notes-table-wrap {
   overflow: visible;
   margin: 0;
+  width: max-content;
+  max-width: 100%;
 }
 .family-preview-guardians {
   border: 0;
@@ -1427,6 +1429,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-notes-table-wrap {
   overflow-x: auto;
   margin: 0;
+  width: max-content;
+  max-width: 100%;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -1436,7 +1440,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   height: 0;
 }
 .family-notes-table {
-  /* Pack meta next to note; grow only as content needs (capped by container) */
+  /* Pack meta next to note; no full-width canyon on the right */
   width: max-content;
   max-width: 100%;
   table-layout: auto;
@@ -1466,11 +1470,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   z-index: 1;
 }
 .family-notes-table .family-notes-col-content {
-  /* Flexible note column (fills remaining when table hits max-width) */
-  width: auto;
-  min-width: 0;
+  width: max-content;
   max-width: 28rem;
-  padding-right: 12px;
+  min-width: 12rem;
+  padding-right: 16px;
 }
 .family-notes-body {
   white-space: pre-wrap;
@@ -1497,10 +1500,11 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-notes-table .family-notes-col-who,
 .family-notes-table .family-notes-col-when,
 .family-notes-table .family-notes-col-edit {
-  width: 1%; /* max-content equivalent for table columns */
+  width: max-content;
   white-space: nowrap;
   padding-left: 0;
-  padding-right: 10px;
+  padding-right: 12px;
+  vertical-align: middle;
 }
 .family-notes-table .family-notes-col-edit {
   padding-right: 0;
@@ -1646,12 +1650,52 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   width: 100%;
   min-width: 0;
 }
-/* Guardian Identity: First|Last|Email|Phone (25% each); Address|Other (50% each) */
+/* Guardian Identity: Row1 First|Last|Email|Phone; Row2 mailing address full; Row3 other info full */
 .guardian-identity-dense .family-household-upper {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
-.guardian-identity-dense .family-household-lower {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+.guardian-identity-dense .guardian-identity-address-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+.guardian-identity-other-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+}
+.guardian-identity-other-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+}
+.guardian-other-info-text {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.guardian-other-info-empty {
+  color: var(--muted);
+  font-weight: 600;
+}
+.guardian-other-info-field textarea {
+  display: block;
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  background: #fbfcfa;
+  color: var(--ink);
+  padding: 11px;
+  margin-top: 6px;
+  font-size: var(--text-content);
+  font-weight: 600;
+  line-height: 1.45;
+  outline: none;
+}
+.guardian-other-info-field textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-soft);
 }
 /* Guardian Household: Family 40% | Parent role 30% | Payment 30% */
 .guardian-household-dense .family-household-upper {
@@ -1800,7 +1844,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
     grid-template-columns: 1fr;
   }
   .guardian-identity-dense .family-household-upper,
-  .guardian-identity-dense .family-household-lower,
+  .guardian-identity-dense .guardian-identity-address-row,
   .guardian-household-dense .family-household-upper {
     grid-template-columns: 1fr;
   }

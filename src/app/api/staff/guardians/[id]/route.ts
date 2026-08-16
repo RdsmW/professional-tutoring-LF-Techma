@@ -15,6 +15,7 @@ import {
   type GuardianRelationshipRole,
 } from "@/lib/staff/guardians";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
+import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 import { isValidEmail, isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
 type PatchBody = {
@@ -106,6 +107,13 @@ export async function PATCH(
       const email = body.email.trim().toLowerCase();
       if (!isValidEmail(email)) {
         return NextResponse.json({ ok: false, error: "Enter a valid email address." }, { status: 400 });
+      }
+      const staffBlock = await assertNotStaffAsGuardian({
+        email,
+        clerkUserId: existing.clerkUserId,
+      });
+      if (staffBlock) {
+        return NextResponse.json({ ok: false, error: staffBlock }, { status: 400 });
       }
       updates.email = email;
     }

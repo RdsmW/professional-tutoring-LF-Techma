@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { requireDb } from "@/lib/db";
 import { guardians } from "@/lib/db/schema";
 import { getStaffContext } from "@/lib/staff/session";
+import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 
 type InviteBody = {
   guardianId?: string;
@@ -35,6 +36,13 @@ export async function POST(
 
     if (!guardian) {
       return NextResponse.json({ ok: false, error: "Guardian not found." }, { status: 404 });
+    }
+    const staffBlock = await assertNotStaffAsGuardian({
+      email: guardian.email,
+      clerkUserId: guardian.clerkUserId,
+    });
+    if (staffBlock) {
+      return NextResponse.json({ ok: false, error: staffBlock }, { status: 400 });
     }
     if (guardian.clerkUserId && guardian.inviteAcceptedAt) {
       return NextResponse.json({ ok: false, error: "Guardian already accepted an invite." }, { status: 400 });

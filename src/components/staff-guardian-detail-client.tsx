@@ -975,15 +975,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                 onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
               />
             </label>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Other information
-              <textarea
-                value={profileForm.otherInformation}
-                onChange={(e) => setProfileForm({ ...profileForm, otherInformation: e.target.value })}
-                rows={3}
-                placeholder="Optional context about this guardian…"
-              />
-            </label>
             <label>
               Street
               <input
@@ -1022,6 +1013,15 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             <label>
               Country
               <input value="United States" disabled readOnly />
+            </label>
+            <label className="guardian-other-info-field" style={{ gridColumn: "1 / -1" }}>
+              Other information
+              <textarea
+                value={profileForm.otherInformation}
+                onChange={(e) => setProfileForm({ ...profileForm, otherInformation: e.target.value })}
+                rows={4}
+                placeholder="Optional context about this guardian…"
+              />
             </label>
             <label>
               Parent role
@@ -1112,7 +1112,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                   <strong>{guardian.phone || "—"}</strong>
                 </span>
               </div>
-              <div className="family-household-lower">
+              <div className="family-household-lower guardian-identity-address-row">
                 <span className="family-household-field-address">
                   <small>Mailing address</small>
                   {addressLines.length ? (
@@ -1125,11 +1125,15 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                     <strong>—</strong>
                   )}
                 </span>
-                <span>
+              </div>
+              <div className="guardian-identity-other-row">
+                <span className="guardian-identity-other-field">
                   <small>Other information</small>
-                  <strong style={{ whiteSpace: "pre-wrap" }}>
-                    {guardian.otherInformation || "—"}
-                  </strong>
+                  {guardian.otherInformation?.trim() ? (
+                    <strong className="guardian-other-info-text">{guardian.otherInformation}</strong>
+                  ) : (
+                    <strong className="guardian-other-info-empty">No other information</strong>
+                  )}
                 </span>
               </div>
             </div>

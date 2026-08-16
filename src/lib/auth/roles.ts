@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { resolveAppRoleSafe, safeCurrentUser } from "@/lib/auth/clerk";
 import { requireDb } from "@/lib/db";
 import { guardians, households, staffProfiles } from "@/lib/db/schema";
+import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 
 export type AppRole = "staff" | "family";
 
@@ -30,6 +31,14 @@ export async function ensureFamilyGuardian() {
     user.primaryEmailAddress?.emailAddress ??
     user.emailAddresses[0]?.emailAddress ??
     `${clerkUserId}@example.local`;
+
+  // Staff must never be created or linked as guardians.
+  const staffBlock = await assertNotStaffAsGuardian({ email, clerkUserId });
+  if (staffBlock) {
+    console.warn("[ensureFamilyGuardian] blocked staff identity", { clerkUserId, email });
+    return null;
+  }
+
   const clerkFirst = user.firstName?.trim() || null;
   const clerkLast = user.lastName?.trim() || null;
   const firstName = clerkFirst || "Parent";

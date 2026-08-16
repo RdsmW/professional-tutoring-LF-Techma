@@ -5,6 +5,7 @@ import { requireDb } from "@/lib/db";
 import { guardians, households, students } from "@/lib/db/schema";
 import { listStaffFamilies } from "@/lib/staff/families";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
+import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 
 type NewFamilyBody = {
   displayName?: string;
@@ -97,6 +98,23 @@ export async function POST(request: Request) {
       );
     }
 
+    const billingStaffBlock = await assertNotStaffAsGuardian({ email: billingEmail });
+    if (billingStaffBlock) {
+      return NextResponse.json({ ok: false, error: billingStaffBlock }, { status: 400 });
+    }
+
+    const secondEmail = (body.secondEmail ?? "").trim().toLowerCase();
+    const secondGuardianRequested =
+      Boolean(secondEmail) &&
+      Boolean((body.secondFirstName ?? "").trim()) &&
+      Boolean((body.secondLastName ?? "").trim());
+    if (secondGuardianRequested) {
+      const secondStaffBlock = await assertNotStaffAsGuardian({ email: secondEmail });
+      if (secondStaffBlock) {
+        return NextResponse.json({ ok: false, error: secondStaffBlock }, { status: 400 });
+      }
+    }
+
     const database = requireDb();
     const now = new Date();
     const [household] = await database
@@ -139,10 +157,9 @@ export async function POST(request: Request) {
       .set({ billingOwnerGuardianId: billingGuardian.id, updatedAt: now })
       .where(eq(households.id, household.id));
 
-    const secondEmail = (body.secondEmail ?? "").trim().toLowerCase();
     let secondGuardianId: string | null = null;
     let secondInviteToken: string | null = null;
-    if (secondEmail && (body.secondFirstName ?? "").trim() && (body.secondLastName ?? "").trim()) {
+    if (secondGuardianRequested) {
       secondInviteToken = randomBytes(24).toString("hex");
       const [second] = await database
         .insert(guardians)
