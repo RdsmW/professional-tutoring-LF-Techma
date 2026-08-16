@@ -63,7 +63,7 @@ type SettingsTab = (typeof TABS)[number]["id"];
 
 type RecycledStaffNote = {
   id: string;
-  kind: "guardian_note" | "household_note" | "student_note";
+  kind: "guardian_note" | "household_note" | "student_note" | "tutor_note";
   body: string;
   authorDisplayName: string;
   createdAt: string;
@@ -553,7 +553,7 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
         <Panel title="Recycle bin">
           <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 0 }}>
             Soft-deleted notes stay here for {retentionDays} days, then are permanently removed. Restore returns a
-            note to its family, guardian, or student record.
+            note to its family, guardian, student, or tutor record.
           </p>
           {recycleError ? <p className="form-error">{recycleError}</p> : null}
           {recycleLoading ? (
@@ -574,7 +574,9 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
                           ? "Family note"
                           : note.kind === "student_note"
                             ? "Student note"
-                            : "Guardian note"}
+                            : note.kind === "tutor_note"
+                              ? "Tutor note"
+                              : "Guardian note"}
                       </span>
                     </strong>
                     <span className="settings-recycle-body">{note.body}</span>

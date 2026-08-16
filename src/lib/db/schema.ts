@@ -179,7 +179,14 @@ export const tutors = pgTable("tutors", {
   phone: varchar("phone", { length: 64 }),
   active: boolean("active").notNull().default(true),
   maxSeatsPerSlot: integer("max_seats_per_slot").notNull().default(1),
+  /** Legacy free-text; prefer tutor_notes for staff threaded notes. */
   notes: text("notes"),
+  addressLine1: text("address_line1"),
+  addressLine2: text("address_line2"),
+  city: text("city"),
+  state: varchar("state", { length: 32 }),
+  postalCode: varchar("postal_code", { length: 32 }),
+  country: text("country").notNull().default("United States"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -553,6 +560,23 @@ export const studentNotes = pgTable("student_notes", {
   studentId: uuid("student_id")
     .notNull()
     .references(() => students.id, { onDelete: "cascade" }),
+  authorStaffId: uuid("author_staff_id").references(() => staffProfiles.id),
+  authorDisplayName: text("author_display_name").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  editorStaffId: uuid("editor_staff_id").references(() => staffProfiles.id),
+  editorDisplayName: text("editor_display_name"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedByStaffId: uuid("deleted_by_staff_id").references(() => staffProfiles.id),
+});
+
+/** Staff notes on a tutor. Soft-deleted for ~30 days (Settings → Recycle bin). */
+export const tutorNotes = pgTable("tutor_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tutorId: uuid("tutor_id")
+    .notNull()
+    .references(() => tutors.id, { onDelete: "cascade" }),
   authorStaffId: uuid("author_staff_id").references(() => staffProfiles.id),
   authorDisplayName: text("author_display_name").notNull(),
   body: text("body").notNull(),

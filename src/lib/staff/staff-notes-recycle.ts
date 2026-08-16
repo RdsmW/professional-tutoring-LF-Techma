@@ -1,13 +1,16 @@
 /**
- * Shared soft-delete / Settings recycle-bin helpers for staff entity notes.
- * Reuse this pattern when Student and Tutor notes modules are added
+ * Shared soft-delete / Settings recycle-bin helpers for staff entity notes
  * (soft-delete columns + list/restore in Settings → Recycle bin, ~30-day purge).
  */
 
 export const STAFF_NOTE_RECYCLE_DAYS = 30;
 
 /** Recycle item kinds currently supported in Settings. */
-export type StaffRecycledNoteKind = "guardian_note" | "household_note" | "student_note";
+export type StaffRecycledNoteKind =
+  | "guardian_note"
+  | "household_note"
+  | "student_note"
+  | "tutor_note";
 
 export type StaffRecycledNote = {
   id: string;

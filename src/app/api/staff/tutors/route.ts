@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { and, desc, eq, ilike, or, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { bookings, tutorSubjects, tutors } from "@/lib/db/schema";
+import { bookings, tutorNotes, tutorSubjects, tutors } from "@/lib/db/schema";
+import { HOUSEHOLD_COUNTRY_US } from "@/lib/staff/household-display-name";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 type NewTutorBody = {
@@ -11,6 +12,11 @@ type NewTutorBody = {
   notes?: string;
   maxSeatsPerSlot?: number;
   active?: boolean;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
 };
 
 function notesPreview(notes: string | null, max = 80) {
@@ -47,6 +53,15 @@ export async function GET(request: Request) {
     if (activeParam === "true") filters.push(eq(tutors.active, true));
     if (activeParam === "false") filters.push(eq(tutors.active, false));
 
+    const latestNoteBody = sql<string | null>`(
+      select ${tutorNotes.body}
+      from ${tutorNotes}
+      where ${tutorNotes.tutorId} = ${tutors.id}
+        and ${tutorNotes.deletedAt} is null
+      order by ${tutorNotes.createdAt} desc
+      limit 1
+    )`.mapWith((value) => (value == null ? null : String(value)));
+
     const rows = await database
       .select({
         id: tutors.id,
@@ -56,6 +71,7 @@ export async function GET(request: Request) {
         active: tutors.active,
         maxSeatsPerSlot: tutors.maxSeatsPerSlot,
         notes: tutors.notes,
+        latestNoteBody,
         updatedAt: tutors.updatedAt,
         bookingCount: sql<number>`count(distinct ${bookings.id})::int`.mapWith(Number),
         subjectCount: sql<number>`count(distinct ${tutorSubjects.id})::int`.mapWith(Number),
@@ -88,7 +104,7 @@ export async function GET(request: Request) {
           phone: row.phone,
           active: row.active,
           maxSeatsPerSlot: row.maxSeatsPerSlot,
-          notesPreview: notesPreview(row.notes),
+          notesPreview: notesPreview(row.latestNoteBody ?? row.notes),
           canDelete: bookingCount === 0 && subjectCount === 0,
         };
       }),
@@ -112,6 +128,11 @@ export async function POST(request: Request) {
     const email = (body.email ?? "").trim().toLowerCase();
     const phone = (body.phone ?? "").trim();
     const notes = (body.notes ?? "").trim();
+    const addressLine1 = (body.addressLine1 ?? "").trim();
+    const addressLine2 = (body.addressLine2 ?? "").trim();
+    const city = (body.city ?? "").trim();
+    const state = (body.state ?? "").trim();
+    const postalCode = (body.postalCode ?? "").trim();
     const maxSeatsPerSlot =
       typeof body.maxSeatsPerSlot === "number" && Number.isFinite(body.maxSeatsPerSlot)
         ? Math.floor(body.maxSeatsPerSlot)
@@ -140,12 +161,27 @@ export async function POST(request: Request) {
         displayName,
         email,
         phone: phone || null,
-        notes: notes || null,
+        notes: null,
         maxSeatsPerSlot,
         active,
+        addressLine1: addressLine1 || null,
+        addressLine2: addressLine2 || null,
+        city: city || null,
+        state: state || null,
+        postalCode: postalCode || null,
+        country: HOUSEHOLD_COUNTRY_US,
         updatedAt: now,
       })
       .returning();
+
+    if (notes) {
+      await database.insert(tutorNotes).values({
+        tutorId: tutor.id,
+        authorStaffId: context.staff.id,
+        authorDisplayName: context.staff.fullName,
+        body: notes,
+      });
+    }
 
     return NextResponse.json({
       ok: true,

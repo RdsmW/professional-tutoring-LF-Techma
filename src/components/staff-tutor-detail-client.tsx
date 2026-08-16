@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
+import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
 import { PageIntro, Panel } from "@/components/ui";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -13,7 +15,13 @@ type TutorDetail = {
   phone: string | null;
   active: boolean;
   maxSeatsPerSlot: number;
-  notes: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+  notesList: StaffNoteItem[];
   subjects: Array<{
     id: string;
     name: string;
@@ -24,12 +32,36 @@ type TutorDetail = {
   canDelete: boolean;
 };
 
+type ProfileForm = {
+  displayName: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+};
+
 type CatalogSubject = {
   id: string;
   code: string;
   name: string;
   category: string | null;
 };
+
+function toProfileForm(tutor: TutorDetail): ProfileForm {
+  return {
+    displayName: tutor.displayName,
+    email: tutor.email ?? "",
+    phone: tutor.phone ?? "",
+    addressLine1: tutor.addressLine1 ?? "",
+    addressLine2: tutor.addressLine2 ?? "",
+    city: tutor.city ?? "",
+    state: tutor.state ?? "",
+    postalCode: tutor.postalCode ?? "",
+  };
+}
 
 export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const router = useRouter();
@@ -40,9 +72,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [catalog, setCatalog] = useState<CatalogSubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
   const [maxSeatsPerSlot, setMaxSeatsPerSlot] = useState("1");
-  const [savingNotes, setSavingNotes] = useState(false);
   const [savingSeats, setSavingSeats] = useState(false);
   const [togglingActive, setTogglingActive] = useState(false);
   const [assigning, setAssigning] = useState(false);
@@ -50,7 +80,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [profileForm, setProfileForm] = useState({ displayName: "", email: "", phone: "" });
+  const [profileForm, setProfileForm] = useState<ProfileForm | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
 
   const reload = useCallback(async () => {
@@ -69,9 +99,12 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         return;
       }
 
-      setTutor(tutorData.tutor);
-      setNotes(tutorData.tutor.notes ?? "");
-      setMaxSeatsPerSlot(String(tutorData.tutor.maxSeatsPerSlot ?? 1));
+      const next = tutorData.tutor as TutorDetail;
+      setTutor({
+        ...next,
+        notesList: next.notesList ?? [],
+      });
+      setMaxSeatsPerSlot(String(next.maxSeatsPerSlot ?? 1));
 
       if (subjectsRes.ok && subjectsData.ok) {
         setCatalog(subjectsData.subjects ?? []);
@@ -90,11 +123,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   useEffect(() => {
     if (!tutor || !deepLinkEdit || editDeepLinkHandled.current) return;
     editDeepLinkHandled.current = true;
-    setProfileForm({
-      displayName: tutor.displayName,
-      email: tutor.email ?? "",
-      phone: tutor.phone ?? "",
-    });
+    setProfileForm(toProfileForm(tutor));
     setEditing(true);
     setError(null);
     setMessage(null);
@@ -114,10 +143,9 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     }
   }, [availableSubjects, selectedSubjectId]);
 
-  async function patchTutor(body: Record<string, unknown>, mode: "notes" | "seats" | "active" | "profile") {
+  async function patchTutor(body: Record<string, unknown>, mode: "seats" | "active" | "profile") {
     setError(null);
     setMessage(null);
-    if (mode === "notes") setSavingNotes(true);
     if (mode === "seats") setSavingSeats(true);
     if (mode === "active") setTogglingActive(true);
     if (mode === "profile") setSavingProfile(true);
@@ -138,11 +166,54 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     } catch {
       setError("Unable to update tutor.");
     } finally {
-      setSavingNotes(false);
       setSavingSeats(false);
       setTogglingActive(false);
       setSavingProfile(false);
     }
+  }
+
+  async function createNote(body: string): Promise<StaffNoteItem> {
+    const response = await fetch(`/api/staff/tutors/${tutorId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Unable to add note.");
+    setTutor((prev) =>
+      prev ? { ...prev, notesList: [data.note as StaffNoteItem, ...prev.notesList] } : prev,
+    );
+    return data.note as StaffNoteItem;
+  }
+
+  async function updateNote(noteId: string, body: string): Promise<StaffNoteItem> {
+    const response = await fetch(`/api/staff/tutors/${tutorId}/notes/${noteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Unable to update note.");
+    setTutor((prev) =>
+      prev
+        ? {
+            ...prev,
+            notesList: prev.notesList.map((note) =>
+              note.id === noteId ? (data.note as StaffNoteItem) : note,
+            ),
+          }
+        : prev,
+    );
+    return data.note as StaffNoteItem;
+  }
+
+  async function deleteNote(noteId: string): Promise<void> {
+    const response = await fetch(`/api/staff/tutors/${tutorId}/notes/${noteId}`, { method: "DELETE" });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Unable to delete note.");
+    setTutor((prev) =>
+      prev ? { ...prev, notesList: prev.notesList.filter((note) => note.id !== noteId) } : prev,
+    );
   }
 
   async function assignSubject() {
@@ -241,11 +312,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             type="button"
             className="action-btn action-btn-edit"
             onClick={() => {
-              setProfileForm({
-                displayName: tutor.displayName,
-                email: tutor.email ?? "",
-                phone: tutor.phone ?? "",
-              });
+              setProfileForm(toProfileForm(tutor));
               setEditing(true);
               setError(null);
               setMessage(null);
@@ -294,7 +361,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
       {error ? <p className="form-error">{error}</p> : null}
       {message ? <p style={{ fontSize: 14, marginBottom: 12 }}>{message}</p> : null}
 
-      {editing ? (
+      {editing && profileForm ? (
         <Panel title="Edit tutor">
           <form
             className="input-grid"
@@ -306,6 +373,12 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
                   displayName: profileForm.displayName,
                   email: profileForm.email || null,
                   phone: profileForm.phone || null,
+                  addressLine1: profileForm.addressLine1 || null,
+                  addressLine2: profileForm.addressLine2 || null,
+                  city: profileForm.city || null,
+                  state: profileForm.state || null,
+                  postalCode: profileForm.postalCode || null,
+                  country: "United States",
                 },
                 "profile",
               );
@@ -335,6 +408,57 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
                 onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
               />
             </label>
+
+            <p className="guardian-edit-section-label">Mailing address</p>
+            <label>
+              Street
+              <AddressAutocompleteInput
+                value={profileForm.addressLine1}
+                onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
+                onSelect={(suggestion) =>
+                  setProfileForm({
+                    ...profileForm,
+                    addressLine1: suggestion.addressLine1,
+                    city: suggestion.city || profileForm.city,
+                    state: suggestion.state || profileForm.state,
+                    postalCode: suggestion.postalCode || profileForm.postalCode,
+                  })
+                }
+              />
+            </label>
+            <label>
+              Address line 2
+              <input
+                value={profileForm.addressLine2}
+                onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
+              />
+            </label>
+            <label>
+              City
+              <input
+                value={profileForm.city}
+                onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
+              />
+            </label>
+            <label>
+              State
+              <input
+                value={profileForm.state}
+                onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
+              />
+            </label>
+            <label>
+              ZIP
+              <input
+                value={profileForm.postalCode}
+                onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
+              />
+            </label>
+            <label>
+              Country
+              <input value="United States" readOnly />
+            </label>
+
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="submit" className="primary-button" disabled={savingProfile}>
                 {savingProfile ? "Saving…" : "Save profile"}
@@ -376,6 +500,37 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           </div>
         </Panel>
 
+        <Panel title="Mailing address">
+          <div className="family-detail-grid profile-detail-grid">
+            <span>
+              <small>Street</small>
+              <strong>{tutor.addressLine1 || "—"}</strong>
+            </span>
+            <span>
+              <small>Line 2</small>
+              <strong>{tutor.addressLine2 || "—"}</strong>
+            </span>
+            <span>
+              <small>City</small>
+              <strong>{tutor.city || "—"}</strong>
+            </span>
+            <span>
+              <small>State</small>
+              <strong>{tutor.state || "—"}</strong>
+            </span>
+            <span>
+              <small>ZIP</small>
+              <strong>{tutor.postalCode || "—"}</strong>
+            </span>
+            <span>
+              <small>Country</small>
+              <strong>{tutor.country || "United States"}</strong>
+            </span>
+          </div>
+        </Panel>
+      </div>
+
+      <div className="profile-layout">
         <Panel title="Capacity">
           <label>
             Max seats per slot
@@ -401,18 +556,14 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         </Panel>
       </div>
 
-      <Panel title="Notes" eyebrow="Internal">
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} />
-        <button
-          type="button"
-          className="primary-button"
-          style={{ marginTop: 12 }}
-          disabled={savingNotes}
-          onClick={() => void patchTutor({ notes }, "notes")}
-        >
-          {savingNotes ? "Saving…" : "Save notes"}
-        </button>
-      </Panel>
+      <StaffNotesSection
+        notes={tutor.notesList}
+        onCreate={createNote}
+        onUpdate={updateNote}
+        onDelete={deleteNote}
+        onSuccess={(text) => setMessage(text)}
+        onError={(text) => setError(text)}
+      />
 
       <Panel title="Subjects">
         <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap", marginBottom: 12 }}>
