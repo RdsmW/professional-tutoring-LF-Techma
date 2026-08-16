@@ -18,11 +18,11 @@ import {
   IconPencil,
   IconPlus,
   IconRestore,
-  IconTrash,
   IconUserPlus,
   StaffIconButton,
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
+import { StaffNotesSection } from "@/components/staff-notes-section";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import {
@@ -86,27 +86,6 @@ function toProfileForm(guardian: StaffGuardianDetail): ProfileForm {
 
 function yesNo(value: boolean) {
   return value ? "Yes" : "No";
-}
-
-function formatWhen(value: string | null | undefined) {
-  if (!value) return "—";
-  try {
-    const date = new Date(value);
-    const now = new Date();
-    const sameYear = date.getFullYear() === now.getFullYear();
-    const day = date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      ...(sameYear ? {} : { year: "numeric" }),
-    });
-    const time = date.toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    return `${day} · ${time}`;
-  } catch {
-    return "—";
-  }
 }
 
 function formatMailingAddressLines(guardian: {
@@ -368,14 +347,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
   const [profileForm, setProfileForm] = useState<ProfileForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [editDeepLinkHandled, setEditDeepLinkHandled] = useState(false);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [savingNotes, setSavingNotes] = useState(false);
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [noteEditDraft, setNoteEditDraft] = useState("");
-  const [savingNoteEdit, setSavingNoteEdit] = useState(false);
-  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
-  const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
-  const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [studentsModalOpen, setStudentsModalOpen] = useState(false);
   const [sectionMenu, setSectionMenu] = useState<"students" | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -528,111 +499,66 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
     }
   }
 
-  async function addNote(event: FormEvent) {
-    event.preventDefault();
-    if (!noteDraft.trim() || savingNotes) return;
-    setSavingNotes(true);
-    try {
-      const response = await fetch(`/api/staff/guardians/${guardianId}/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: noteDraft }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok || !data.note) {
-        toast.error(data.error || "Unable to add note.");
-        return;
-      }
-      const nextNote = data.note as StaffGuardianNote;
-      setGuardian((prev) =>
-        prev
-          ? {
-              ...prev,
-              notes: [nextNote, ...prev.notes],
-            }
-          : prev,
-      );
-      setNoteDraft("");
-      toast.success("Note added.");
-    } catch {
-      toast.error("Unable to add note.");
-    } finally {
-      setSavingNotes(false);
+  async function createGuardianNote(body: string): Promise<StaffGuardianNote> {
+    const response = await fetch(`/api/staff/guardians/${guardianId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok || !data.note) {
+      throw new Error(data.error || "Unable to add note.");
     }
+    const nextNote = data.note as StaffGuardianNote;
+    setGuardian((prev) =>
+      prev
+        ? {
+            ...prev,
+            notes: [nextNote, ...prev.notes],
+          }
+        : prev,
+    );
+    return nextNote;
   }
 
-  function startEditNote(note: StaffGuardianNote) {
-    setEditingNoteId(note.id);
-    setNoteEditDraft(note.body);
-  }
-
-  function cancelEditNote() {
-    setEditingNoteId(null);
-    setNoteEditDraft("");
-  }
-
-  async function saveNoteEdit(event: FormEvent) {
-    event.preventDefault();
-    if (!editingNoteId || !noteEditDraft.trim() || savingNoteEdit) return;
-    setSavingNoteEdit(true);
-    try {
-      const response = await fetch(`/api/staff/guardians/${guardianId}/notes/${editingNoteId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: noteEditDraft }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok || !data.note) {
-        toast.error(data.error || "Unable to update note.");
-        return;
-      }
-      const nextNote = data.note as StaffGuardianNote;
-      setGuardian((prev) =>
-        prev
-          ? {
-              ...prev,
-              notes: prev.notes.map((note) => (note.id === nextNote.id ? nextNote : note)),
-            }
-          : prev,
-      );
-      setEditingNoteId(null);
-      setNoteEditDraft("");
-      toast.success("Note updated.");
-    } catch {
-      toast.error("Unable to update note.");
-    } finally {
-      setSavingNoteEdit(false);
+  async function updateGuardianNote(noteId: string, body: string): Promise<StaffGuardianNote> {
+    const response = await fetch(`/api/staff/guardians/${guardianId}/notes/${noteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok || !data.note) {
+      throw new Error(data.error || "Unable to update note.");
     }
+    const nextNote = data.note as StaffGuardianNote;
+    setGuardian((prev) =>
+      prev
+        ? {
+            ...prev,
+            notes: prev.notes.map((note) => (note.id === nextNote.id ? nextNote : note)),
+          }
+        : prev,
+    );
+    return nextNote;
   }
 
-  async function deleteNote(noteId: string) {
-    if (deletingNoteId) return;
-    setDeletingNoteId(noteId);
-    try {
-      const response = await fetch(`/api/staff/guardians/${guardianId}/notes/${noteId}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        toast.error(data.error || "Unable to delete note.");
-        return;
-      }
-      setGuardian((prev) =>
-        prev
-          ? {
-              ...prev,
-              notes: prev.notes.filter((note) => note.id !== noteId),
-            }
-          : prev,
-      );
-      if (editingNoteId === noteId) cancelEditNote();
-      setConfirmDeleteNoteId(null);
-      toast.success("Note moved to Recycle bin.");
-    } catch {
-      toast.error("Unable to delete note.");
-    } finally {
-      setDeletingNoteId(null);
+  async function deleteGuardianNote(noteId: string): Promise<void> {
+    const response = await fetch(`/api/staff/guardians/${guardianId}/notes/${noteId}`, {
+      method: "DELETE",
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "Unable to delete note.");
     }
+    setGuardian((prev) =>
+      prev
+        ? {
+            ...prev,
+            notes: prev.notes.filter((note) => note.id !== noteId),
+          }
+        : prev,
+    );
   }
 
   function closeAssignModal() {
@@ -819,11 +745,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
   if (guardian.relationshipRole) takenRoles.delete(guardian.relationshipRole);
 
   const addressLines = formatMailingAddressLines(guardian);
-  const previewNotes = guardian.notes.slice(0, PREVIEW_LIMIT);
   const previewStudents = guardian.students.slice(0, PREVIEW_LIMIT);
-  const editingNote = editingNoteId
-    ? guardian.notes.find((note) => note.id === editingNoteId) ?? null
-    : null;
   const showStudents = guardian.isBillingOwner;
   const householdId = guardian.household?.id ?? null;
 
@@ -901,75 +823,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             </span>
           </div>
         ))}
-      </div>
-    );
-  }
-
-  function renderNotesTable(notes: StaffGuardianNote[]) {
-    return (
-      <div className="family-notes-table-wrap">
-        <table className="family-notes-table">
-          <thead>
-            <tr>
-              <th className="family-notes-col-content">Note</th>
-              <th className="family-notes-col-who">Created By</th>
-              <th className="family-notes-col-when">Created Time</th>
-              <th className="family-notes-col-edit" aria-label="Actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {notes.map((note) => (
-              <tr
-                key={note.id}
-                className="family-notes-row-clickable"
-                tabIndex={0}
-                role="button"
-                aria-label="Edit note"
-                onClick={() => startEditNote(note)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    startEditNote(note);
-                  }
-                }}
-              >
-                <td className="family-notes-col-content">
-                  <span className="family-notes-body">{note.body}</span>
-                </td>
-                <td className="family-notes-col-who">{note.authorDisplayName}</td>
-                <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
-                <td className="family-notes-col-edit">
-                  <div className="family-notes-action-group" onClick={(event) => event.stopPropagation()}>
-                    <StaffIconButton
-                      label="Edit"
-                      title="Edit"
-                      tone="muted"
-                      className="family-notes-edit-btn"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        startEditNote(note);
-                      }}
-                    >
-                      <IconPencil size={14} />
-                    </StaffIconButton>
-                    <StaffIconButton
-                      label="Delete"
-                      title="Delete"
-                      tone="danger"
-                      className="family-notes-edit-btn"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setConfirmDeleteNoteId(note.id);
-                      }}
-                    >
-                      <IconTrash size={14} />
-                    </StaffIconButton>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     );
   }
@@ -1331,63 +1184,18 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
         ) : null}
       </div>
 
-      <div className="family-notes-layout">
-        <Panel className="family-notes-panel family-equal-panel">
-          <div className="family-panel-heading">
-            <h2>Add note</h2>
-          </div>
-          <div className="family-add-note-stretch">
-            <p className="family-add-note-helper">Internal only — not visible in the family portal.</p>
-            <form onSubmit={(e) => void addNote(e)}>
-              <label className="family-add-note-label">
-                <span className="sr-only">Note</span>
-                <textarea
-                  value={noteDraft}
-                  onChange={(event) => setNoteDraft(event.target.value)}
-                  rows={4}
-                  placeholder="Add a staff note…"
-                />
-              </label>
-              <div className="family-add-note-footer">
-                <button
-                  type="submit"
-                  className="primary-button family-add-note-btn"
-                  disabled={savingNotes || !noteDraft.trim()}
-                >
-                  {savingNotes ? "Adding…" : "Add note"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </Panel>
-
-        <Panel className="family-notes-panel family-equal-panel">
-          <div className="family-panel-heading">
-            <h2>Notes</h2>
-          </div>
-          <NotesListPreview
-            total={guardian.notes.length}
-            empty={<p className="family-empty">No notes yet.</p>}
-            onViewMore={() => setNotesModalOpen(true)}
-          >
-            {renderNotesTable(previewNotes)}
-          </NotesListPreview>
-        </Panel>
-      </div>
+      <StaffNotesSection
+        notes={guardian.notes}
+        onCreate={createGuardianNote}
+        onUpdate={updateGuardianNote}
+        onDelete={deleteGuardianNote}
+        onSuccess={toast.success}
+        onError={toast.error}
+      />
 
       {studentsModalOpen ? (
         <NotesListModal title="Students" onClose={() => setStudentsModalOpen(false)}>
           {renderStudentsTable(guardian.students)}
-        </NotesListModal>
-      ) : null}
-
-      {notesModalOpen ? (
-        <NotesListModal
-          title="Notes"
-          className="family-notes-list-modal"
-          onClose={() => setNotesModalOpen(false)}
-        >
-          {renderNotesTable(guardian.notes)}
         </NotesListModal>
       ) : null}
 
@@ -1470,92 +1278,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             </div>
           </div>
         </div>
-      ) : null}
-
-      {editingNoteId ? (
-        <div
-          className="staff-modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !confirmDeleteNoteId) cancelEditNote();
-          }}
-        >
-          <div
-            className="staff-modal family-note-edit-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="guardian-note-edit-title"
-          >
-            <div className="family-list-modal-header">
-              <h3 id="guardian-note-edit-title">Edit note</h3>
-              <StaffIconButton label="Close" title="Cancel" tone="muted" onClick={cancelEditNote}>
-                <IconClose size={18} />
-              </StaffIconButton>
-            </div>
-            <dl className="family-note-edit-meta">
-              <div>
-                <dt>Created By</dt>
-                <dd>{editingNote?.authorDisplayName || "—"}</dd>
-              </div>
-              <div>
-                <dt>Created Time</dt>
-                <dd>{formatWhen(editingNote?.createdAt)}</dd>
-              </div>
-              <div>
-                <dt>Edited By</dt>
-                <dd>{editingNote?.editorDisplayName || "—"}</dd>
-              </div>
-              <div>
-                <dt>Edited Time</dt>
-                <dd>{formatWhen(editingNote?.updatedAt)}</dd>
-              </div>
-            </dl>
-            <form onSubmit={(e) => void saveNoteEdit(e)} className="staff-modal-form family-note-edit-form">
-              <label className="family-note-edit-field">
-                Note
-                <textarea
-                  value={noteEditDraft}
-                  onChange={(event) => setNoteEditDraft(event.target.value)}
-                  rows={5}
-                  autoFocus
-                />
-              </label>
-              <div className="staff-modal-actions">
-                <button
-                  type="button"
-                  className="danger-button"
-                  disabled={!!deletingNoteId}
-                  onClick={() => {
-                    if (editingNoteId) setConfirmDeleteNoteId(editingNoteId);
-                  }}
-                >
-                  Delete
-                </button>
-                <button
-                  type="submit"
-                  className="action-btn action-btn-edit"
-                  disabled={savingNoteEdit || !noteEditDraft.trim()}
-                >
-                  {savingNoteEdit ? "Saving…" : "Save"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
-      {confirmDeleteNoteId ? (
-        <ConfirmActionModal
-          title="Delete this note?"
-          body="The note moves to Settings → Recycle bin for 30 days, then is permanently removed."
-          confirmLabel="Delete"
-          destructive
-          busy={deletingNoteId === confirmDeleteNoteId}
-          onCancel={() => {
-            if (!deletingNoteId) setConfirmDeleteNoteId(null);
-          }}
-          onConfirm={() => void deleteNote(confirmDeleteNoteId)}
-        />
       ) : null}
     </>
   );
