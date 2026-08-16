@@ -1522,7 +1522,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-dense {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 24px;
   width: 100%;
   min-width: 0;
 }
