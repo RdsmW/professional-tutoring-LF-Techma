@@ -5,12 +5,10 @@ import {
   useEffect,
   useRef,
   useState,
-  type FormEvent,
   type ReactNode,
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { Panel } from "@/components/ui";
 import {
   IconArchive,
@@ -28,29 +26,12 @@ import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import {
   formatGuardianRelationshipRole,
-  type GuardianRelationshipRole,
   type StaffGuardianDetail,
   type StaffGuardianNote,
   type StaffGuardianStudentRow,
 } from "@/lib/staff/guardian-shared";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
-import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
-
-type ProfileForm = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  otherInformation: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  relationshipRole: "" | GuardianRelationshipRole;
-  isBillingOwner: boolean;
-};
 
 type AssignStudentOption = {
   id: string;
@@ -67,23 +48,6 @@ function initials(firstName: string, lastName: string) {
   const a = firstName.trim().charAt(0);
   const b = lastName.trim().charAt(0);
   return `${a}${b}`.toUpperCase() || "G";
-}
-
-function toProfileForm(guardian: StaffGuardianDetail): ProfileForm {
-  return {
-    firstName: guardian.firstName,
-    lastName: guardian.lastName,
-    email: guardian.email,
-    phone: guardian.phone || "",
-    otherInformation: guardian.otherInformation || "",
-    addressLine1: guardian.addressLine1 || "",
-    addressLine2: guardian.addressLine2 || "",
-    city: guardian.city || "",
-    state: guardian.state || "",
-    postalCode: guardian.postalCode || "",
-    relationshipRole: guardian.relationshipRole ?? "",
-    isBillingOwner: guardian.isBillingOwner,
-  };
 }
 
 function yesNo(value: boolean) {
@@ -345,9 +309,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
   const [guardian, setGuardian] = useState<StaffGuardianDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [profileForm, setProfileForm] = useState<ProfileForm | null>(null);
-  const [saving, setSaving] = useState(false);
   const [editDeepLinkHandled, setEditDeepLinkHandled] = useState(false);
   const [studentsModalOpen, setStudentsModalOpen] = useState(false);
   const [sectionMenu, setSectionMenu] = useState<"students" | null>(null);
@@ -396,21 +357,13 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
   }, [reload]);
 
   useEffect(() => {
-    if (!guardian || !deepLinkEdit || editDeepLinkHandled) return;
+    if (!deepLinkEdit || editDeepLinkHandled) return;
     setEditDeepLinkHandled(true);
-    setProfileForm(toProfileForm(guardian));
-    setEditing(true);
     const params = new URLSearchParams(searchParams.toString());
     params.delete("edit");
     const qs = params.toString();
-    router.replace(`/staff/guardians/${guardianId}${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [guardian, deepLinkEdit, editDeepLinkHandled, guardianId, router, searchParams]);
-
-  function openEdit() {
-    if (!guardian) return;
-    setProfileForm(toProfileForm(guardian));
-    setEditing(true);
-  }
+    router.replace(`/staff/guardians/${guardianId}/edit${qs ? `?${qs}` : ""}`);
+  }, [deepLinkEdit, editDeepLinkHandled, guardianId, router, searchParams]);
 
   async function setStatus(status: "active" | "archived", options?: { fromUndo?: boolean }) {
     if (lifecycleBusy) return;
@@ -445,59 +398,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
       toast.error("Unable to update status.");
     } finally {
       setLifecycleBusy(false);
-    }
-  }
-
-  async function saveProfile(event: FormEvent) {
-    event.preventDefault();
-    if (!profileForm || saving) return;
-
-    if (!profileForm.firstName.trim() || !profileForm.lastName.trim()) {
-      toast.error("First and last name are required.");
-      return;
-    }
-    if (!isValidEmail(profileForm.email)) {
-      toast.error("Enter a valid email address.");
-      return;
-    }
-    if (profileForm.phone.trim() && !isValidPhone(profileForm.phone)) {
-      toast.error("Enter a valid phone number.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/staff/guardians/${guardianId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: profileForm.firstName,
-          lastName: profileForm.lastName,
-          email: profileForm.email,
-          phone: profileForm.phone,
-          otherInformation: profileForm.otherInformation,
-          addressLine1: profileForm.addressLine1,
-          addressLine2: profileForm.addressLine2,
-          city: profileForm.city,
-          state: profileForm.state,
-          postalCode: profileForm.postalCode,
-          relationshipRole: profileForm.relationshipRole || null,
-          isBillingOwner: profileForm.isBillingOwner,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        toast.error(data.error || "Unable to save guardian.");
-        return;
-      }
-      setGuardian(data.guardian as StaffGuardianDetail);
-      setEditing(false);
-      setProfileForm(null);
-      toast.success("Guardian updated.");
-    } catch {
-      toast.error("Unable to save guardian.");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -739,13 +639,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
         ? "linked"
         : "unlinked";
 
-  const takenRoles = new Set(
-    guardian.householdGuardians
-      .map((row) => row.relationshipRole)
-      .filter((role): role is GuardianRelationshipRole => role === "parent_1" || role === "parent_2"),
-  );
-  if (guardian.relationshipRole) takenRoles.delete(guardian.relationshipRole);
-
   const addressLines = formatMailingAddressLines(guardian);
   const previewStudents = guardian.students.slice(0, PREVIEW_LIMIT);
   const showStudents = guardian.isBillingOwner;
@@ -856,15 +749,18 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           {backLabel}
         </Link>
         <div className="family-detail-topbar-actions">
-          <StaffIconButton
-            label="Edit"
+          <Link
+            href={
+              fromFamily
+                ? `/staff/guardians/${guardianId}/edit?from=family`
+                : `/staff/guardians/${guardianId}/edit`
+            }
+            className="staff-icon-btn staff-icon-btn-edit"
+            aria-label="Edit"
             title="Edit"
-            tone="edit"
-            disabled={lifecycleBusy}
-            onClick={openEdit}
           >
             <IconPencil size={15} />
-          </StaffIconButton>
+          </Link>
           {isArchived ? (
             <StaffIconButton
               label="Restore"
@@ -900,167 +796,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
       </section>
 
       {error ? <p className="form-error">{error}</p> : null}
-
-      {editing && profileForm ? (
-        <Panel title="Edit guardian" className="family-equal-panel">
-          <form onSubmit={(e) => void saveProfile(e)} className="input-grid family-household-edit-grid">
-            <p className="guardian-edit-section-label">Identity</p>
-            <label>
-              First name
-              <input
-                value={profileForm.firstName}
-                onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Last name
-              <input
-                value={profileForm.lastName}
-                onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Email
-              <input
-                type="email"
-                value={profileForm.email}
-                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Phone
-              <input
-                type="tel"
-                value={profileForm.phone}
-                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-              />
-            </label>
-            <p className="guardian-edit-section-label">Mailing address</p>
-            <label>
-              Street
-              <AddressAutocompleteInput
-                value={profileForm.addressLine1}
-                onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
-                onSelect={(suggestion) =>
-                  setProfileForm({
-                    ...profileForm,
-                    addressLine1: suggestion.addressLine1,
-                    city: suggestion.city || profileForm.city,
-                    state: suggestion.state || profileForm.state,
-                    postalCode: suggestion.postalCode || profileForm.postalCode,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Address line 2
-              <input
-                value={profileForm.addressLine2}
-                onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
-              />
-            </label>
-            <label>
-              City
-              <input
-                value={profileForm.city}
-                onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
-              />
-            </label>
-            <label>
-              State
-              <input
-                value={profileForm.state}
-                onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
-              />
-            </label>
-            <label>
-              ZIP
-              <input
-                value={profileForm.postalCode}
-                onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
-              />
-            </label>
-            <label>
-              Country
-              <input value="United States" disabled readOnly />
-            </label>
-            <p className="guardian-edit-section-label">Household role</p>
-            <label>
-              Parent role
-              <select
-                value={profileForm.relationshipRole}
-                onChange={(e) =>
-                  setProfileForm({
-                    ...profileForm,
-                    relationshipRole: e.target.value as ProfileForm["relationshipRole"],
-                  })
-                }
-                disabled={!guardian.household}
-              >
-                <option value="">{guardian.household ? "Unset" : "Assign to a family first"}</option>
-                <option value="parent_1" disabled={takenRoles.has("parent_1")}>
-                  Parent 1{takenRoles.has("parent_1") ? " (taken)" : ""}
-                </option>
-                <option value="parent_2" disabled={takenRoles.has("parent_2")}>
-                  Parent 2{takenRoles.has("parent_2") ? " (taken)" : ""}
-                </option>
-              </select>
-            </label>
-            <label>
-              Responsible for payment
-              <select
-                value={profileForm.isBillingOwner ? "yes" : "no"}
-                onChange={(e) =>
-                  setProfileForm({ ...profileForm, isBillingOwner: e.target.value === "yes" })
-                }
-                disabled={!guardian.household}
-              >
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </label>
-            {!guardian.household ? (
-              <p className="family-empty" style={{ gridColumn: "1 / -1", margin: 0 }}>
-                Assign this guardian to a family before setting Parent role or payment responsibility.
-              </p>
-            ) : guardian.isBillingOwner && !profileForm.isBillingOwner ? (
-              <p className="family-empty" style={{ gridColumn: "1 / -1", margin: 0 }}>
-                To remove payment responsibility, set another household guardian as payer on the Family
-                page first.
-              </p>
-            ) : null}
-            <p className="guardian-edit-section-label">Other information</p>
-            <label className="guardian-other-info-field" style={{ gridColumn: "1 / -1" }}>
-              <span className="sr-only">Other information</span>
-              <textarea
-                value={profileForm.otherInformation}
-                onChange={(e) => setProfileForm({ ...profileForm, otherInformation: e.target.value })}
-                rows={4}
-                placeholder="Optional context about this guardian…"
-              />
-            </label>
-            <div className="family-household-edit-actions">
-              <button type="submit" className="primary-button" disabled={saving}>
-                {saving ? "Saving…" : "Save guardian"}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={saving}
-                onClick={() => {
-                  setEditing(false);
-                  setProfileForm(null);
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Panel>
-      ) : null}
 
       <div className="family-detail-layout family-detail-stack">
         <Panel className="family-equal-panel">
