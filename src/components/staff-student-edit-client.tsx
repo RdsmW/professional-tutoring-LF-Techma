@@ -492,26 +492,32 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             ))}
           </select>
         </label>
-        <label style={{ gridColumn: "1 / -1" }}>
-          Preferred schedule
-          <select
-            multiple
-            value={profileForm.preferredScheduleIds}
-            onChange={(e) =>
-              setProfileForm({
-                ...profileForm,
-                preferredScheduleIds: Array.from(e.target.selectedOptions).map((option) => option.value),
-              })
-            }
-            style={{ minHeight: 120 }}
-          >
-            {ACADEMIC_SCHEDULE_WINDOWS.options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <strong style={{ display: "block", marginBottom: 8, fontSize: 13 }}>Preferred schedule</strong>
+          <div className="subject-multi-select" role="group" aria-label="Preferred schedule">
+            {ACADEMIC_SCHEDULE_WINDOWS.options.map((option) => {
+              const selected = profileForm.preferredScheduleIds.includes(option.id);
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={selected ? "selected" : undefined}
+                  aria-pressed={selected}
+                  onClick={() =>
+                    setProfileForm({
+                      ...profileForm,
+                      preferredScheduleIds: selected
+                        ? profileForm.preferredScheduleIds.filter((id) => id !== option.id)
+                        : [...profileForm.preferredScheduleIds, option.id],
+                    })
+                  }
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <label style={{ gridColumn: "1 / -1" }}>
           Subjects
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>

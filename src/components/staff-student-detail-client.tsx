@@ -396,9 +396,10 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
   if (!student) return null;
 
   const isArchived = student.lifecycle === "archived";
-  const scheduleLabels = parseScheduleIds(student.preferredSchedule).map((id) =>
-    optionLabel(ACADEMIC_SCHEDULE_WINDOWS, id),
-  );
+  const scheduleChips = parseScheduleIds(student.preferredSchedule).map((id) => ({
+    id,
+    label: optionLabel(ACADEMIC_SCHEDULE_WINDOWS, id),
+  }));
   const addressLines = formatMailingAddressLines(student);
   const learningParsed = parseLearningNeeds(student.learningNeeds);
   const learningNotesText = learningNeedNotes(student.learningNeeds);
@@ -687,7 +688,15 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 </span>
                 <span style={{ gridColumn: "1 / -1" }}>
                   <small>Preferred schedule</small>
-                  <strong>{scheduleLabels.length > 0 ? scheduleLabels.join(" · ") : "—"}</strong>
+                  {scheduleChips.length > 0 ? (
+                    <div className="field-cloud" style={{ marginTop: 4 }}>
+                      {scheduleChips.map((chip) => (
+                        <span key={chip.id}>{chip.label}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <strong>—</strong>
+                  )}
                 </span>
                 <span>
                   <small>Hours/Rates</small>
