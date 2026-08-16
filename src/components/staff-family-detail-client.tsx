@@ -1381,18 +1381,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <span className="avatar navy">{initials(family.displayName)}</span>
         <div className="family-record-hero-copy">
           <h2>{family.displayName}</h2>
-          <p className="family-record-hero-meta">
-            {[
-              family.billingOwnerName
-                ? `Payer: ${family.billingOwnerName}`
-                : null,
-              family.billingEmail || null,
-              `Card: ${cardLabel}`,
-              `Auto-charge: ${yesNo(family.autoCharge)}`,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
         </div>
         <span className={`pill family-record-hero-status-pill ${statusTone(family.status)}`}>
           {formatStatusLabel(family.status)}
