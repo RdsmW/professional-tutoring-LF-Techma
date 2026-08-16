@@ -174,123 +174,131 @@ export function StaffGuardianEditClient({ guardianId }: { guardianId: string }) 
         onSubmit={(event) => void saveProfile(event)}
       >
         <StaffEditSectionLabel>Identity</StaffEditSectionLabel>
-        <label>
-          First name
-          <input
-            value={profileForm.firstName}
-            onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          Last name
-          <input
-            value={profileForm.lastName}
-            onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          Email
-          <input
-            type="email"
-            value={profileForm.email}
-            onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          Phone
-          <input
-            type="tel"
-            value={profileForm.phone}
-            onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-          />
-        </label>
+        <div className="staff-edit-field-row staff-edit-field-row--4">
+          <label>
+            First name
+            <input
+              value={profileForm.firstName}
+              onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            Last name
+            <input
+              value={profileForm.lastName}
+              onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            Email
+            <input
+              type="email"
+              value={profileForm.email}
+              onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            Phone
+            <input
+              type="tel"
+              value={profileForm.phone}
+              onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+            />
+          </label>
+        </div>
 
         <StaffEditSectionLabel>Mailing address</StaffEditSectionLabel>
-        <label>
-          Street
-          <AddressAutocompleteInput
-            value={profileForm.addressLine1}
-            onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
-            onSelect={(suggestion) =>
-              setProfileForm({
-                ...profileForm,
-                addressLine1: suggestion.addressLine1,
-                city: suggestion.city || profileForm.city,
-                state: suggestion.state || profileForm.state,
-                postalCode: suggestion.postalCode || profileForm.postalCode,
-              })
-            }
-          />
-        </label>
-        <label>
-          Address line 2
-          <input
-            value={profileForm.addressLine2}
-            onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
-          />
-        </label>
-        <label>
-          City
-          <input
-            value={profileForm.city}
-            onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
-          />
-        </label>
-        <label>
-          State
-          <input
-            value={profileForm.state}
-            onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
-          />
-        </label>
-        <label>
-          ZIP
-          <input
-            value={profileForm.postalCode}
-            onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
-          />
-        </label>
-        <label>
-          Country
-          <input value="United States" disabled readOnly />
-        </label>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            Street
+            <AddressAutocompleteInput
+              value={profileForm.addressLine1}
+              onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
+              onSelect={(suggestion) =>
+                setProfileForm({
+                  ...profileForm,
+                  addressLine1: suggestion.addressLine1,
+                  city: suggestion.city || profileForm.city,
+                  state: suggestion.state || profileForm.state,
+                  postalCode: suggestion.postalCode || profileForm.postalCode,
+                })
+              }
+            />
+          </label>
+          <label>
+            Address line 2
+            <input
+              value={profileForm.addressLine2}
+              onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
+            />
+          </label>
+          <label>
+            City
+            <input
+              value={profileForm.city}
+              onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
+            />
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            State
+            <input
+              value={profileForm.state}
+              onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
+            />
+          </label>
+          <label>
+            ZIP
+            <input
+              value={profileForm.postalCode}
+              onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
+            />
+          </label>
+          <label>
+            Country
+            <input value="United States" readOnly />
+          </label>
+        </div>
 
         <StaffEditSectionLabel>Household role</StaffEditSectionLabel>
-        <label>
-          Parent role
-          <select
-            value={profileForm.relationshipRole}
-            onChange={(e) =>
-              setProfileForm({
-                ...profileForm,
-                relationshipRole: e.target.value as ProfileForm["relationshipRole"],
-              })
-            }
-            disabled={!guardian.household}
-          >
-            <option value="">{guardian.household ? "Unset" : "Assign to a family first"}</option>
-            <option value="parent_1" disabled={takenRoles.has("parent_1")}>
-              Parent 1{takenRoles.has("parent_1") ? " (taken)" : ""}
-            </option>
-            <option value="parent_2" disabled={takenRoles.has("parent_2")}>
-              Parent 2{takenRoles.has("parent_2") ? " (taken)" : ""}
-            </option>
-          </select>
-        </label>
-        <label>
-          Responsible for payment
-          <select
-            value={profileForm.isBillingOwner ? "yes" : "no"}
-            onChange={(e) => setProfileForm({ ...profileForm, isBillingOwner: e.target.value === "yes" })}
-            disabled={!guardian.household}
-          >
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </label>
+        <div className="staff-edit-field-row staff-edit-field-row--2">
+          <label>
+            Parent role
+            <select
+              value={profileForm.relationshipRole}
+              onChange={(e) =>
+                setProfileForm({
+                  ...profileForm,
+                  relationshipRole: e.target.value as ProfileForm["relationshipRole"],
+                })
+              }
+              disabled={!guardian.household}
+            >
+              <option value="">{guardian.household ? "Unset" : "Assign to a family first"}</option>
+              <option value="parent_1" disabled={takenRoles.has("parent_1")}>
+                Parent 1{takenRoles.has("parent_1") ? " (taken)" : ""}
+              </option>
+              <option value="parent_2" disabled={takenRoles.has("parent_2")}>
+                Parent 2{takenRoles.has("parent_2") ? " (taken)" : ""}
+              </option>
+            </select>
+          </label>
+          <label>
+            Responsible for payment
+            <select
+              value={profileForm.isBillingOwner ? "yes" : "no"}
+              onChange={(e) => setProfileForm({ ...profileForm, isBillingOwner: e.target.value === "yes" })}
+              disabled={!guardian.household}
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+        </div>
         {!guardian.household ? (
           <p className="family-empty" style={{ gridColumn: "1 / -1", margin: 0 }}>
             Assign this guardian to a family before setting Parent role or payment responsibility.
