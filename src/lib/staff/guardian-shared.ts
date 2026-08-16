@@ -19,6 +19,7 @@ export type StaffGuardianStudentRow = {
   gradeLabel: string | null;
   schoolName: string | null;
   lifecycle: string;
+  subjects: Array<{ id: string; name: string; code: string }>;
   canDelete: boolean;
 };
 

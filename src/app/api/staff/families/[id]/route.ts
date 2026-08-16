@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { refreshCardOnFile } from "@/lib/billing/refresh-card-on-file";
 import { requireDb } from "@/lib/db";
 import {
@@ -10,6 +10,8 @@ import {
   householdNotes,
   households,
   students,
+  studentSubjects,
+  subjects,
   tutors,
 } from "@/lib/db/schema";
 import { purgeExpiredHouseholdNotes } from "@/lib/staff/families";
@@ -212,6 +214,26 @@ export async function GET(
       studentEnrollmentCounts.map((row) => [row.studentId, Number(row.value ?? 0)]),
     );
 
+    const subjectsByStudent = new Map<string, Array<{ id: string; name: string; code: string }>>();
+    if (studentIds.length > 0) {
+      const subjectRows = await database
+        .select({
+          studentId: studentSubjects.studentId,
+          id: subjects.id,
+          name: subjects.name,
+          code: subjects.code,
+        })
+        .from(studentSubjects)
+        .innerJoin(subjects, eq(studentSubjects.subjectId, subjects.id))
+        .where(inArray(studentSubjects.studentId, studentIds))
+        .orderBy(asc(subjects.name));
+      for (const row of subjectRows) {
+        const list = subjectsByStudent.get(row.studentId) ?? [];
+        list.push({ id: row.id, name: row.name, code: row.code });
+        subjectsByStudent.set(row.studentId, list);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       family: {
@@ -268,6 +290,7 @@ export async function GET(
           gradeLabel: s.gradeLabel,
           schoolName: s.schoolName,
           lifecycle: s.lifecycle,
+          subjects: subjectsByStudent.get(s.id) ?? [],
           canDelete:
             (bookingCountByStudent.get(s.id) ?? 0) === 0 &&
             (enrollmentCountByStudent.get(s.id) ?? 0) === 0,

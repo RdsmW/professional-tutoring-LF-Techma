@@ -34,6 +34,7 @@ import {
   type StaffGuardianStudentRow,
 } from "@/lib/staff/guardian-shared";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
+import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 
 type ProfileForm = {
@@ -793,6 +794,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
       <div className="table-panel staff-dir-table family-detail-table">
         <div className="table-head family-detail-cols-students">
           <span>Name</span>
+          <span>Subjects</span>
           <span>Grade</span>
           <span>School</span>
           <span className="staff-dir-col-status">Status</span>
@@ -814,6 +816,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             }}
           >
             <strong>{s.displayName}</strong>
+            <span>{formatSubjectsPreview(s.subjects)}</span>
             <span>{s.gradeLabel || "—"}</span>
             <span>{s.schoolName || "—"}</span>
             <span className="staff-dir-col-status">

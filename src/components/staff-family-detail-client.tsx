@@ -22,6 +22,7 @@ import { isValidPhone } from "@/lib/validation/contact";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
+import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 
 type NoteRow = {
   id: string;
@@ -53,6 +54,7 @@ type StudentRow = {
   gradeLabel: string | null;
   schoolName: string | null;
   lifecycle: string;
+  subjects?: Array<{ id: string; name: string; code: string }>;
   canDelete: boolean;
 };
 
@@ -1131,6 +1133,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       <div className="table-panel staff-dir-table family-detail-table">
         <div className="table-head family-detail-cols-students">
           <span>Name</span>
+          <span>Subjects</span>
           <span>Grade</span>
           <span>School</span>
           <span className="staff-dir-col-status">Status</span>
@@ -1152,6 +1155,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             }}
           >
             <strong>{s.displayName}</strong>
+            <span>{formatSubjectsPreview(s.subjects)}</span>
             <span>{s.gradeLabel || "—"}</span>
             <span>{s.schoolName || "—"}</span>
             <span className="staff-dir-col-status">

@@ -8,6 +8,7 @@ import { StaffDirectoryCard } from "@/components/staff-directory-card";
 import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
+import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 
 type StudentRow = {
   id: string;
@@ -21,14 +22,6 @@ type StudentRow = {
   subjects?: Array<{ id: string; name: string; code: string }>;
   canDelete: boolean;
 };
-
-function formatSubjectsPreview(subjects: Array<{ name: string }> | undefined) {
-  if (!subjects || subjects.length === 0) return "—";
-  const visible = subjects.slice(0, 2).map((subject) => subject.name);
-  const remaining = subjects.length - visible.length;
-  if (remaining > 0) return `${visible.join(", ")} +${remaining}`;
-  return visible.join(", ");
-}
 
 type HouseholdOption = {
   id: string;

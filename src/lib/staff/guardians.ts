@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, inArray, isNotNull, isNull, lt, ne, or, SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, lt, ne, or, SQL } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import {
   bookings,
@@ -7,6 +7,8 @@ import {
   guardians,
   households,
   students,
+  studentSubjects,
+  subjects,
 } from "@/lib/db/schema";
 import { HOUSEHOLD_COUNTRY_US } from "@/lib/staff/household-display-name";
 import {
@@ -449,6 +451,27 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
   const enrollmentCountByStudent = new Map(
     studentEnrollmentCounts.map((row) => [row.studentId, Number(row.value ?? 0)]),
   );
+
+  const subjectsByStudent = new Map<string, Array<{ id: string; name: string; code: string }>>();
+  if (studentIds.length > 0) {
+    const subjectRows = await database
+      .select({
+        studentId: studentSubjects.studentId,
+        id: subjects.id,
+        name: subjects.name,
+        code: subjects.code,
+      })
+      .from(studentSubjects)
+      .innerJoin(subjects, eq(studentSubjects.subjectId, subjects.id))
+      .where(inArray(studentSubjects.studentId, studentIds))
+      .orderBy(asc(subjects.name));
+    for (const row of subjectRows) {
+      const list = subjectsByStudent.get(row.studentId) ?? [];
+      list.push({ id: row.id, name: row.name, code: row.code });
+      subjectsByStudent.set(row.studentId, list);
+    }
+  }
+
   return {
     id: g.id,
     firstName: g.firstName,
@@ -494,6 +517,7 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
       gradeLabel: row.gradeLabel,
       schoolName: row.schoolName,
       lifecycle: row.lifecycle,
+      subjects: subjectsByStudent.get(row.id) ?? [],
       canDelete:
         (bookingCountByStudent.get(row.id) ?? 0) === 0 &&
         (enrollmentCountByStudent.get(row.id) ?? 0) === 0,
