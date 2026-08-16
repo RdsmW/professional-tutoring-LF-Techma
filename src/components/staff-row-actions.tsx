@@ -20,7 +20,7 @@ import {
   IconTrash,
 } from "@/components/staff-action-icons";
 
-export type StaffRowActionTone = "edit" | "restore" | "archive" | "danger" | "default";
+export type StaffRowActionTone = "edit" | "restore" | "archive" | "danger" | "unassign" | "default";
 
 export type StaffRowAction = {
   id: string;
@@ -50,6 +50,8 @@ function toneClass(tone: StaffRowActionTone | undefined) {
       return "staff-row-actions-item staff-row-actions-item-archive";
     case "danger":
       return "staff-row-actions-item staff-row-actions-item-danger";
+    case "unassign":
+      return "staff-row-actions-item staff-row-actions-item-unassign";
     default:
       return "staff-row-actions-item";
   }
@@ -59,7 +61,7 @@ function actionLeadingIcon(action: StaffRowAction) {
   if (action.id === "edit" || action.tone === "edit") {
     return <IconPencil size={14} />;
   }
-  if (action.id === "unassign" || action.id === "close") {
+  if (action.id === "unassign" || action.tone === "unassign" || action.id === "close") {
     return <IconClose size={14} />;
   }
   if (action.id === "archive" || action.tone === "archive") {
@@ -201,7 +203,9 @@ export function StaffRowActions({ label = "Row actions", actions }: StaffRowActi
                   key={action.id}
                   type="button"
                   role="menuitem"
-                  className={toneClass(action.tone)}
+                  className={toneClass(
+                    action.tone ?? (action.id === "unassign" ? "unassign" : undefined),
+                  )}
                   disabled={action.disabled}
                   title={action.label}
                   onClick={(event) => {

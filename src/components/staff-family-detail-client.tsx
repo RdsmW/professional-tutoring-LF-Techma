@@ -1144,6 +1144,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       {
         id: "unassign",
         label: "Unassign",
+        tone: "unassign",
         disabled: memberBusyId === g.id,
         onSelect: () => void unassignGuardian(g.id),
       },
@@ -1171,6 +1172,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     actions.splice(1, 0, {
       id: "unassign",
       label: "Unassign",
+      tone: "unassign",
       disabled: memberBusyId === s.id,
       onSelect: () => void unassignStudent(s.id),
     });
@@ -1191,7 +1193,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         {rows.map((g) => {
           const portalBadge = guardianPortalBadge(g);
           return (
-          <div key={g.id} className="table-row family-detail-cols-guardians family-detail-table-row">
+          <div
+            key={g.id}
+            className="table-row family-detail-cols-guardians family-detail-table-row family-detail-row-clickable"
+            role="link"
+            tabIndex={0}
+            aria-label={`Open guardian ${g.firstName} ${g.lastName}`}
+            onClick={() => openGuardianEdit(g)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openGuardianEdit(g);
+              }
+            }}
+          >
             <span>
               <strong>
                 {g.firstName} {g.lastName}
@@ -1225,7 +1240,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           <span className="staff-dir-col-actions" aria-label="Actions" />
         </div>
         {rows.map((s) => (
-          <div key={s.id} className="table-row family-detail-cols-students family-detail-table-row">
+          <div
+            key={s.id}
+            className="table-row family-detail-cols-students family-detail-table-row family-detail-row-clickable"
+            role="link"
+            tabIndex={0}
+            aria-label={`Open student ${s.displayName}`}
+            onClick={() => router.push(`/staff/students/${s.id}`)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                router.push(`/staff/students/${s.id}`);
+              }
+            }}
+          >
             <strong>{s.displayName}</strong>
             <span>{s.gradeLabel || "—"}</span>
             <span>{s.schoolName || "—"}</span>
@@ -1242,8 +1270,22 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   }
 
   function renderEnrollmentRow(row: FamilyDetail["activity"]["enrollments"][number]) {
+    const href = `/staff/families/${familyId}/enrollments/${row.id}`;
     return (
-      <div key={row.id} className="staff-detail-list-row">
+      <div
+        key={row.id}
+        className="staff-detail-list-row staff-detail-list-row-clickable"
+        role="link"
+        tabIndex={0}
+        aria-label={`Open enrollment ${row.studentName} ${row.courseName}`}
+        onClick={() => router.push(href)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            router.push(href);
+          }
+        }}
+      >
         <span>
           <strong>
             {row.studentName} · {row.courseName}
@@ -1253,8 +1295,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </small>
         </span>
         <Link
-          href={`/staff/families/${familyId}/enrollments/${row.id}`}
+          href={href}
           className="secondary-button staff-open-control"
+          onClick={(event) => event.stopPropagation()}
         >
           Open
         </Link>
@@ -1263,8 +1306,22 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   }
 
   function renderBookingRow(row: FamilyDetail["activity"]["bookings"][number]) {
+    const href = `/staff/families/${familyId}/bookings/${row.id}`;
     return (
-      <div key={row.id} className="staff-detail-list-row">
+      <div
+        key={row.id}
+        className="staff-detail-list-row staff-detail-list-row-clickable"
+        role="link"
+        tabIndex={0}
+        aria-label={`Open booking ${row.studentName} ${row.tutorName}`}
+        onClick={() => router.push(href)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            router.push(href);
+          }
+        }}
+      >
         <span>
           <strong>
             {row.studentName} · {row.tutorName}
@@ -1274,8 +1331,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </small>
         </span>
         <Link
-          href={`/staff/families/${familyId}/bookings/${row.id}`}
+          href={href}
           className="secondary-button staff-open-control"
+          onClick={(event) => event.stopPropagation()}
         >
           Open
         </Link>
