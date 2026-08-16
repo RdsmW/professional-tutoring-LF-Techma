@@ -166,7 +166,7 @@ export function StaffGuardiansClient() {
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
               const familyId = row.household.id;
-              const roleLabel = formatGuardianRelationshipRole(row.relationshipRole);
+              const roleLabel = formatGuardianRelationshipRole(row.relationshipRole) ?? "—";
               const actions = [
                 {
                   id: "edit",
@@ -185,13 +185,16 @@ export function StaffGuardiansClient() {
                 <StaffDirectoryCard
                   key={row.id}
                   title={fullName}
-                  subtitle={roleLabel ? `${row.email} · ${roleLabel}` : row.email}
+                  subtitle={row.email}
                   status={
                     <span className={`pill ${statusTone(row.linkStatus)}`}>
                       {formatStatusLabel(row.linkStatus)}
                     </span>
                   }
-                  fields={[{ label: "Family", value: row.household.displayName }]}
+                  fields={[
+                    { label: "Parent role", value: roleLabel },
+                    { label: "Family", value: row.household.displayName },
+                  ]}
                   actions={actions}
                   onOpen={() => openGuardian(row.id)}
                 />
@@ -202,6 +205,7 @@ export function StaffGuardiansClient() {
           <div className="table-panel staff-dir-table">
             <div className="table-head staff-dir-cols-guardians">
               <span>Name</span>
+              <span>Parent role</span>
               <span>Email</span>
               <span>Family</span>
               <span className="staff-dir-col-status">Status</span>
@@ -210,7 +214,7 @@ export function StaffGuardiansClient() {
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
               const familyId = row.household.id;
-              const roleLabel = formatGuardianRelationshipRole(row.relationshipRole);
+              const roleLabel = formatGuardianRelationshipRole(row.relationshipRole) ?? "—";
               return (
                 <div
                   key={row.id}
@@ -227,8 +231,8 @@ export function StaffGuardiansClient() {
                 >
                   <span>
                     <strong>{fullName}</strong>
-                    {roleLabel ? <small className="family-guardian-link-status">{roleLabel}</small> : null}
                   </span>
+                  <span>{roleLabel}</span>
                   <span>{row.email}</span>
                   <span>{row.household.displayName}</span>
                   <span className="staff-dir-col-status">

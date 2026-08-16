@@ -19,6 +19,7 @@ import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/compon
 import { isValidPhone } from "@/lib/validation/contact";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
+import { formatGuardianRelationshipRole } from "@/lib/staff/guardian-shared";
 
 type NoteRow = {
   id: string;
@@ -171,12 +172,6 @@ function formatDate(value: string) {
 /** Quiet badge only for non-default portal states (Clerk link itself is not shown). */
 function guardianPortalBadge(g: GuardianRow) {
   if (g.invitePending) return "Invite pending";
-  return null;
-}
-
-function guardianRoleLabel(role: GuardianRow["relationshipRole"]) {
-  if (role === "parent_1") return "Parent 1";
-  if (role === "parent_2") return "Parent 2";
   return null;
 }
 
@@ -1123,6 +1118,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       <div className="table-panel staff-dir-table family-detail-table">
         <div className="table-head family-detail-cols-guardians">
           <span>Name</span>
+          <span>Parent role</span>
           <span>Email</span>
           <span className="family-detail-col-flag">Payer</span>
           <span className="family-detail-col-flag">Manage students</span>
@@ -1131,7 +1127,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </div>
         {rows.map((g) => {
           const portalBadge = guardianPortalBadge(g);
-          const roleLabel = guardianRoleLabel(g.relationshipRole);
+          const roleLabel = formatGuardianRelationshipRole(g.relationshipRole) ?? "—";
           return (
           <div
             key={g.id}
@@ -1151,11 +1147,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <strong>
                 {g.firstName} {g.lastName}
               </strong>
-              {roleLabel ? <small className="family-guardian-link-status">{roleLabel}</small> : null}
               {portalBadge ? (
                 <small className="family-guardian-link-status">{portalBadge}</small>
               ) : null}
             </span>
+            <span>{roleLabel}</span>
             <span>{g.email}</span>
             <span className="family-detail-col-flag">{yesNo(g.isBillingOwner)}</span>
             <span className="family-detail-col-flag">{yesNo(g.canManageStudents)}</span>
