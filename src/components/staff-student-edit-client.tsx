@@ -285,7 +285,7 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
         onSubmit={(event) => void saveProfile(event)}
       >
         <StaffEditSectionLabel>Profile</StaffEditSectionLabel>
-        <div className="staff-edit-field-row staff-edit-field-row--3">
+        <div className="staff-edit-field-row staff-edit-field-row--5">
           <label>
             First name
             <input
@@ -316,8 +316,6 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
               ))}
             </select>
           </label>
-        </div>
-        <div className="staff-edit-field-row staff-edit-field-row--3">
           <label>
             Birthdate
             <input
@@ -334,21 +332,8 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
               onChange={(e) => setProfileForm({ ...profileForm, cellPhone: e.target.value })}
             />
           </label>
-          <label>
-            Lifecycle
-            <select
-              value={profileForm.lifecycle}
-              onChange={(e) => setProfileForm({ ...profileForm, lifecycle: e.target.value })}
-            >
-              {LIFECYCLE_OPTIONS.map((value) => (
-                <option key={value} value={value}>
-                  {capitalizeLabel(value)}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
-        <div className="staff-edit-field-row staff-edit-field-row--4">
+        <div className="staff-edit-field-row staff-edit-field-row--5">
           <label>
             Grade
             <select
@@ -390,6 +375,19 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
               value={profileForm.availabilityNotes}
               onChange={(e) => setProfileForm({ ...profileForm, availabilityNotes: e.target.value })}
             />
+          </label>
+          <label>
+            Lifecycle
+            <select
+              value={profileForm.lifecycle}
+              onChange={(e) => setProfileForm({ ...profileForm, lifecycle: e.target.value })}
+            >
+              {LIFECYCLE_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {capitalizeLabel(value)}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
@@ -473,7 +471,7 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
         />
 
         <StaffEditSectionLabel>Tutoring</StaffEditSectionLabel>
-        <div className="staff-edit-field-row staff-edit-field-row--2 staff-edit-field-row--tutoring-subjects">
+        <div className="staff-edit-field-row staff-edit-field-row--4">
           <label>
             Academic year
             <input
@@ -528,8 +526,6 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
               ) : null}
             </div>
           </label>
-        </div>
-        <div className="staff-edit-field-row staff-edit-field-row--2">
           <StaffWrapSelect
             label="Hours/Rates"
             value={profileForm.hoursRatePackage}
