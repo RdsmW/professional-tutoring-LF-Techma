@@ -1948,6 +1948,26 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-edit-subjects-field {
   min-width: 0;
 }
+/* New Guardian: billing flag sits beside phone (label + checkbox, no stretched gap) */
+.input-grid label.staff-edit-billing-check {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  align-self: end;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0;
+  cursor: pointer;
+}
+.input-grid label.staff-edit-billing-check input[type="checkbox"] {
+  display: inline-block;
+  width: auto;
+  margin-top: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
 .staff-edit-payment-tutoring-band,
 .staff-edit-schedule-needs-band {
   grid-column: 1 / -1;

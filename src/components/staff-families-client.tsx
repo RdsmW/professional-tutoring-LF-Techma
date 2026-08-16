@@ -217,64 +217,68 @@ export function StaffFamiliesClient({
         <h2>New guardian</h2>
         <form className="wizard-stage" onSubmit={createGuardian}>
           <div className="input-grid">
-            <label>
-              Household
-              <select
-                value={guardianForm.householdId}
-                onChange={(e) => setGuardianForm({ ...guardianForm, householdId: e.target.value })}
-                required
-              >
-                <option value="">Select family</option>
-                {householdOptions.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              First name
-              <input
-                value={guardianForm.firstName}
-                onChange={(e) => setGuardianForm({ ...guardianForm, firstName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Last name
-              <input
-                value={guardianForm.lastName}
-                onChange={(e) => setGuardianForm({ ...guardianForm, lastName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Email
-              <input
-                type="email"
-                value={guardianForm.email}
-                onChange={(e) => setGuardianForm({ ...guardianForm, email: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Phone
-              <input
-                type="tel"
-                value={guardianForm.phone}
-                onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
-              />
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={guardianForm.isBillingOwner}
-                onChange={(e) =>
-                  setGuardianForm({ ...guardianForm, isBillingOwner: e.target.checked })
-                }
-              />
-              Billing owner
-            </label>
+            <div className="staff-edit-field-row staff-edit-field-row--3">
+              <label>
+                Household
+                <select
+                  value={guardianForm.householdId}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, householdId: e.target.value })}
+                  required
+                >
+                  <option value="">Select family</option>
+                  {householdOptions.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                First name
+                <input
+                  value={guardianForm.firstName}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, firstName: e.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                Last name
+                <input
+                  value={guardianForm.lastName}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, lastName: e.target.value })}
+                  required
+                />
+              </label>
+            </div>
+            <div className="staff-edit-field-row staff-edit-field-row--3">
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={guardianForm.email}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, email: e.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                Phone
+                <input
+                  type="tel"
+                  value={guardianForm.phone}
+                  onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
+                />
+              </label>
+              <label className="staff-edit-billing-check">
+                Billing owner
+                <input
+                  type="checkbox"
+                  checked={guardianForm.isBillingOwner}
+                  onChange={(e) =>
+                    setGuardianForm({ ...guardianForm, isBillingOwner: e.target.checked })
+                  }
+                />
+              </label>
+            </div>
           </div>
           {error ? <div className="validation-hint">{error}</div> : null}
           <div className="wizard-footer">
