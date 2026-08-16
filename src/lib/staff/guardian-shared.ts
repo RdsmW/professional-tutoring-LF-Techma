@@ -1,5 +1,7 @@
 export type GuardianLinkStatus = "linked" | "invite_pending" | "unlinked";
 
+export type GuardianStatus = "active" | "archived";
+
 export type GuardianRelationshipRole = "parent_1" | "parent_2";
 
 export type StaffGuardianNote = {
@@ -26,6 +28,7 @@ export type StaffGuardianListRow = {
   lastName: string;
   email: string;
   phone: string | null;
+  status: GuardianStatus;
   linkStatus: GuardianLinkStatus;
   relationshipRole: GuardianRelationshipRole | null;
   isBillingOwner: boolean;
@@ -52,6 +55,7 @@ export type StaffGuardianDetail = {
   state: string | null;
   postalCode: string | null;
   country: string;
+  status: GuardianStatus;
   relationshipRole: GuardianRelationshipRole | null;
   isBillingOwner: boolean;
   canManageStudents: boolean;

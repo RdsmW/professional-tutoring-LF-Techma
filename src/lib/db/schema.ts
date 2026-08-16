@@ -39,6 +39,8 @@ export const guardianRelationshipRoleEnum = pgEnum("guardian_relationship_role",
   "parent_2",
 ]);
 
+export const guardianStatusEnum = pgEnum("guardian_status", ["active", "archived"]);
+
 export const households = pgTable("households", {
   id: uuid("id").defaultRandom().primaryKey(),
   displayName: text("display_name").notNull(),
@@ -101,6 +103,7 @@ export const guardians = pgTable("guardians", {
   canRequestServices: boolean("can_request_services").notNull().default(true),
   inviteToken: text("invite_token"),
   inviteAcceptedAt: timestamp("invite_accepted_at", { withTimezone: true }),
+  status: guardianStatusEnum("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

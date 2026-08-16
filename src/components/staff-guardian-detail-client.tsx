@@ -12,10 +12,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Panel } from "@/components/ui";
 import {
+  IconArchive,
   IconClose,
   IconLink,
   IconPencil,
   IconPlus,
+  IconRestore,
   IconTrash,
   IconUserPlus,
   StaffIconButton,
@@ -56,6 +58,8 @@ type AssignStudentOption = {
 };
 
 const PREVIEW_LIMIT = 3;
+
+type GuardianLifecycleConfirm = "archive" | "restore";
 
 function initials(firstName: string, lastName: string) {
   const a = firstName.trim().charAt(0);
@@ -382,6 +386,8 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
   const [assignBusyId, setAssignBusyId] = useState<string | null>(null);
   const [studentBusyId, setStudentBusyId] = useState<string | null>(null);
   const [memberBusyId, setMemberBusyId] = useState<string | null>(null);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  const [lifecycleConfirm, setLifecycleConfirm] = useState<GuardianLifecycleConfirm | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -431,6 +437,42 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
     if (!guardian) return;
     setProfileForm(toProfileForm(guardian));
     setEditing(true);
+  }
+
+  async function setStatus(status: "active" | "archived", options?: { fromUndo?: boolean }) {
+    if (lifecycleBusy) return;
+    setLifecycleBusy(true);
+
+    try {
+      const response = await fetch(`/api/staff/guardians/${guardianId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to update status.");
+        return;
+      }
+      setLifecycleConfirm(null);
+      const message = status === "archived" ? "Guardian archived." : "Guardian restored.";
+      if (options?.fromUndo) {
+        toast.success(message);
+      } else {
+        const reverse: "active" | "archived" = status === "archived" ? "active" : "archived";
+        toast.success(message, {
+          action: {
+            label: "Undo",
+            onClick: () => void setStatus(reverse, { fromUndo: true }),
+          },
+        });
+      }
+      await softReload();
+    } catch {
+      toast.error("Unable to update status.");
+    } finally {
+      setLifecycleBusy(false);
+    }
   }
 
   async function saveProfile(event: FormEvent) {
@@ -760,11 +802,14 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
       ? `/staff/families/${guardian.household.id}`
       : "/staff/guardians";
   const backLabel = fromFamily && guardian.household ? "← Family" : "← Guardians";
-  const statusKey = guardian.invitePending
-    ? "invite_pending"
-    : guardian.linked
-      ? "linked"
-      : "unlinked";
+  const isArchived = guardian.status === "archived";
+  const statusKey = isArchived
+    ? "archived"
+    : guardian.invitePending
+      ? "invite_pending"
+      : guardian.linked
+        ? "linked"
+        : "unlinked";
 
   const takenRoles = new Set(
     guardian.householdGuardians
@@ -781,6 +826,22 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
     : null;
   const showStudents = guardian.isBillingOwner;
   const householdId = guardian.household?.id ?? null;
+
+  const lifecycleConfirmCopy: Record<
+    GuardianLifecycleConfirm,
+    { title: string; body: string; confirmLabel: string }
+  > = {
+    archive: {
+      title: "Archive this guardian?",
+      body: "Archived guardians are hidden from the default Guardians list. You can restore them later.",
+      confirmLabel: "Archive",
+    },
+    restore: {
+      title: "Restore this guardian?",
+      body: "This guardian will appear as active again in the Guardians list.",
+      confirmLabel: "Restore",
+    },
+  };
 
   function studentActions(s: StaffGuardianStudentRow): StaffRowAction[] {
     const actions = lifecycleActions({
@@ -917,14 +978,57 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
     <>
       <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
 
+      {lifecycleConfirm ? (
+        <ConfirmActionModal
+          title={lifecycleConfirmCopy[lifecycleConfirm].title}
+          body={lifecycleConfirmCopy[lifecycleConfirm].body}
+          confirmLabel={lifecycleConfirmCopy[lifecycleConfirm].confirmLabel}
+          busy={lifecycleBusy}
+          onCancel={() => {
+            if (!lifecycleBusy) setLifecycleConfirm(null);
+          }}
+          onConfirm={() => {
+            if (lifecycleConfirm === "archive") void setStatus("archived");
+            else void setStatus("active");
+          }}
+        />
+      ) : null}
+
       <div className="family-detail-topbar">
         <Link href={backHref} className="page-back">
           {backLabel}
         </Link>
         <div className="family-detail-topbar-actions">
-          <StaffIconButton label="Edit" title="Edit" tone="edit" onClick={openEdit}>
+          <StaffIconButton
+            label="Edit"
+            title="Edit"
+            tone="edit"
+            disabled={lifecycleBusy}
+            onClick={openEdit}
+          >
             <IconPencil size={15} />
           </StaffIconButton>
+          {isArchived ? (
+            <StaffIconButton
+              label="Restore"
+              title="Restore"
+              tone="restore"
+              disabled={lifecycleBusy}
+              onClick={() => setLifecycleConfirm("restore")}
+            >
+              <IconRestore size={15} />
+            </StaffIconButton>
+          ) : (
+            <StaffIconButton
+              label="Archive"
+              title="Archive"
+              tone="archive"
+              disabled={lifecycleBusy}
+              onClick={() => setLifecycleConfirm("archive")}
+            >
+              <IconArchive size={15} />
+            </StaffIconButton>
+          )}
         </div>
       </div>
 

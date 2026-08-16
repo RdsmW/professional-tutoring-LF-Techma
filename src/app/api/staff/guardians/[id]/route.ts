@@ -33,6 +33,7 @@ type PatchBody = {
   isBillingOwner?: boolean;
   canManageStudents?: boolean;
   canRequestServices?: boolean;
+  status?: "active" | "archived";
 };
 
 function optionalTrimmedText(value: string | null | undefined): string | null {
@@ -161,6 +162,16 @@ export async function PATCH(
 
     if (typeof body.canManageStudents === "boolean") updates.canManageStudents = body.canManageStudents;
     if (typeof body.canRequestServices === "boolean") updates.canRequestServices = body.canRequestServices;
+
+    if (body.status !== undefined) {
+      if (body.status !== "active" && body.status !== "archived") {
+        return NextResponse.json(
+          { ok: false, error: "Status must be active or archived." },
+          { status: 400 },
+        );
+      }
+      updates.status = body.status;
+    }
 
     if (body.relationshipRole !== undefined) {
       if (body.relationshipRole !== null && !isGuardianRelationshipRole(body.relationshipRole)) {

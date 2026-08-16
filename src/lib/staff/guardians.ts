@@ -14,6 +14,7 @@ import {
   isGuardianRelationshipRole,
   type GuardianLinkStatus,
   type GuardianRelationshipRole,
+  type GuardianStatus,
   type StaffGuardianDetail,
   type StaffGuardianListRow,
   type StaffGuardianNote,
@@ -32,6 +33,7 @@ export type StaffRecycledGuardianNote = StaffGuardianNote & {
 export type {
   GuardianLinkStatus,
   GuardianRelationshipRole,
+  GuardianStatus,
   StaffGuardianDetail,
   StaffGuardianListRow,
   StaffGuardianNote,
@@ -41,9 +43,17 @@ export { formatGuardianRelationshipRole, isGuardianRelationshipRole } from "@/li
 
 export type ListStaffGuardiansFilters = {
   q?: string;
-  /** `linked` | `invite_pending` | `all` (default). */
+  /**
+   * Link filters: `linked` | `invite_pending`.
+   * Lifecycle: `archived` | `all` (every status).
+   * Omit / empty = non-archived default (like Families).
+   */
   status?: string;
 };
+
+function normalizeGuardianStatus(value: string | null | undefined): GuardianStatus {
+  return value === "archived" ? "archived" : "active";
+}
 
 function deriveLinkStatus(row: {
   clerkUserId: string | null;
@@ -287,12 +297,23 @@ export async function listStaffGuardians(
     );
   }
 
-  if (status === "linked") {
+  if (status === "all") {
+    // no lifecycle / link constraint
+  } else if (status === "archived") {
+    whereParts.push(eq(guardians.status, "archived"));
+  } else if (status === "linked") {
+    whereParts.push(ne(guardians.status, "archived"));
     whereParts.push(isNotNull(guardians.clerkUserId));
   } else if (status === "invite_pending") {
+    whereParts.push(ne(guardians.status, "archived"));
     whereParts.push(
       and(isNotNull(guardians.inviteToken), isNull(guardians.inviteAcceptedAt), isNull(guardians.clerkUserId))!,
     );
+  } else if (status === "active") {
+    whereParts.push(eq(guardians.status, "active"));
+  } else {
+    // Default: exclude archived
+    whereParts.push(ne(guardians.status, "archived"));
   }
 
   const rows = await database
@@ -302,6 +323,7 @@ export async function listStaffGuardians(
       lastName: guardians.lastName,
       email: guardians.email,
       phone: guardians.phone,
+      status: guardians.status,
       relationshipRole: guardians.relationshipRole,
       clerkUserId: guardians.clerkUserId,
       inviteToken: guardians.inviteToken,
@@ -325,6 +347,7 @@ export async function listStaffGuardians(
     lastName: row.lastName,
     email: row.email,
     phone: row.phone,
+    status: normalizeGuardianStatus(row.status),
     linkStatus: deriveLinkStatus(row),
     relationshipRole: isGuardianRelationshipRole(row.relationshipRole) ? row.relationshipRole : null,
     isBillingOwner: row.isBillingOwner,
@@ -437,6 +460,7 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
     state: g.state,
     postalCode: g.postalCode,
     country: g.country || HOUSEHOLD_COUNTRY_US,
+    status: normalizeGuardianStatus(g.status),
     relationshipRole: isGuardianRelationshipRole(g.relationshipRole) ? g.relationshipRole : null,
     isBillingOwner: g.isBillingOwner,
     canManageStudents: g.canManageStudents,

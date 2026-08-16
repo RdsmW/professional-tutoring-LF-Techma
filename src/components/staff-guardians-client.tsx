@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { DirectoryViewToggle } from "@/components/directory-view-toggle";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
-import { StaffDirectoryFilters, StaffRowActions } from "@/components/staff-row-actions";
+import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -17,6 +17,7 @@ type GuardianRow = {
   lastName: string;
   email: string;
   phone: string | null;
+  status: "active" | "archived";
   linkStatus: "linked" | "invite_pending" | "unlinked";
   relationshipRole: "parent_1" | "parent_2" | null;
   isBillingOwner: boolean;
@@ -31,9 +32,11 @@ type GuardianRow = {
 };
 
 const STATUS_OPTIONS = [
-  { value: "all", label: "All" },
+  { value: "", label: "All (non-archived)" },
   { value: "linked", label: "Linked" },
   { value: "invite_pending", label: "Invite pending" },
+  { value: "archived", label: "Archived" },
+  { value: "all", label: "All statuses" },
 ] as const;
 
 export function StaffGuardiansClient() {
@@ -42,9 +45,10 @@ export function StaffGuardiansClient() {
   const [guardians, setGuardians] = useState<GuardianRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("all");
-  const [applied, setApplied] = useState({ q: "", status: "all" });
+  const [status, setStatus] = useState("");
+  const [applied, setApplied] = useState({ q: "", status: "" });
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -52,8 +56,7 @@ export function StaffGuardiansClient() {
     try {
       const params = new URLSearchParams();
       if (applied.q) params.set("q", applied.q);
-      if (applied.status && applied.status !== "all") params.set("status", applied.status);
-      else params.set("status", "all");
+      if (applied.status) params.set("status", applied.status);
       const query = params.toString();
       const response = await fetch(`/api/staff/guardians${query ? `?${query}` : ""}`);
       const data = await response.json();
@@ -84,8 +87,8 @@ export function StaffGuardiansClient() {
 
   function clearFilters() {
     setQ("");
-    setStatus("all");
-    setApplied({ q: "", status: "all" });
+    setStatus("");
+    setApplied({ q: "", status: "" });
   }
 
   function openGuardian(guardianId: string) {
@@ -95,6 +98,54 @@ export function StaffGuardiansClient() {
   function openFamily(householdId: string | null) {
     if (!householdId) return;
     router.push(`/staff/families/${householdId}`);
+  }
+
+  async function setGuardianStatus(id: string, next: "active" | "archived") {
+    if (busyId) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/guardians/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update guardian.");
+        return;
+      }
+      await reload();
+    } catch {
+      setError("Unable to update guardian.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function rowStatusKey(row: GuardianRow) {
+    if (row.status === "archived") return "archived";
+    return row.linkStatus;
+  }
+
+  function rowActions(row: GuardianRow) {
+    const familyId = row.household.id;
+    const actions = lifecycleActions({
+      isArchived: row.status === "archived",
+      canDelete: false,
+      busy: busyId === row.id,
+      onEdit: () => openGuardian(row.id),
+      onArchive: () => void setGuardianStatus(row.id, "archived"),
+      onRestore: () => void setGuardianStatus(row.id, "active"),
+      onDelete: () => undefined,
+    });
+    actions.push({
+      id: "open-family",
+      label: familyId ? "Open family" : "Unassigned",
+      disabled: !familyId,
+      onSelect: () => openFamily(familyId),
+    });
+    return actions;
   }
 
   return (
@@ -165,30 +216,14 @@ export function StaffGuardiansClient() {
           <div className="staff-dir-card-grid">
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
-              const familyId = row.household.id;
-              const actions = [
-                {
-                  id: "edit",
-                  label: "Edit",
-                  tone: "edit" as const,
-                  onSelect: () => openGuardian(row.id),
-                },
-                {
-                  id: "open-family",
-                  label: familyId ? "Open family" : "Unassigned",
-                  disabled: !familyId,
-                  onSelect: () => openFamily(familyId),
-                },
-              ];
+              const statusKey = rowStatusKey(row);
               return (
                 <StaffDirectoryCard
                   key={row.id}
                   title={fullName}
                   subtitle={row.email}
                   status={
-                    <span className={`pill ${statusTone(row.linkStatus)}`}>
-                      {formatStatusLabel(row.linkStatus)}
-                    </span>
+                    <span className={`pill ${statusTone(statusKey)}`}>{formatStatusLabel(statusKey)}</span>
                   }
                   fields={[
                     {
@@ -197,7 +232,7 @@ export function StaffGuardiansClient() {
                     },
                     { label: "Family", value: row.household.displayName },
                   ]}
-                  actions={actions}
+                  actions={rowActions(row)}
                   onOpen={() => openGuardian(row.id)}
                 />
               );
@@ -215,7 +250,7 @@ export function StaffGuardiansClient() {
             </div>
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
-              const familyId = row.household.id;
+              const statusKey = rowStatusKey(row);
               return (
                 <div
                   key={row.id}
@@ -239,28 +274,10 @@ export function StaffGuardiansClient() {
                   <span>{row.email}</span>
                   <span>{row.household.displayName}</span>
                   <span className="staff-dir-col-status">
-                    <span className={`pill ${statusTone(row.linkStatus)}`}>
-                      {formatStatusLabel(row.linkStatus)}
-                    </span>
+                    <span className={`pill ${statusTone(statusKey)}`}>{formatStatusLabel(statusKey)}</span>
                   </span>
                   <span className="staff-dir-col-actions">
-                    <StaffRowActions
-                      label="Row actions"
-                      actions={[
-                        {
-                          id: "edit",
-                          label: "Edit",
-                          tone: "edit",
-                          onSelect: () => openGuardian(row.id),
-                        },
-                        {
-                          id: "open-family",
-                          label: familyId ? "Open family" : "Unassigned",
-                          disabled: !familyId,
-                          onSelect: () => openFamily(familyId),
-                        },
-                      ]}
-                    />
+                    <StaffRowActions label="Row actions" actions={rowActions(row)} />
                   </span>
                 </div>
               );
