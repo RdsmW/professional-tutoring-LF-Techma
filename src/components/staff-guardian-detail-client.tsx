@@ -1,10 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Panel } from "@/components/ui";
-import { IconClose, IconPencil, StaffIconButton } from "@/components/staff-action-icons";
+import {
+  IconClose,
+  IconLink,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+  IconUserPlus,
+  StaffIconButton,
+} from "@/components/staff-action-icons";
+import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import {
   formatGuardianRelationshipRole,
@@ -29,6 +45,13 @@ type ProfileForm = {
   postalCode: string;
   relationshipRole: "" | GuardianRelationshipRole;
   isBillingOwner: boolean;
+};
+
+type AssignStudentOption = {
+  id: string;
+  displayName: string;
+  gradeLabel: string | null;
+  householdDisplayName: string;
 };
 
 const PREVIEW_LIMIT = 3;
@@ -248,6 +271,84 @@ function NotesListModal({
   );
 }
 
+function SectionPlusMenu({
+  open,
+  onToggle,
+  onClose,
+  disabled,
+  disabledReason,
+  items,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
+  items: Array<{
+    id: string;
+    label: string;
+    onSelect: () => void;
+    disabled?: boolean;
+    icon?: ReactNode;
+  }>;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) onClose();
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
+  return (
+    <div className="family-section-plus" ref={rootRef}>
+      <StaffIconButton
+        label="Add"
+        title={disabled ? disabledReason || "Cannot add" : "Add"}
+        disabled={disabled}
+        onClick={onToggle}
+      >
+        <IconPlus size={16} />
+      </StaffIconButton>
+      {disabled && disabledReason ? (
+        <span className="family-section-plus-hint">{disabledReason}</span>
+      ) : null}
+      {open && !disabled ? (
+        <div className="family-section-plus-menu" role="menu">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="menuitem"
+              className="family-section-plus-item"
+              disabled={item.disabled}
+              onClick={() => {
+                onClose();
+                item.onSelect();
+              }}
+            >
+              <span className="family-section-plus-item-icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="family-section-plus-item-label">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -261,15 +362,25 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
   const [editing, setEditing] = useState(false);
   const [profileForm, setProfileForm] = useState<ProfileForm | null>(null);
   const [saving, setSaving] = useState(false);
-  const [unassignBusy, setUnassignBusy] = useState(false);
-  const [confirmUnassign, setConfirmUnassign] = useState(false);
   const [editDeepLinkHandled, setEditDeepLinkHandled] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteEditDraft, setNoteEditDraft] = useState("");
   const [savingNoteEdit, setSavingNoteEdit] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [studentsModalOpen, setStudentsModalOpen] = useState(false);
+  const [sectionMenu, setSectionMenu] = useState<"students" | null>(null);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignQuery, setAssignQuery] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignStudents, setAssignStudents] = useState<AssignStudentOption[]>([]);
+  const [assignSelectedId, setAssignSelectedId] = useState<string | null>(null);
+  const [assignBusyId, setAssignBusyId] = useState<string | null>(null);
+  const [studentBusyId, setStudentBusyId] = useState<string | null>(null);
+  const [memberBusyId, setMemberBusyId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -286,6 +397,17 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
       setError("Unable to load guardian.");
     } finally {
       setLoading(false);
+    }
+  }, [guardianId]);
+
+  const softReload = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/staff/guardians/${guardianId}`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) return;
+      setGuardian(data.guardian as StaffGuardianDetail);
+    } catch {
+      /* keep current view */
     }
   }, [guardianId]);
 
@@ -360,31 +482,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
       toast.error("Unable to save guardian.");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function unassignFromFamily() {
-    if (!guardian?.household || unassignBusy) return;
-    setUnassignBusy(true);
-    try {
-      const response = await fetch(
-        `/api/staff/families/${guardian.household.id}/guardians/${guardianId}/unassign`,
-        { method: "POST" },
-      );
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        toast.error(data.error || "Unable to unassign guardian.");
-        return;
-      }
-      setConfirmUnassign(false);
-      toast.success("Guardian unassigned.");
-      await reload();
-      setEditing(false);
-      setProfileForm(null);
-    } catch {
-      toast.error("Unable to unassign guardian.");
-    } finally {
-      setUnassignBusy(false);
     }
   }
 
@@ -465,6 +562,192 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
     }
   }
 
+  async function deleteNote(noteId: string) {
+    if (deletingNoteId) return;
+    setDeletingNoteId(noteId);
+    try {
+      const response = await fetch(`/api/staff/guardians/${guardianId}/notes/${noteId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to delete note.");
+        return;
+      }
+      setGuardian((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: prev.notes.filter((note) => note.id !== noteId),
+            }
+          : prev,
+      );
+      if (editingNoteId === noteId) cancelEditNote();
+      setConfirmDeleteNoteId(null);
+      toast.success("Note moved to Recycle bin.");
+    } catch {
+      toast.error("Unable to delete note.");
+    } finally {
+      setDeletingNoteId(null);
+    }
+  }
+
+  function closeAssignModal() {
+    setAssignModalOpen(false);
+    setAssignQuery("");
+    setAssignSelectedId(null);
+    setAssignStudents([]);
+    setAssignBusyId(null);
+  }
+
+  async function openAssignModal() {
+    if (!guardian?.household) {
+      toast.error("Assign this guardian to a family before assigning students.");
+      return;
+    }
+    setAssignModalOpen(true);
+    setAssignQuery("");
+    setAssignSelectedId(null);
+    setAssignStudents([]);
+    setAssignLoading(true);
+    try {
+      const response = await fetch(`/api/staff/families/${guardian.household.id}/students/assign`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to load students.");
+        closeAssignModal();
+        return;
+      }
+      setAssignStudents(data.students ?? []);
+    } catch {
+      toast.error("Unable to load students.");
+      closeAssignModal();
+    } finally {
+      setAssignLoading(false);
+    }
+  }
+
+  async function searchAssign(q: string) {
+    if (!guardian?.household) return;
+    setAssignQuery(q);
+    setAssignSelectedId(null);
+    setAssignLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (q.trim()) params.set("q", q.trim());
+      const qs = params.toString();
+      const response = await fetch(
+        `/api/staff/families/${guardian.household.id}/students/assign${qs ? `?${qs}` : ""}`,
+      );
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to search students.");
+        return;
+      }
+      setAssignStudents(data.students ?? []);
+    } catch {
+      toast.error("Unable to search students.");
+    } finally {
+      setAssignLoading(false);
+    }
+  }
+
+  async function confirmAssign() {
+    if (!guardian?.household || !assignSelectedId || assignBusyId) return;
+    setAssignBusyId(assignSelectedId);
+    try {
+      const response = await fetch(`/api/staff/families/${guardian.household.id}/students/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: assignSelectedId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to assign student.");
+        return;
+      }
+      toast.success("Student assigned.");
+      closeAssignModal();
+      await softReload();
+    } catch {
+      toast.error("Unable to assign student.");
+    } finally {
+      setAssignBusyId(null);
+    }
+  }
+
+  async function setStudentLifecycle(studentId: string, nextLifecycle: string) {
+    if (studentBusyId) return;
+    setStudentBusyId(studentId);
+    try {
+      const response = await fetch(`/api/staff/students/${studentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lifecycle: nextLifecycle }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to update student.");
+        return;
+      }
+      toast.success(nextLifecycle === "archived" ? "Student archived." : "Student restored.");
+      await softReload();
+    } catch {
+      toast.error("Unable to update student.");
+    } finally {
+      setStudentBusyId(null);
+    }
+  }
+
+  async function deleteStudent(studentId: string) {
+    if (studentBusyId) return;
+    if (!window.confirm("Permanently delete this student? This cannot be undone.")) return;
+    setStudentBusyId(studentId);
+    try {
+      const response = await fetch(`/api/staff/students/${studentId}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to delete student.");
+        return;
+      }
+      toast.success("Student deleted.");
+      await softReload();
+    } catch {
+      toast.error("Unable to delete student.");
+    } finally {
+      setStudentBusyId(null);
+    }
+  }
+
+  async function unassignStudent(studentId: string) {
+    if (!guardian?.household || memberBusyId) return;
+    if (
+      !window.confirm(
+        "Unassign this student from the family? They become an orphan until reassigned. Historical bookings stay on this family.",
+      )
+    ) {
+      return;
+    }
+    setMemberBusyId(studentId);
+    try {
+      const response = await fetch(
+        `/api/staff/families/${guardian.household.id}/students/${studentId}/unassign`,
+        { method: "POST" },
+      );
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to unassign student.");
+        return;
+      }
+      toast.success("Student unassigned.");
+      await softReload();
+    } catch {
+      toast.error("Unable to unassign student.");
+    } finally {
+      setMemberBusyId(null);
+    }
+  }
+
   if (loading) return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading guardian…</p>;
   if (error && !guardian) return <p className="form-error">{error}</p>;
   if (!guardian) return null;
@@ -491,10 +774,74 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
 
   const addressLines = formatMailingAddressLines(guardian);
   const previewNotes = guardian.notes.slice(0, PREVIEW_LIMIT);
+  const previewStudents = guardian.students.slice(0, PREVIEW_LIMIT);
   const editingNote = editingNoteId
     ? guardian.notes.find((note) => note.id === editingNoteId) ?? null
     : null;
   const showStudents = guardian.isBillingOwner;
+  const householdId = guardian.household?.id ?? null;
+
+  function studentActions(s: StaffGuardianStudentRow): StaffRowAction[] {
+    const actions = lifecycleActions({
+      isArchived: s.lifecycle === "archived",
+      canDelete: Boolean(s.canDelete),
+      busy: studentBusyId === s.id || memberBusyId === s.id,
+      onEdit: () => router.push(`/staff/students/${s.id}?edit=1`),
+      onArchive: () => void setStudentLifecycle(s.id, "archived"),
+      onRestore: () => void setStudentLifecycle(s.id, "active"),
+      onDelete: () => void deleteStudent(s.id),
+    });
+    if (householdId) {
+      actions.splice(1, 0, {
+        id: "unassign",
+        label: "Unassign",
+        tone: "unassign",
+        disabled: memberBusyId === s.id,
+        onSelect: () => void unassignStudent(s.id),
+      });
+    }
+    return actions;
+  }
+
+  function renderStudentsTable(rows: StaffGuardianStudentRow[]) {
+    return (
+      <div className="table-panel staff-dir-table family-detail-table">
+        <div className="table-head family-detail-cols-students">
+          <span>Name</span>
+          <span>Grade</span>
+          <span>School</span>
+          <span className="staff-dir-col-status">Status</span>
+          <span className="staff-dir-col-actions" aria-label="Actions" />
+        </div>
+        {rows.map((s) => (
+          <div
+            key={s.id}
+            className="table-row family-detail-cols-students family-detail-table-row family-detail-row-clickable"
+            role="link"
+            tabIndex={0}
+            aria-label={`Open student ${s.displayName}`}
+            onClick={() => router.push(`/staff/students/${s.id}`)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                router.push(`/staff/students/${s.id}`);
+              }
+            }}
+          >
+            <strong>{s.displayName}</strong>
+            <span>{s.gradeLabel || "—"}</span>
+            <span>{s.schoolName || "—"}</span>
+            <span className="staff-dir-col-status">
+              <span className={`pill ${statusTone(s.lifecycle)}`}>{formatStatusLabel(s.lifecycle)}</span>
+            </span>
+            <span className="staff-dir-col-actions">
+              <StaffRowActions label="Student actions" actions={studentActions(s)} />
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   function renderNotesTable(notes: StaffGuardianNote[]) {
     return (
@@ -530,18 +877,32 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                 <td className="family-notes-col-who">{note.authorDisplayName}</td>
                 <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
                 <td className="family-notes-col-edit">
-                  <StaffIconButton
-                    label="Edit"
-                    title="Edit"
-                    tone="muted"
-                    className="family-notes-edit-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      startEditNote(note);
-                    }}
-                  >
-                    <IconPencil size={14} />
-                  </StaffIconButton>
+                  <div className="family-notes-action-group" onClick={(event) => event.stopPropagation()}>
+                    <StaffIconButton
+                      label="Edit"
+                      title="Edit"
+                      tone="muted"
+                      className="family-notes-edit-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        startEditNote(note);
+                      }}
+                    >
+                      <IconPencil size={14} />
+                    </StaffIconButton>
+                    <StaffIconButton
+                      label="Delete"
+                      title="Delete"
+                      tone="danger"
+                      className="family-notes-edit-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setConfirmDeleteNoteId(note.id);
+                      }}
+                    >
+                      <IconTrash size={14} />
+                    </StaffIconButton>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -551,32 +912,9 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
     );
   }
 
-  function studentMeta(student: StaffGuardianStudentRow) {
-    const parts = [
-      student.gradeLabel,
-      student.schoolName,
-      student.graduationYear ? String(student.graduationYear) : null,
-    ].filter(Boolean);
-    return parts.length ? parts.join(" · ") : "—";
-  }
-
   return (
     <>
       <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
-
-      {confirmUnassign ? (
-        <ConfirmActionModal
-          title="Unassign this guardian?"
-          body="They become an orphan until reassigned (not deleted). Payment responsibility will move to another household guardian when needed."
-          confirmLabel="Unassign"
-          destructive
-          busy={unassignBusy}
-          onCancel={() => {
-            if (!unassignBusy) setConfirmUnassign(false);
-          }}
-          onConfirm={() => void unassignFromFamily()}
-        />
-      ) : null}
 
       <div className="family-detail-topbar">
         <Link href={backHref} className="page-back">
@@ -755,7 +1093,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             <h2>Identity</h2>
           </div>
           <div className="family-household-summary">
-            <div className="family-household-dense">
+            <div className="family-household-dense guardian-identity-dense">
               <div className="family-household-upper">
                 <span>
                   <small>First name</small>
@@ -787,7 +1125,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                     <strong>—</strong>
                   )}
                 </span>
-                <span style={{ gridColumn: "1 / -1" }}>
+                <span>
                   <small>Other information</small>
                   <strong style={{ whiteSpace: "pre-wrap" }}>
                     {guardian.otherInformation || "—"}
@@ -803,16 +1141,8 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             <h2>Household</h2>
           </div>
           <div className="family-household-summary">
-            <div className="family-household-dense">
+            <div className="family-household-dense guardian-household-dense">
               <div className="family-household-upper">
-                <span>
-                  <small>Parent role</small>
-                  <strong>{roleLabel || "—"}</strong>
-                </span>
-                <span>
-                  <small>Responsible for payment</small>
-                  <strong>{yesNo(guardian.isBillingOwner)}</strong>
-                </span>
                 <span>
                   <small>Family</small>
                   {guardian.household ? (
@@ -827,30 +1157,21 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                   )}
                 </span>
                 <span>
-                  <small>Portal</small>
-                  <strong>{formatStatusLabel(statusKey)}</strong>
+                  <small>Parent role</small>
+                  <strong>{roleLabel || "—"}</strong>
+                </span>
+                <span>
+                  <small>Responsible for payment</small>
+                  <strong>{yesNo(guardian.isBillingOwner)}</strong>
                 </span>
               </div>
-              {guardian.household ? (
-                <div className="family-household-lower">
-                  <span style={{ gridColumn: "1 / -1" }}>
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      disabled={unassignBusy}
-                      onClick={() => setConfirmUnassign(true)}
-                    >
-                      Unassign from family
-                    </button>
-                  </span>
-                </div>
-              ) : (
+              {!guardian.household ? (
                 <div className="family-household-lower">
                   <p className="family-empty" style={{ margin: 0, gridColumn: "1 / -1" }}>
                     Assign this guardian from a Family record.
                   </p>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </Panel>
@@ -859,44 +1180,38 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           <Panel className="family-equal-panel family-students-band">
             <div className="family-panel-heading">
               <h2>Students</h2>
+              <SectionPlusMenu
+                open={sectionMenu === "students"}
+                onToggle={() => setSectionMenu((v) => (v === "students" ? null : "students"))}
+                onClose={() => setSectionMenu(null)}
+                disabled={!householdId}
+                disabledReason="Assign this guardian to a family first."
+                items={[
+                  {
+                    id: "add-new",
+                    label: "Add new",
+                    icon: <IconUserPlus size={14} />,
+                    onSelect: () => {
+                      if (!householdId) return;
+                      router.push(`/staff/students?new=1&householdId=${encodeURIComponent(householdId)}`);
+                    },
+                  },
+                  {
+                    id: "assign",
+                    label: "Assign existing",
+                    icon: <IconLink size={14} />,
+                    onSelect: () => void openAssignModal(),
+                  },
+                ]}
+              />
             </div>
-            {guardian.students.length === 0 ? (
-              <p className="family-empty">No students in this household yet.</p>
-            ) : (
-              <div className="staff-detail-list">
-                {guardian.students.map((student) => {
-                  const href = `/staff/students/${student.id}`;
-                  return (
-                    <div
-                      key={student.id}
-                      className="staff-detail-list-row staff-detail-list-row-clickable"
-                      role="link"
-                      tabIndex={0}
-                      aria-label={`Open student ${student.displayName}`}
-                      onClick={() => router.push(href)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          router.push(href);
-                        }
-                      }}
-                    >
-                      <span>
-                        <strong>{student.displayName}</strong>
-                        <small>{studentMeta(student)}</small>
-                      </span>
-                      <Link
-                        href={href}
-                        className="secondary-button staff-open-control"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        Open
-                      </Link>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <NotesListPreview
+              total={guardian.students.length}
+              empty={<p className="family-empty">No students in this household yet.</p>}
+              onViewMore={() => setStudentsModalOpen(true)}
+            >
+              {renderStudentsTable(previewStudents)}
+            </NotesListPreview>
           </Panel>
         ) : null}
       </div>
@@ -945,6 +1260,12 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
         </Panel>
       </div>
 
+      {studentsModalOpen ? (
+        <NotesListModal title="Students" onClose={() => setStudentsModalOpen(false)}>
+          {renderStudentsTable(guardian.students)}
+        </NotesListModal>
+      ) : null}
+
       {notesModalOpen ? (
         <NotesListModal
           title="Notes"
@@ -955,12 +1276,93 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
         </NotesListModal>
       ) : null}
 
+      {assignModalOpen ? (
+        <div
+          className="staff-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeAssignModal();
+          }}
+        >
+          <div
+            className="staff-modal family-assign-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guardian-assign-student-title"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") closeAssignModal();
+            }}
+          >
+            <div className="family-list-modal-header">
+              <h3 id="guardian-assign-student-title">Assign student</h3>
+              <StaffIconButton label="Close" title="Close" tone="muted" onClick={closeAssignModal}>
+                <IconClose size={18} />
+              </StaffIconButton>
+            </div>
+            <div className="family-assign-modal-body">
+              <label className="family-assign-search">
+                Search
+                <input
+                  value={assignQuery}
+                  onChange={(e) => void searchAssign(e.target.value)}
+                  placeholder="Student name…"
+                  autoFocus
+                />
+              </label>
+              {assignLoading ? <p className="family-empty">Loading…</p> : null}
+              {!assignLoading ? (
+                assignStudents.length === 0 ? (
+                  <p className="family-empty">No available students to assign.</p>
+                ) : (
+                  <div className="family-assign-list" role="listbox" aria-label="Available students">
+                    {assignStudents.map((s) => {
+                      const selected = assignSelectedId === s.id;
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          className={`family-assign-row${selected ? " is-selected" : ""}`}
+                          disabled={!!assignBusyId}
+                          onClick={() => setAssignSelectedId(s.id)}
+                        >
+                          <span className="family-assign-row-copy">
+                            <strong>{s.displayName}</strong>
+                            <small>
+                              {s.gradeLabel || "—"} · {s.householdDisplayName}
+                            </small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )
+              ) : null}
+            </div>
+            <div className="staff-modal-actions">
+              <button type="button" className="secondary-button" onClick={closeAssignModal}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={!assignSelectedId || !!assignBusyId}
+                onClick={() => void confirmAssign()}
+              >
+                {assignBusyId ? "Assigning…" : "Assign"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {editingNoteId ? (
         <div
           className="staff-modal-backdrop"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) cancelEditNote();
+            if (event.target === event.currentTarget && !confirmDeleteNoteId) cancelEditNote();
           }}
         >
           <div
@@ -1005,6 +1407,16 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
               </label>
               <div className="staff-modal-actions">
                 <button
+                  type="button"
+                  className="danger-button"
+                  disabled={!!deletingNoteId}
+                  onClick={() => {
+                    if (editingNoteId) setConfirmDeleteNoteId(editingNoteId);
+                  }}
+                >
+                  Delete
+                </button>
+                <button
                   type="submit"
                   className="action-btn action-btn-edit"
                   disabled={savingNoteEdit || !noteEditDraft.trim()}
@@ -1015,6 +1427,20 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             </form>
           </div>
         </div>
+      ) : null}
+
+      {confirmDeleteNoteId ? (
+        <ConfirmActionModal
+          title="Delete this note?"
+          body="The note moves to Settings → Recycle bin for 30 days, then is permanently removed."
+          confirmLabel="Delete"
+          destructive
+          busy={deletingNoteId === confirmDeleteNoteId}
+          onCancel={() => {
+            if (!deletingNoteId) setConfirmDeleteNoteId(null);
+          }}
+          onConfirm={() => void deleteNote(confirmDeleteNoteId)}
+        />
       ) : null}
     </>
   );

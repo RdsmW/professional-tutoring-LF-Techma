@@ -54,9 +54,21 @@ const TABS = [
   { id: "prices", label: "Prices" },
   { id: "history", label: "History" },
   { id: "integrations", label: "Integrations" },
+  { id: "recycle", label: "Recycle bin" },
 ] as const;
 
 type SettingsTab = (typeof TABS)[number]["id"];
+
+type RecycledGuardianNote = {
+  id: string;
+  body: string;
+  authorDisplayName: string;
+  createdAt: string;
+  guardianId: string;
+  guardianDisplayName: string;
+  deletedAt: string;
+  purgeAt: string;
+};
 
 function isSettingsTab(value: string | null): value is SettingsTab {
   return TABS.some((tab) => tab.id === value);
@@ -88,6 +100,11 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
   const [priceSaving, setPriceSaving] = useState(false);
   const [priceSaved, setPriceSaved] = useState(false);
   const [priceNote, setPriceNote] = useState<string | null>(null);
+  const [recycleNotes, setRecycleNotes] = useState<RecycledGuardianNote[]>([]);
+  const [recycleLoading, setRecycleLoading] = useState(false);
+  const [recycleError, setRecycleError] = useState<string | null>(null);
+  const [recycleBusyId, setRecycleBusyId] = useState<string | null>(null);
+  const [retentionDays, setRetentionDays] = useState(30);
 
   const applyActive = useCallback((next: ActivePolicy) => {
     setActive(next);
@@ -135,12 +152,61 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
     void reload();
   }, [reload]);
 
+  const reloadRecycleBin = useCallback(async () => {
+    setRecycleLoading(true);
+    setRecycleError(null);
+    try {
+      const response = await fetch("/api/staff/settings/recycle-bin");
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setRecycleError(data.error || "Unable to load recycle bin.");
+        setRecycleNotes([]);
+        return;
+      }
+      setRetentionDays(typeof data.retentionDays === "number" ? data.retentionDays : 30);
+      setRecycleNotes(data.notes ?? []);
+    } catch {
+      setRecycleError("Unable to load recycle bin.");
+      setRecycleNotes([]);
+    } finally {
+      setRecycleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab !== "recycle") return;
+    void reloadRecycleBin();
+  }, [tab, reloadRecycleBin]);
+
   function setTab(next: SettingsTab) {
     const params = new URLSearchParams(searchParams.toString());
     if (next === "policy") params.delete("tab");
     else params.set("tab", next);
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
+
+  async function restoreRecycledNote(noteId: string) {
+    if (recycleBusyId) return;
+    setRecycleBusyId(noteId);
+    setRecycleError(null);
+    try {
+      const response = await fetch("/api/staff/settings/recycle-bin/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "guardian_note", noteId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setRecycleError(data.error || "Unable to restore note.");
+        return;
+      }
+      setRecycleNotes((prev) => prev.filter((note) => note.id !== noteId));
+    } catch {
+      setRecycleError("Unable to restore note.");
+    } finally {
+      setRecycleBusyId(null);
+    }
   }
 
   async function saveVersion() {
@@ -474,6 +540,47 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
       {tab === "integrations" ? (
         <Panel title="Connection status">
           <IntegrationStatusPanel stripeConfigured={stripeConfigured} />
+        </Panel>
+      ) : null}
+
+      {tab === "recycle" ? (
+        <Panel title="Recycle bin">
+          <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 0 }}>
+            Soft-deleted notes stay here for {retentionDays} days, then are permanently removed. Restore returns a
+            note to its guardian record.
+          </p>
+          {recycleError ? <p className="form-error">{recycleError}</p> : null}
+          {recycleLoading ? (
+            <p style={{ color: "var(--muted)", margin: 0 }}>Loading…</p>
+          ) : recycleNotes.length === 0 ? (
+            <p style={{ color: "var(--muted)", margin: 0 }}>No deleted notes in the retention window.</p>
+          ) : (
+            <div className="settings-recycle-list">
+              {recycleNotes.map((note) => (
+                <div key={note.id} className="settings-recycle-row">
+                  <div className="settings-recycle-copy">
+                    <strong>
+                      <a href={`/staff/guardians/${note.guardianId}`}>{note.guardianDisplayName}</a>
+                    </strong>
+                    <span className="settings-recycle-body">{note.body}</span>
+                    <small>
+                      Deleted{" "}
+                      {new Date(note.deletedAt).toLocaleString("en-US", { timeZone: APP_TIMEZONE })} · Purges{" "}
+                      {new Date(note.purgeAt).toLocaleDateString("en-US", { timeZone: APP_TIMEZONE })}
+                    </small>
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={recycleBusyId === note.id}
+                    onClick={() => void restoreRecycledNote(note.id)}
+                  >
+                    {recycleBusyId === note.id ? "Restoring…" : "Restore"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </Panel>
       ) : null}
     </>

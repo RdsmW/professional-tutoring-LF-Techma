@@ -1,6 +1,13 @@
-import { and, desc, eq, ilike, isNotNull, isNull, ne, or, SQL } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNotNull, isNull, lt, ne, or, SQL } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { guardianNotes, guardians, households, students } from "@/lib/db/schema";
+import {
+  bookings,
+  courseEnrollments,
+  guardianNotes,
+  guardians,
+  households,
+  students,
+} from "@/lib/db/schema";
 import { HOUSEHOLD_COUNTRY_US } from "@/lib/staff/household-display-name";
 import {
   formatGuardianRelationshipRole,
@@ -11,6 +18,16 @@ import {
   type StaffGuardianListRow,
   type StaffGuardianNote,
 } from "@/lib/staff/guardian-shared";
+
+/** Soft-deleted guardian notes are retained this long before purge. */
+export const GUARDIAN_NOTE_RECYCLE_DAYS = 30;
+
+export type StaffRecycledGuardianNote = StaffGuardianNote & {
+  guardianId: string;
+  guardianDisplayName: string;
+  deletedAt: string;
+  purgeAt: string;
+};
 
 export type {
   GuardianLinkStatus,
@@ -47,6 +64,92 @@ function serializeNote(note: typeof guardianNotes.$inferSelect): StaffGuardianNo
     editorDisplayName: note.editorDisplayName ?? null,
     updatedAt: note.updatedAt ? note.updatedAt.toISOString() : null,
   };
+}
+
+function recycleCutoffDate(now = new Date()) {
+  return new Date(now.getTime() - GUARDIAN_NOTE_RECYCLE_DAYS * 24 * 60 * 60 * 1000);
+}
+
+function purgeAtFromDeletedAt(deletedAt: Date) {
+  return new Date(deletedAt.getTime() + GUARDIAN_NOTE_RECYCLE_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/** Permanently remove soft-deleted guardian notes past the retention window. */
+export async function purgeExpiredGuardianNotes() {
+  const database = requireDb();
+  await database
+    .delete(guardianNotes)
+    .where(and(isNotNull(guardianNotes.deletedAt), lt(guardianNotes.deletedAt, recycleCutoffDate())));
+}
+
+export async function softDeleteGuardianNote(input: {
+  guardianId: string;
+  noteId: string;
+  staffId: string;
+}): Promise<StaffGuardianNote | null> {
+  const database = requireDb();
+  await purgeExpiredGuardianNotes();
+  const now = new Date();
+  const [note] = await database
+    .update(guardianNotes)
+    .set({
+      deletedAt: now,
+      deletedByStaffId: input.staffId,
+    })
+    .where(
+      and(
+        eq(guardianNotes.id, input.noteId),
+        eq(guardianNotes.guardianId, input.guardianId),
+        isNull(guardianNotes.deletedAt),
+      ),
+    )
+    .returning();
+  return note ? serializeNote(note) : null;
+}
+
+export async function restoreGuardianNote(noteId: string): Promise<{ id: string; guardianId: string } | null> {
+  const database = requireDb();
+  await purgeExpiredGuardianNotes();
+  const [note] = await database
+    .update(guardianNotes)
+    .set({
+      deletedAt: null,
+      deletedByStaffId: null,
+    })
+    .where(and(eq(guardianNotes.id, noteId), isNotNull(guardianNotes.deletedAt)))
+    .returning({ id: guardianNotes.id, guardianId: guardianNotes.guardianId });
+  return note ?? null;
+}
+
+export async function listDeletedGuardianNotes(): Promise<StaffRecycledGuardianNote[]> {
+  const database = requireDb();
+  await purgeExpiredGuardianNotes();
+
+  const rows = await database
+    .select({
+      note: guardianNotes,
+      firstName: guardians.firstName,
+      lastName: guardians.lastName,
+    })
+    .from(guardianNotes)
+    .innerJoin(guardians, eq(guardianNotes.guardianId, guardians.id))
+    .where(isNotNull(guardianNotes.deletedAt))
+    .orderBy(desc(guardianNotes.deletedAt));
+
+  return rows
+    .filter((row): row is typeof row & { note: typeof row.note & { deletedAt: Date } } =>
+      Boolean(row.note.deletedAt),
+    )
+    .map((row) => {
+      const deletedAt = row.note.deletedAt;
+      return {
+        ...serializeNote(row.note),
+        guardianId: row.note.guardianId,
+        guardianDisplayName: `${row.firstName} ${row.lastName}`.trim() || "Guardian",
+        deletedAt: deletedAt.toISOString(),
+        purgeAt: purgeAtFromDeletedAt(deletedAt).toISOString(),
+      };
+    });
 }
 
 /** Next free Parent 1 / Parent 2 slot for a household, or null if both taken. */
@@ -272,10 +375,11 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
 
   let noteRows: StaffGuardianNote[] = [];
   try {
+    await purgeExpiredGuardianNotes();
     const rows = await database
       .select()
       .from(guardianNotes)
-      .where(eq(guardianNotes.guardianId, guardianId))
+      .where(and(eq(guardianNotes.guardianId, guardianId), isNull(guardianNotes.deletedAt)))
       .orderBy(desc(guardianNotes.createdAt));
     noteRows = rows.map(serializeNote);
   } catch (error) {
@@ -290,13 +394,36 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
             displayName: students.displayName,
             gradeLabel: students.gradeLabel,
             schoolName: students.schoolName,
-            graduationYear: students.graduationYear,
+            lifecycle: students.lifecycle,
           })
           .from(students)
           .where(eq(students.householdId, householdId))
           .orderBy(desc(students.updatedAt))
       : [];
 
+  const studentIds = studentRows.map((row) => row.id);
+  const studentBookingCounts =
+    studentIds.length > 0
+      ? await database
+          .select({ studentId: bookings.studentId, value: count() })
+          .from(bookings)
+          .where(inArray(bookings.studentId, studentIds))
+          .groupBy(bookings.studentId)
+      : [];
+  const studentEnrollmentCounts =
+    studentIds.length > 0
+      ? await database
+          .select({ studentId: courseEnrollments.studentId, value: count() })
+          .from(courseEnrollments)
+          .where(inArray(courseEnrollments.studentId, studentIds))
+          .groupBy(courseEnrollments.studentId)
+      : [];
+  const bookingCountByStudent = new Map(
+    studentBookingCounts.map((row) => [row.studentId, Number(row.value ?? 0)]),
+  );
+  const enrollmentCountByStudent = new Map(
+    studentEnrollmentCounts.map((row) => [row.studentId, Number(row.value ?? 0)]),
+  );
   return {
     id: g.id,
     firstName: g.firstName,
@@ -340,7 +467,10 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
       displayName: row.displayName,
       gradeLabel: row.gradeLabel,
       schoolName: row.schoolName,
-      graduationYear: row.graduationYear,
+      lifecycle: row.lifecycle,
+      canDelete:
+        (bookingCountByStudent.get(row.id) ?? 0) === 0 &&
+        (enrollmentCountByStudent.get(row.id) ?? 0) === 0,
     })),
     notes: noteRows,
   };

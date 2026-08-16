@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardianNotes, guardians } from "@/lib/db/schema";
-import { serializeGuardianNote } from "@/lib/staff/guardians";
+import { serializeGuardianNote, softDeleteGuardianNote } from "@/lib/staff/guardians";
 import { getStaffContext } from "@/lib/staff/session";
 
 export async function PATCH(
@@ -41,7 +41,13 @@ export async function PATCH(
         editorDisplayName: context.staff.fullName,
         updatedAt: now,
       })
-      .where(and(eq(guardianNotes.id, noteId), eq(guardianNotes.guardianId, id)))
+      .where(
+        and(
+          eq(guardianNotes.id, noteId),
+          eq(guardianNotes.guardianId, id),
+          isNull(guardianNotes.deletedAt),
+        ),
+      )
       .returning();
 
     if (!note) {
@@ -55,5 +61,33 @@ export async function PATCH(
   } catch (error) {
     console.warn("[staff/guardians/id/notes/noteId] PATCH soft-fail", error);
     return NextResponse.json({ ok: false, error: "Unable to update note." }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  contextParams: { params: Promise<{ id: string; noteId: string }> },
+) {
+  try {
+    const context = await getStaffContext();
+    if (!context) {
+      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+    }
+
+    const { id, noteId } = await contextParams.params;
+    const note = await softDeleteGuardianNote({
+      guardianId: id,
+      noteId,
+      staffId: context.staff.id,
+    });
+
+    if (!note) {
+      return NextResponse.json({ ok: false, error: "Note not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true, note });
+  } catch (error) {
+    console.warn("[staff/guardians/id/notes/noteId] DELETE soft-fail", error);
+    return NextResponse.json({ ok: false, error: "Unable to delete note." }, { status: 500 });
   }
 }

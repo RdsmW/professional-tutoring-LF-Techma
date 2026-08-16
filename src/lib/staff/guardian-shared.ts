@@ -16,7 +16,8 @@ export type StaffGuardianStudentRow = {
   displayName: string;
   gradeLabel: string | null;
   schoolName: string | null;
-  graduationYear: number | null;
+  lifecycle: string;
+  canDelete: boolean;
 };
 
 export type StaffGuardianListRow = {
