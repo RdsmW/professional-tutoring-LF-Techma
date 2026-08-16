@@ -1776,6 +1776,161 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-edit-field-full {
   grid-column: 1 / -1;
 }
+/* Edit shell fields: white fill + visible border on warm #FEFBF6 canvas */
+.staff-record-edit-shell .input-grid input,
+.staff-record-edit-shell .input-grid select,
+.staff-record-edit-shell .staff-multiline-input,
+.staff-record-edit-shell .input-grid textarea.staff-multiline-input {
+  background: #ffffff;
+  border: 1px solid #c9cec6;
+  color: var(--ink);
+}
+.staff-record-edit-shell .input-grid input:focus,
+.staff-record-edit-shell .input-grid select:focus,
+.staff-record-edit-shell .staff-multiline-input:focus,
+.staff-record-edit-shell .input-grid textarea.staff-multiline-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-soft);
+}
+.staff-record-edit-shell .input-grid {
+  gap: 14px 12px;
+}
+.staff-edit-field-row {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+.staff-edit-field-row--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.staff-edit-field-row--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.staff-edit-field-row--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.staff-edit-field-row--tutoring-subjects {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+.staff-edit-field-row > label,
+.staff-edit-subjects-field {
+  min-width: 0;
+}
+.staff-edit-subjects-cloud {
+  margin-top: 8px;
+}
+.staff-edit-empty-hint {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.staff-edit-chip-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.staff-edit-inline-label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.staff-edit-learning-notes {
+  margin-top: 4px;
+}
+.staff-edit-payment-row {
+  max-width: 640px;
+}
+/* Long select labels: visible wrap face (~2 lines); native select stays interactive */
+.staff-edit-select-wrap-face {
+  position: relative;
+  margin-top: 6px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #c9cec6;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 8px 28px 8px 11px;
+  min-height: 42px;
+  max-height: 3.7em;
+  overflow: hidden;
+}
+.staff-edit-select-wrap-face::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--muted);
+  transform: translateY(-40%);
+  pointer-events: none;
+}
+.staff-edit-select-wrap-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-transform: none;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  pointer-events: none;
+}
+.staff-edit-select-wrap-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+}
+.staff-record-edit-shell .input-grid .staff-edit-select-wrap-native {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.staff-edit-select-wrap-face:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-soft);
+}
+@media (max-width: 960px) {
+  .staff-edit-field-row--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .staff-edit-field-row--2,
+  .staff-edit-field-row--3,
+  .staff-edit-field-row--4,
+  .staff-edit-field-row--tutoring-subjects {
+    grid-template-columns: 1fr;
+  }
+  .staff-edit-payment-row {
+    max-width: none;
+  }
+}
 /* Guardian Household: Family 40% | Parent role 30% | Payment 30% */
 .guardian-household-dense .family-household-upper {
   grid-template-columns: minmax(0, 4fr) minmax(0, 3fr) minmax(0, 3fr);

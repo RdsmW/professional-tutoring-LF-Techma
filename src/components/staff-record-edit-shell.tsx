@@ -45,6 +45,54 @@ export function StaffMultilineField({
   );
 }
 
+type StaffWrapSelectOption = { id: string; label: string };
+
+type StaffWrapSelectProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: StaffWrapSelectOption[];
+  emptyLabel?: string;
+  id?: string;
+};
+
+/** Select that shows selected label wrapped (~2 lines) instead of overflowing the field. */
+export function StaffWrapSelect({
+  label,
+  value,
+  onChange,
+  options,
+  emptyLabel = "—",
+  id,
+}: StaffWrapSelectProps) {
+  const selected = options.find((option) => option.id === value);
+  const display = selected?.label || emptyLabel;
+  return (
+    <label>
+      {label}
+      <div className="staff-edit-select-wrap-face">
+        <span className="staff-edit-select-wrap-text" aria-hidden="true">
+          {display}
+        </span>
+        <select
+          id={id}
+          className="staff-edit-select-wrap-native"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          title={display}
+        >
+          <option value="">{emptyLabel}</option>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </label>
+  );
+}
+
 type StaffRecordEditShellProps = {
   backHref: string;
   backLabel: string;

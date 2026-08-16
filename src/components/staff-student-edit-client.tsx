@@ -8,6 +8,7 @@ import {
   StaffEditSectionLabel,
   StaffMultilineField,
   StaffRecordEditShell,
+  StaffWrapSelect,
 } from "@/components/staff-record-edit-shell";
 import {
   composeLearningNeeds,
@@ -90,6 +91,11 @@ type ProfileForm = {
 };
 
 const LIFECYCLE_OPTIONS = ["prospect", "active", "paused", "completed", "archived"];
+
+function capitalizeLabel(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 function parseScheduleIds(value: string | null | undefined) {
   if (!value) return [] as string[];
@@ -279,221 +285,268 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
         onSubmit={(event) => void saveProfile(event)}
       >
         <StaffEditSectionLabel>Profile</StaffEditSectionLabel>
-        <StaffEditSectionLabel>Legal name · Gender · Birthdate · Phone</StaffEditSectionLabel>
-        <label>
-          First name
-          <input
-            value={profileForm.firstName}
-            onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          Last name
-          <input
-            value={profileForm.lastName}
-            onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          Gender
-          <select
-            value={profileForm.gender}
-            onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
-          >
-            <option value="">—</option>
-            {GENDER.options.map((option) => (
-              <option key={option.id} value={option.label}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Birthdate
-          <input
-            value={profileForm.birthdate}
-            onChange={(e) => setProfileForm({ ...profileForm, birthdate: e.target.value })}
-            placeholder="YYYY-MM-DD"
-          />
-        </label>
-        <label>
-          Phone
-          <input
-            type="tel"
-            value={profileForm.cellPhone}
-            onChange={(e) => setProfileForm({ ...profileForm, cellPhone: e.target.value })}
-          />
-        </label>
-        <label>
-          Lifecycle
-          <select
-            value={profileForm.lifecycle}
-            onChange={(e) => setProfileForm({ ...profileForm, lifecycle: e.target.value })}
-          >
-            {LIFECYCLE_OPTIONS.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            First name
+            <input
+              value={profileForm.firstName}
+              onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            Last name
+            <input
+              value={profileForm.lastName}
+              onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            Gender
+            <select
+              value={profileForm.gender}
+              onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
+            >
+              <option value="">—</option>
+              {GENDER.options.map((option) => (
+                <option key={option.id} value={option.label}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            Birthdate
+            <input
+              value={profileForm.birthdate}
+              onChange={(e) => setProfileForm({ ...profileForm, birthdate: e.target.value })}
+              placeholder="YYYY-MM-DD"
+            />
+          </label>
+          <label>
+            Phone
+            <input
+              type="tel"
+              value={profileForm.cellPhone}
+              onChange={(e) => setProfileForm({ ...profileForm, cellPhone: e.target.value })}
+            />
+          </label>
+          <label>
+            Lifecycle
+            <select
+              value={profileForm.lifecycle}
+              onChange={(e) => setProfileForm({ ...profileForm, lifecycle: e.target.value })}
+            >
+              {LIFECYCLE_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {capitalizeLabel(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--4">
+          <label>
+            Grade
+            <select
+              value={profileForm.gradeLabel}
+              onChange={(e) => setProfileForm({ ...profileForm, gradeLabel: e.target.value })}
+            >
+              <option value="">—</option>
+              {GRADE_LABELS.options.map((option) => (
+                <option key={option.id} value={option.label}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Grade Year
+            <select
+              value={profileForm.graduationYear}
+              onChange={(e) => setProfileForm({ ...profileForm, graduationYear: e.target.value })}
+            >
+              <option value="">—</option>
+              {GRADUATION_YEARS.options.map((option) => (
+                <option key={option.id} value={option.label}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            School
+            <input
+              value={profileForm.schoolName}
+              onChange={(e) => setProfileForm({ ...profileForm, schoolName: e.target.value })}
+            />
+          </label>
+          <label>
+            Availability
+            <input
+              value={profileForm.availabilityNotes}
+              onChange={(e) => setProfileForm({ ...profileForm, availabilityNotes: e.target.value })}
+            />
+          </label>
+        </div>
 
-        <StaffEditSectionLabel>Grade · Grade Year · School · Availability</StaffEditSectionLabel>
-        <label>
-          Grade
-          <select
-            value={profileForm.gradeLabel}
-            onChange={(e) => setProfileForm({ ...profileForm, gradeLabel: e.target.value })}
-          >
-            <option value="">—</option>
-            {GRADE_LABELS.options.map((option) => (
-              <option key={option.id} value={option.label}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Grade Year
-          <select
-            value={profileForm.graduationYear}
-            onChange={(e) => setProfileForm({ ...profileForm, graduationYear: e.target.value })}
-          >
-            <option value="">—</option>
-            {GRADUATION_YEARS.options.map((option) => (
-              <option key={option.id} value={option.label}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          School
-          <input
-            value={profileForm.schoolName}
-            onChange={(e) => setProfileForm({ ...profileForm, schoolName: e.target.value })}
-          />
-        </label>
-        <StaffMultilineField
-          label="Availability"
-          value={profileForm.availabilityNotes}
-          onChange={(availabilityNotes) => setProfileForm({ ...profileForm, availabilityNotes })}
-          rows={2}
-        />
-
-        <StaffEditSectionLabel>Mailing address · Zoho CRM ID · Zoho CRM URL</StaffEditSectionLabel>
-        <label>
-          Street
-          <AddressAutocompleteInput
-            value={profileForm.addressLine1}
-            onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
-            onSelect={(suggestion) =>
-              setProfileForm({
-                ...profileForm,
-                addressLine1: suggestion.addressLine1,
-                city: suggestion.city || profileForm.city,
-                state: suggestion.state || profileForm.state,
-                postalCode: suggestion.postalCode || profileForm.postalCode,
-              })
-            }
-          />
-        </label>
-        <label>
-          Address line 2
-          <input
-            value={profileForm.addressLine2}
-            onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
-          />
-        </label>
-        <label>
-          City
-          <input
-            value={profileForm.city}
-            onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
-          />
-        </label>
-        <label>
-          State
-          <input
-            value={profileForm.state}
-            onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
-          />
-        </label>
-        <label>
-          ZIP
-          <input
-            value={profileForm.postalCode}
-            onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
-          />
-        </label>
-        <label>
-          Country
-          <input value="United States" readOnly />
-        </label>
-        <label>
-          Zoho CRM ID
-          <input
-            value={profileForm.zohoDealId}
-            onChange={(e) => setProfileForm({ ...profileForm, zohoDealId: e.target.value })}
-          />
-        </label>
-        <label>
-          Zoho CRM URL
-          <input
-            value={profileForm.zohoDealUrl}
-            onChange={(e) => setProfileForm({ ...profileForm, zohoDealUrl: e.target.value })}
-          />
-        </label>
+        <StaffEditSectionLabel>Address</StaffEditSectionLabel>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            Street
+            <AddressAutocompleteInput
+              value={profileForm.addressLine1}
+              onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
+              onSelect={(suggestion) =>
+                setProfileForm({
+                  ...profileForm,
+                  addressLine1: suggestion.addressLine1,
+                  city: suggestion.city || profileForm.city,
+                  state: suggestion.state || profileForm.state,
+                  postalCode: suggestion.postalCode || profileForm.postalCode,
+                })
+              }
+            />
+          </label>
+          <label>
+            Address line 2
+            <input
+              value={profileForm.addressLine2}
+              onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
+            />
+          </label>
+          <label>
+            City
+            <input
+              value={profileForm.city}
+              onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
+            />
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            State
+            <input
+              value={profileForm.state}
+              onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
+            />
+          </label>
+          <label>
+            ZIP
+            <input
+              value={profileForm.postalCode}
+              onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
+            />
+          </label>
+          <label>
+            Country
+            <input value="United States" readOnly />
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--2">
+          <label>
+            Zoho CRM ID
+            <input
+              value={profileForm.zohoDealId}
+              onChange={(e) => setProfileForm({ ...profileForm, zohoDealId: e.target.value })}
+            />
+          </label>
+          <label>
+            Zoho CRM URL
+            <input
+              value={profileForm.zohoDealUrl}
+              onChange={(e) => setProfileForm({ ...profileForm, zohoDealUrl: e.target.value })}
+            />
+          </label>
+        </div>
 
         <StaffEditSectionLabel>Description</StaffEditSectionLabel>
         <StaffMultilineField
           label="Description"
           value={profileForm.description}
           onChange={(description) => setProfileForm({ ...profileForm, description })}
-          rows={2}
+          rows={3}
+          hideLabel
         />
 
         <StaffEditSectionLabel>Tutoring</StaffEditSectionLabel>
-        <label>
-          Academic year
-          <input
-            value={profileForm.academicYear}
-            onChange={(e) => setProfileForm({ ...profileForm, academicYear: e.target.value })}
-            placeholder="2025-2026"
-          />
-        </label>
-        <label>
-          Hours/Rates
-          <select
+        <div className="staff-edit-field-row staff-edit-field-row--2 staff-edit-field-row--tutoring-subjects">
+          <label>
+            Academic year
+            <input
+              value={profileForm.academicYear}
+              onChange={(e) => setProfileForm({ ...profileForm, academicYear: e.target.value })}
+              placeholder="2025-2026"
+            />
+          </label>
+          <label className="staff-edit-subjects-field">
+            Subjects
+            <select
+              id="student-subject-add"
+              defaultValue=""
+              onChange={(e) => {
+                const value = e.target.value;
+                if (!value) return;
+                if (!profileForm.subjectIds.includes(value)) {
+                  setProfileForm({ ...profileForm, subjectIds: [...profileForm.subjectIds, value] });
+                }
+                e.target.value = "";
+              }}
+            >
+              <option value="">Add subject…</option>
+              {availableSubjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
+            <div className="field-cloud staff-edit-subjects-cloud">
+              {profileForm.subjectIds.map((subjectId) => {
+                const subject =
+                  catalogSubjects.find((row) => row.id === subjectId) ||
+                  student.subjects.find((row) => row.id === subjectId);
+                return (
+                  <button
+                    key={subjectId}
+                    type="button"
+                    onClick={() =>
+                      setProfileForm({
+                        ...profileForm,
+                        subjectIds: profileForm.subjectIds.filter((id) => id !== subjectId),
+                      })
+                    }
+                  >
+                    {subject?.name ?? subjectId} ×
+                  </button>
+                );
+              })}
+              {profileForm.subjectIds.length === 0 ? (
+                <span className="staff-edit-empty-hint">No subjects selected.</span>
+              ) : null}
+            </div>
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--2">
+          <StaffWrapSelect
+            label="Hours/Rates"
             value={profileForm.hoursRatePackage}
-            onChange={(e) => setProfileForm({ ...profileForm, hoursRatePackage: e.target.value })}
-          >
-            <option value="">—</option>
-            {ACADEMIC_RATE_PACKAGES.options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Advanced Subjects Hours/Rates
-          <select
+            onChange={(hoursRatePackage) => setProfileForm({ ...profileForm, hoursRatePackage })}
+            options={ACADEMIC_RATE_PACKAGES.options}
+          />
+          <StaffWrapSelect
+            label="Advanced Subjects Hours/Rates"
             value={profileForm.advancedHoursRatePackage}
-            onChange={(e) => setProfileForm({ ...profileForm, advancedHoursRatePackage: e.target.value })}
-          >
-            <option value="">—</option>
-            {ACADEMIC_ADVANCED_RATE_PACKAGES.options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div style={{ gridColumn: "1 / -1" }}>
-          <strong style={{ display: "block", marginBottom: 8, fontSize: 13 }}>Preferred schedule</strong>
+            onChange={(advancedHoursRatePackage) =>
+              setProfileForm({ ...profileForm, advancedHoursRatePackage })
+            }
+            options={ACADEMIC_ADVANCED_RATE_PACKAGES.options}
+          />
+        </div>
+        <div className="staff-edit-field-full staff-edit-chip-block">
+          <span className="staff-edit-inline-label">Preferred schedule</span>
           <div className="subject-multi-select" role="group" aria-label="Preferred schedule">
             {ACADEMIC_SCHEDULE_WINDOWS.options.map((option) => {
               const selected = profileForm.preferredScheduleIds.includes(option.id);
@@ -518,83 +571,8 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             })}
           </div>
         </div>
-        <label style={{ gridColumn: "1 / -1" }}>
-          Subjects
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
-            <select
-              id="student-subject-add"
-              defaultValue=""
-              onChange={(e) => {
-                const value = e.target.value;
-                if (!value) return;
-                if (!profileForm.subjectIds.includes(value)) {
-                  setProfileForm({ ...profileForm, subjectIds: [...profileForm.subjectIds, value] });
-                }
-                e.target.value = "";
-              }}
-            >
-              <option value="">Add subject…</option>
-              {availableSubjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field-cloud" style={{ marginTop: 8 }}>
-            {profileForm.subjectIds.map((subjectId) => {
-              const subject =
-                catalogSubjects.find((row) => row.id === subjectId) ||
-                student.subjects.find((row) => row.id === subjectId);
-              return (
-                <button
-                  key={subjectId}
-                  type="button"
-                  onClick={() =>
-                    setProfileForm({
-                      ...profileForm,
-                      subjectIds: profileForm.subjectIds.filter((id) => id !== subjectId),
-                    })
-                  }
-                >
-                  {subject?.name ?? subjectId} ×
-                </button>
-              );
-            })}
-            {profileForm.subjectIds.length === 0 ? (
-              <span style={{ color: "var(--muted)", fontSize: 14 }}>No subjects selected.</span>
-            ) : null}
-          </div>
-        </label>
-
-        <StaffEditSectionLabel>Payment</StaffEditSectionLabel>
-        <label>
-          Payment plan
-          <select
-            value={profileForm.paymentPlan}
-            onChange={(e) => setProfileForm({ ...profileForm, paymentPlan: e.target.value })}
-          >
-            <option value="">—</option>
-            {ACADEMIC_PAYMENT_PLANS.options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Deposit ($)
-          <input
-            value={profileForm.depositDollars}
-            onChange={(e) => setProfileForm({ ...profileForm, depositDollars: e.target.value })}
-            inputMode="decimal"
-            placeholder="0.00"
-          />
-        </label>
-
-        <StaffEditSectionLabel>Learning needs</StaffEditSectionLabel>
-        <div style={{ gridColumn: "1 / -1" }}>
-          <strong style={{ display: "block", marginBottom: 8, fontSize: 13 }}>Subjects or learning goals</strong>
+        <div className="staff-edit-field-full staff-edit-chip-block">
+          <span className="staff-edit-inline-label">Learning needs</span>
           <div className="subject-multi-select" role="group" aria-label="Learning needs">
             {ACADEMIC_SUBJECTS.options.map((option) => {
               const selected = profileForm.learningNeedSubjectIds.includes(option.id);
@@ -618,7 +596,7 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
               );
             })}
           </div>
-          <div style={{ marginTop: 12 }}>
+          <div className="staff-edit-learning-notes">
             <StaffMultilineField
               label="Additional notes (optional)"
               value={profileForm.learningNeedNotes}
@@ -628,6 +606,25 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
               fullWidth={false}
             />
           </div>
+        </div>
+
+        <StaffEditSectionLabel>Payment</StaffEditSectionLabel>
+        <div className="staff-edit-field-row staff-edit-field-row--2 staff-edit-payment-row">
+          <StaffWrapSelect
+            label="Payment plan"
+            value={profileForm.paymentPlan}
+            onChange={(paymentPlan) => setProfileForm({ ...profileForm, paymentPlan })}
+            options={ACADEMIC_PAYMENT_PLANS.options}
+          />
+          <label>
+            Deposit ($)
+            <input
+              value={profileForm.depositDollars}
+              onChange={(e) => setProfileForm({ ...profileForm, depositDollars: e.target.value })}
+              inputMode="decimal"
+              placeholder="0.00"
+            />
+          </label>
         </div>
       </StaffRecordEditShell>
     </>
