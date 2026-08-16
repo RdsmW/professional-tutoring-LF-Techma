@@ -1276,8 +1276,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   align-items: stretch;
 }
 .student-payment-learning-band {
-  /* Tutoring | Payment | Learning needs ~40% / 30% / 30% */
-  grid-template-columns: minmax(0, 40fr) minmax(0, 30fr) minmax(0, 30fr);
+  /* Tutoring | Payment | Learning needs ~48% / 20% / 32% */
+  grid-template-columns: minmax(0, 48fr) minmax(0, 20fr) minmax(0, 32fr);
 }
 .family-activity-band > .panel,
 .family-notes-layout > .panel,
