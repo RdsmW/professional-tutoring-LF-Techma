@@ -662,7 +662,9 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
             </div>
           </div>
         </Panel>
+      </div>
 
+      <div className="student-payment-learning-band">
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Tutoring</h2>
@@ -712,9 +714,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
             </div>
           </div>
         </Panel>
-      </div>
 
-      <div className="student-payment-learning-band">
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Payment</h2>
