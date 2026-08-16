@@ -28,18 +28,18 @@ export function StaffDirectoryCard({
   }
 
   return (
-    <article className="staff-dir-card">
-      <div className="staff-dir-card-top">
+    <article
+      className="staff-dir-card staff-dir-card-clickable"
+      role="link"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={onKeyDown}
+    >
+      <div className="staff-dir-card-top" onClick={(event) => event.stopPropagation()}>
         <div className="staff-dir-card-status">{status}</div>
         <StaffRowActions label="Card actions" actions={actions} />
       </div>
-      <div
-        className="staff-dir-card-body"
-        role="link"
-        tabIndex={0}
-        onClick={onOpen}
-        onKeyDown={onKeyDown}
-      >
+      <div className="staff-dir-card-body">
         <h3>{title}</h3>
         {subtitle ? <p>{subtitle}</p> : null}
         {fields.length > 0 ? (

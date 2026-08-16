@@ -1060,7 +1060,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     : family.cardOnFile
       ? "Yes"
       : "No";
-  const payerPhone = family.billingOwnerPhone || null;
+  const billingOwner = family.billingOwnerGuardianId
+    ? family.guardians.find((g) => g.id === family.billingOwnerGuardianId) ?? null
+    : null;
   const isArchived = family.status === "archived";
   const guardiansAtMax = family.guardians.length >= (family.maxGuardians || MAX_GUARDIANS);
   const zohoLink = zohoHref(family);
@@ -1295,7 +1297,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </thead>
           <tbody>
             {notes.map((note) => (
-              <tr key={note.id}>
+              <tr
+                key={note.id}
+                className="family-notes-row-clickable"
+                tabIndex={0}
+                role="button"
+                aria-label="Edit note"
+                onClick={() => startEditNote(note)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    startEditNote(note);
+                  }
+                }}
+              >
                 <td className="family-notes-col-content">
                   <span className="family-notes-body">{note.body}</span>
                 </td>
@@ -1307,7 +1322,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                     title="Edit"
                     tone="muted"
                     className="family-notes-edit-btn"
-                    onClick={() => startEditNote(note)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      startEditNote(note);
+                    }}
                   >
                     <IconPencil size={14} />
                   </StaffIconButton>
@@ -1414,7 +1432,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               />
             </label>
             <label>
-              Address line 2
+              Billing address line 2
               <input
                 value={householdForm.addressLine2}
                 onChange={(e) => setHouseholdForm({ ...householdForm, addressLine2: e.target.value })}
@@ -1528,12 +1546,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             <h2>Household</h2>
           </div>
           <div className="family-household-summary">
-            <div className="family-household-summary-title">
-              <strong>{family.displayName}</strong>
-              <span className={`pill ${statusTone(family.status)}`}>
-                {formatStatusLabel(family.status)}
-              </span>
-            </div>
             <div className="family-household-dense">
               <div className="family-household-upper">
                 <span className="family-household-field-phone">
@@ -1542,21 +1554,18 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 </span>
                 <span className="family-household-field-payer">
                   <small>Responsible for payment</small>
-                  {!family.billingOwnerName && !family.billingEmail && !payerPhone ? (
-                    <strong>—</strong>
+                  {billingOwner && family.billingOwnerName ? (
+                    <button
+                      type="button"
+                      className="family-household-payer-link"
+                      onClick={() => openGuardianEdit(billingOwner)}
+                    >
+                      {family.billingOwnerName}
+                    </button>
+                  ) : family.billingOwnerName ? (
+                    <strong>{family.billingOwnerName}</strong>
                   ) : (
-                    <>
-                      <strong>{family.billingOwnerName || "—"}</strong>
-                      <span
-                        className="family-household-payer-line"
-                        title={family.billingEmail || undefined}
-                      >
-                        {family.billingEmail || "—"}
-                      </span>
-                      {payerPhone ? (
-                        <span className="family-household-payer-line">{payerPhone}</span>
-                      ) : null}
-                    </>
+                    <strong>—</strong>
                   )}
                 </span>
                 <span className="family-household-field-card">
@@ -1570,7 +1579,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               </div>
               <div className="family-household-lower">
                 <span className="family-household-field-address">
-                  <small>Address</small>
+                  <small>Billing Address</small>
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (

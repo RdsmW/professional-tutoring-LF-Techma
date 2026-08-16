@@ -29,14 +29,17 @@ export function AppIcon({
   name,
   title,
   size = 17,
+  preferPng = true,
 }: {
   name: string;
   title?: string;
   size?: number;
+  /** When false, always use the stroke SVG (needed for CSS currentColor tinting). */
+  preferPng?: boolean;
 }) {
   const icon = (name in drawings ? name : "dashboard") as IconName;
   const [pngFailed, setPngFailed] = useState(false);
-  const tryPng = prefersNavPng(icon) && !pngFailed;
+  const tryPng = preferPng && prefersNavPng(icon) && !pngFailed;
 
   if (tryPng) {
     return (

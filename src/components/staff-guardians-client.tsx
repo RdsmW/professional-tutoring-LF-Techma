@@ -86,6 +86,11 @@ export function StaffGuardiansClient() {
     setApplied({ q: "", status: "all" });
   }
 
+  function openGuardian(householdId: string | null, guardianId: string) {
+    if (!householdId) return;
+    router.push(`/staff/families/${householdId}?guardianId=${guardianId}`);
+  }
+
   function openFamily(householdId: string | null) {
     if (!householdId) return;
     router.push(`/staff/families/${householdId}`);
@@ -190,7 +195,7 @@ export function StaffGuardiansClient() {
                   }
                   fields={[{ label: "Family", value: row.household.displayName }]}
                   actions={actions}
-                  onOpen={() => openFamily(familyId)}
+                  onOpen={() => openGuardian(familyId, row.id)}
                 />
               );
             })}
@@ -210,15 +215,15 @@ export function StaffGuardiansClient() {
               return (
                 <div
                   key={row.id}
-                  className="table-row staff-dir-cols-guardians"
+                  className={`table-row staff-dir-cols-guardians${familyId ? "" : " staff-dir-row-muted"}`}
                   role={familyId ? "link" : undefined}
                   tabIndex={familyId ? 0 : undefined}
-                  onClick={() => openFamily(familyId)}
+                  onClick={() => openGuardian(familyId, row.id)}
                   onKeyDown={(event) => {
                     if (!familyId) return;
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      openFamily(familyId);
+                      openGuardian(familyId, row.id);
                     }
                   }}
                 >

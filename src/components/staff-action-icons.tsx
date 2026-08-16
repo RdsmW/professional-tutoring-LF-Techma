@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 /** Compact staff action icons — stroke style matching AppIcon / create-menu SVGs. */
 export function IconPencil({ size = 16 }: { size?: number }) {
@@ -197,7 +197,7 @@ export function IconLink({ size = 16 }: { size?: number }) {
 type StaffIconButtonProps = {
   label: string;
   title?: string;
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   type?: "button" | "submit";
   disabled?: boolean;
   tone?: "default" | "edit" | "danger" | "muted" | "archive" | "restore";

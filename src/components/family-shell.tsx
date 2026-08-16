@@ -66,7 +66,7 @@ export function FamilyShell({
                   aria-label={item.label}
                 >
                   <span className="nav-icon">
-                    <AppIcon name={item.icon} />
+                    <AppIcon name={item.icon} preferPng={false} />
                   </span>
                   <span className="nav-text">{item.label}</span>
                 </Link>
@@ -86,11 +86,11 @@ export function FamilyShell({
           <div className="sidebar-footer">
             <div className="sidebar-chrome-actions">
               <button type="button" aria-label="Search" title="Search">
-                <AppIcon name="search" size={16} />
+                <AppIcon name="search" size={16} preferPng={false} />
                 <span className="chrome-label">Search</span>
               </button>
               <button type="button" aria-label="Notifications" title="Notifications">
-                <AppIcon name="bell" size={16} />
+                <AppIcon name="bell" size={16} preferPng={false} />
                 <span className="chrome-label">Alerts</span>
               </button>
             </div>
