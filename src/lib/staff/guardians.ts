@@ -1,26 +1,22 @@
-import { and, desc, eq, ilike, isNotNull, isNull, or, SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, isNotNull, isNull, ne, or, SQL } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardians, households } from "@/lib/db/schema";
+import {
+  formatGuardianRelationshipRole,
+  isGuardianRelationshipRole,
+  type GuardianLinkStatus,
+  type GuardianRelationshipRole,
+  type StaffGuardianDetail,
+  type StaffGuardianListRow,
+} from "@/lib/staff/guardian-shared";
 
-export type GuardianLinkStatus = "linked" | "invite_pending" | "unlinked";
-
-export type StaffGuardianListRow = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string | null;
-  linkStatus: GuardianLinkStatus;
-  isBillingOwner: boolean;
-  canManageStudents: boolean;
-  canRequestServices: boolean;
-  household: {
-    id: string | null;
-    displayName: string;
-    status: string;
-  };
-  updatedAt: string;
-};
+export type {
+  GuardianLinkStatus,
+  GuardianRelationshipRole,
+  StaffGuardianDetail,
+  StaffGuardianListRow,
+} from "@/lib/staff/guardian-shared";
+export { formatGuardianRelationshipRole, isGuardianRelationshipRole } from "@/lib/staff/guardian-shared";
 
 export type ListStaffGuardiansFilters = {
   q?: string;
@@ -36,6 +32,83 @@ function deriveLinkStatus(row: {
   if (row.clerkUserId) return "linked";
   if (row.inviteToken && !row.inviteAcceptedAt) return "invite_pending";
   return "unlinked";
+}
+
+/** Next free Parent 1 / Parent 2 slot for a household, or null if both taken. */
+export async function nextAvailableRelationshipRole(
+  householdId: string,
+  excludeGuardianId?: string,
+): Promise<GuardianRelationshipRole | null> {
+  const database = requireDb();
+  const rows = await database
+    .select({ id: guardians.id, relationshipRole: guardians.relationshipRole })
+    .from(guardians)
+    .where(eq(guardians.householdId, householdId));
+
+  const taken = new Set(
+    rows
+      .filter((row) => !excludeGuardianId || row.id !== excludeGuardianId)
+      .map((row) => row.relationshipRole)
+      .filter((role): role is GuardianRelationshipRole => isGuardianRelationshipRole(role)),
+  );
+
+  if (!taken.has("parent_1")) return "parent_1";
+  if (!taken.has("parent_2")) return "parent_2";
+  return null;
+}
+
+/**
+ * Ensure relationshipRole is unique within the household.
+ * Returns an error message when another guardian already holds the role.
+ */
+export async function assertUniqueRelationshipRole(input: {
+  householdId: string;
+  guardianId: string;
+  relationshipRole: GuardianRelationshipRole | null;
+}): Promise<string | null> {
+  if (!input.relationshipRole) return null;
+  const database = requireDb();
+  const [conflict] = await database
+    .select({ id: guardians.id, firstName: guardians.firstName, lastName: guardians.lastName })
+    .from(guardians)
+    .where(
+      and(
+        eq(guardians.householdId, input.householdId),
+        eq(guardians.relationshipRole, input.relationshipRole),
+        ne(guardians.id, input.guardianId),
+      ),
+    )
+    .limit(1);
+  if (!conflict) return null;
+  const label = formatGuardianRelationshipRole(input.relationshipRole);
+  const name = `${conflict.firstName} ${conflict.lastName}`.trim();
+  return `${label} is already assigned to ${name || "another guardian"} on this family.`;
+}
+
+/** Atomic household payer update (Family is source of truth). */
+export async function setHouseholdBillingOwner(householdId: string, guardianId: string) {
+  const database = requireDb();
+  const [owner] = await database
+    .select({ id: guardians.id })
+    .from(guardians)
+    .where(and(eq(guardians.id, guardianId), eq(guardians.householdId, householdId)))
+    .limit(1);
+  if (!owner) {
+    throw new Error("Responsible for payment must be a household guardian.");
+  }
+
+  await database
+    .update(guardians)
+    .set({ isBillingOwner: false, updatedAt: new Date() })
+    .where(eq(guardians.householdId, householdId));
+  await database
+    .update(guardians)
+    .set({ isBillingOwner: true, updatedAt: new Date() })
+    .where(eq(guardians.id, guardianId));
+  await database
+    .update(households)
+    .set({ billingOwnerGuardianId: guardianId, updatedAt: new Date() })
+    .where(eq(households.id, householdId));
 }
 
 /** Staff Guardians directory query. */
@@ -75,6 +148,7 @@ export async function listStaffGuardians(
       lastName: guardians.lastName,
       email: guardians.email,
       phone: guardians.phone,
+      relationshipRole: guardians.relationshipRole,
       clerkUserId: guardians.clerkUserId,
       inviteToken: guardians.inviteToken,
       inviteAcceptedAt: guardians.inviteAcceptedAt,
@@ -98,6 +172,7 @@ export async function listStaffGuardians(
     email: row.email,
     phone: row.phone,
     linkStatus: deriveLinkStatus(row),
+    relationshipRole: isGuardianRelationshipRole(row.relationshipRole) ? row.relationshipRole : null,
     isBillingOwner: row.isBillingOwner,
     canManageStudents: row.canManageStudents,
     canRequestServices: row.canRequestServices,
@@ -108,4 +183,72 @@ export async function listStaffGuardians(
     },
     updatedAt: row.updatedAt.toISOString(),
   }));
+}
+
+export async function getStaffGuardianDetail(guardianId: string): Promise<StaffGuardianDetail | null> {
+  const database = requireDb();
+  const [joined] = await database
+    .select({
+      guardian: guardians,
+      householdId: households.id,
+      householdDisplayName: households.displayName,
+      householdStatus: households.status,
+      billingOwnerGuardianId: households.billingOwnerGuardianId,
+    })
+    .from(guardians)
+    .leftJoin(households, eq(guardians.householdId, households.id))
+    .where(eq(guardians.id, guardianId))
+    .limit(1);
+
+  if (!joined) return null;
+
+  const g = joined.guardian;
+  const linkStatus = deriveLinkStatus(g);
+  const householdId = joined.householdId;
+
+  const siblingRows = householdId
+    ? await database
+        .select({
+          id: guardians.id,
+          firstName: guardians.firstName,
+          lastName: guardians.lastName,
+          relationshipRole: guardians.relationshipRole,
+          isBillingOwner: guardians.isBillingOwner,
+        })
+        .from(guardians)
+        .where(and(eq(guardians.householdId, householdId), ne(guardians.id, guardianId)))
+    : [];
+
+  return {
+    id: g.id,
+    firstName: g.firstName,
+    lastName: g.lastName,
+    email: g.email,
+    phone: g.phone,
+    relationshipRole: isGuardianRelationshipRole(g.relationshipRole) ? g.relationshipRole : null,
+    isBillingOwner: g.isBillingOwner,
+    canManageStudents: g.canManageStudents,
+    canRequestServices: g.canRequestServices,
+    linkStatus,
+    invitePending: linkStatus === "invite_pending",
+    invitePath: g.inviteToken && !g.inviteAcceptedAt ? `/invite/${g.inviteToken}` : null,
+    linked: Boolean(g.clerkUserId),
+    createdAt: g.createdAt.toISOString(),
+    updatedAt: g.updatedAt.toISOString(),
+    household: householdId
+      ? {
+          id: householdId,
+          displayName: joined.householdDisplayName || "Family",
+          status: joined.householdStatus || "pending",
+          billingOwnerGuardianId: joined.billingOwnerGuardianId,
+        }
+      : null,
+    householdGuardians: siblingRows.map((row) => ({
+      id: row.id,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      relationshipRole: isGuardianRelationshipRole(row.relationshipRole) ? row.relationshipRole : null,
+      isBillingOwner: row.isBillingOwner,
+    })),
+  };
 }

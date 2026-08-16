@@ -33,6 +33,12 @@ export const studentLifecycleEnum = pgEnum("student_lifecycle", [
   "archived",
 ]);
 
+/** Household guardian slot: at most one Parent 1 and one Parent 2 per household. */
+export const guardianRelationshipRoleEnum = pgEnum("guardian_relationship_role", [
+  "parent_1",
+  "parent_2",
+]);
+
 export const households = pgTable("households", {
   id: uuid("id").defaultRandom().primaryKey(),
   displayName: text("display_name").notNull(),
@@ -78,6 +84,8 @@ export const guardians = pgTable("guardians", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   phone: varchar("phone", { length: 64 }),
+  /** Parent 1 / Parent 2 within a household; null when unassigned or unset. */
+  relationshipRole: guardianRelationshipRoleEnum("relationship_role"),
   isBillingOwner: boolean("is_billing_owner").notNull().default(false),
   canManageStudents: boolean("can_manage_students").notNull().default(true),
   canRequestServices: boolean("can_request_services").notNull().default(true),

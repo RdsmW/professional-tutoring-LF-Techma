@@ -6,6 +6,12 @@ import {
   MAX_GUARDIANS_PER_HOUSEHOLD,
   refreshHouseholdDisplayNameIfAuto,
 } from "@/lib/staff/household-display-name";
+import {
+  assertUniqueRelationshipRole,
+  isGuardianRelationshipRole,
+  nextAvailableRelationshipRole,
+  type GuardianRelationshipRole,
+} from "@/lib/staff/guardians";
 import { getStaffContext } from "@/lib/staff/session";
 import { isValidEmail, isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
@@ -26,6 +32,7 @@ export async function POST(
       email?: string;
       phone?: string;
       isBillingOwner?: boolean;
+      relationshipRole?: GuardianRelationshipRole | null;
     };
 
     const firstName = (body.firstName ?? "").trim();
@@ -76,11 +83,36 @@ export async function POST(
     const shouldBeBillingOwner =
       makeBillingOwner || existingCount === 0 || !householdBilling?.billingOwnerGuardianId;
 
+    let relationshipRole: GuardianRelationshipRole | null = null;
+    if (body.relationshipRole !== undefined && body.relationshipRole !== null) {
+      if (!isGuardianRelationshipRole(body.relationshipRole)) {
+        return NextResponse.json(
+          { ok: false, error: "Relationship role must be Parent 1 or Parent 2." },
+          { status: 400 },
+        );
+      }
+      relationshipRole = body.relationshipRole;
+    } else {
+      relationshipRole = await nextAvailableRelationshipRole(id);
+    }
+
     if (shouldBeBillingOwner) {
       await database
         .update(guardians)
         .set({ isBillingOwner: false, updatedAt: new Date() })
         .where(eq(guardians.householdId, id));
+    }
+
+    // Placeholder id for uniqueness check before insert — use a temp check via siblings only.
+    if (relationshipRole) {
+      const conflict = await assertUniqueRelationshipRole({
+        householdId: id,
+        guardianId: "00000000-0000-0000-0000-000000000000",
+        relationshipRole,
+      });
+      if (conflict) {
+        return NextResponse.json({ ok: false, error: conflict }, { status: 400 });
+      }
     }
 
     const [guardian] = await database
@@ -91,6 +123,7 @@ export async function POST(
         lastName,
         email,
         phone: normalizePhone(phone),
+        relationshipRole,
         isBillingOwner: shouldBeBillingOwner,
         canManageStudents: true,
         canRequestServices: true,

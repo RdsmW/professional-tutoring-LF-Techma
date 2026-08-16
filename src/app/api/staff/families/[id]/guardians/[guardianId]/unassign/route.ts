@@ -40,6 +40,7 @@ export async function POST(
       .set({
         householdId: null,
         isBillingOwner: false,
+        relationshipRole: null,
         updatedAt: new Date(),
       })
       .where(eq(guardians.id, guardianId));

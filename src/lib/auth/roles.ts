@@ -73,6 +73,7 @@ export async function ensureFamilyGuardian() {
       email,
       firstName,
       lastName,
+      relationshipRole: "parent_1",
       isBillingOwner: true,
     })
     .returning();

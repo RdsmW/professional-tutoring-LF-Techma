@@ -7,6 +7,7 @@ import {
   reassignBillingOwnerAfterGuardianRemoved,
   refreshHouseholdDisplayNameIfAuto,
 } from "@/lib/staff/household-display-name";
+import { nextAvailableRelationshipRole } from "@/lib/staff/guardians";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 /** Assign an existing guardian (orphan or other household) to this family. */
@@ -77,11 +78,14 @@ export async function POST(
         .where(eq(guardians.householdId, householdId));
     }
 
+    const relationshipRole = await nextAvailableRelationshipRole(householdId, guardianId);
+
     await database
       .update(guardians)
       .set({
         householdId,
         isBillingOwner: becomeBillingOwner,
+        relationshipRole,
         updatedAt: new Date(),
       })
       .where(eq(guardians.id, guardianId));

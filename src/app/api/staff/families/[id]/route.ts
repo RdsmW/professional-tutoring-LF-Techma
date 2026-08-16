@@ -16,6 +16,7 @@ import {
   HOUSEHOLD_COUNTRY_US,
   refreshHouseholdDisplayNameIfAuto,
 } from "@/lib/staff/household-display-name";
+import { setHouseholdBillingOwner } from "@/lib/staff/guardians";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { isValidPhone, normalizePhone } from "@/lib/validation/contact";
@@ -251,6 +252,7 @@ export async function GET(
           lastName: g.lastName,
           email: g.email,
           phone: g.phone,
+          relationshipRole: g.relationshipRole ?? null,
           isBillingOwner: g.isBillingOwner,
           canManageStudents: g.canManageStudents,
           canRequestServices: g.canRequestServices,
@@ -419,16 +421,8 @@ export async function PATCH(
             { status: 400 },
           );
         }
-        // Atomic: clear all guardian flags, set owner flag, set household pointer.
         updates.billingOwnerGuardianId = owner.id;
-        await database
-          .update(guardians)
-          .set({ isBillingOwner: false, updatedAt: new Date() })
-          .where(eq(guardians.householdId, id));
-        await database
-          .update(guardians)
-          .set({ isBillingOwner: true, updatedAt: new Date() })
-          .where(eq(guardians.id, owner.id));
+        await setHouseholdBillingOwner(id, owner.id);
       }
     }
 

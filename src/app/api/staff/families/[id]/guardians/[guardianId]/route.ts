@@ -3,6 +3,11 @@ import { and, eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardians } from "@/lib/db/schema";
 import { refreshHouseholdDisplayNameIfAuto } from "@/lib/staff/household-display-name";
+import {
+  assertUniqueRelationshipRole,
+  isGuardianRelationshipRole,
+  type GuardianRelationshipRole,
+} from "@/lib/staff/guardians";
 import { getStaffContext } from "@/lib/staff/session";
 import { isValidEmail, isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
@@ -11,6 +16,7 @@ type GuardianPatchBody = {
   lastName?: string;
   email?: string;
   phone?: string | null;
+  relationshipRole?: GuardianRelationshipRole | null;
   isBillingOwner?: boolean;
   canManageStudents?: boolean;
   canRequestServices?: boolean;
@@ -82,6 +88,26 @@ export async function PATCH(
     if (typeof body.canManageStudents === "boolean") updates.canManageStudents = body.canManageStudents;
     if (typeof body.canRequestServices === "boolean") updates.canRequestServices = body.canRequestServices;
 
+    if (body.relationshipRole !== undefined) {
+      if (body.relationshipRole !== null && !isGuardianRelationshipRole(body.relationshipRole)) {
+        return NextResponse.json(
+          { ok: false, error: "Relationship role must be Parent 1 or Parent 2." },
+          { status: 400 },
+        );
+      }
+      if (body.relationshipRole) {
+        const conflict = await assertUniqueRelationshipRole({
+          householdId: id,
+          guardianId,
+          relationshipRole: body.relationshipRole,
+        });
+        if (conflict) {
+          return NextResponse.json({ ok: false, error: conflict }, { status: 400 });
+        }
+      }
+      updates.relationshipRole = body.relationshipRole;
+    }
+
     const [updated] = await database
       .update(guardians)
       .set(updates)
@@ -98,6 +124,7 @@ export async function PATCH(
         lastName: updated.lastName,
         email: updated.email,
         phone: updated.phone,
+        relationshipRole: updated.relationshipRole,
         isBillingOwner: updated.isBillingOwner,
         canManageStudents: updated.canManageStudents,
         canRequestServices: updated.canRequestServices,

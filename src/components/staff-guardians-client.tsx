@@ -9,6 +9,7 @@ import { StaffDirectoryCard } from "@/components/staff-directory-card";
 import { StaffDirectoryFilters, StaffRowActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
+import { formatGuardianRelationshipRole } from "@/lib/staff/guardian-shared";
 
 type GuardianRow = {
   id: string;
@@ -17,6 +18,7 @@ type GuardianRow = {
   email: string;
   phone: string | null;
   linkStatus: "linked" | "invite_pending" | "unlinked";
+  relationshipRole: "parent_1" | "parent_2" | null;
   isBillingOwner: boolean;
   canManageStudents: boolean;
   canRequestServices: boolean;
@@ -86,9 +88,8 @@ export function StaffGuardiansClient() {
     setApplied({ q: "", status: "all" });
   }
 
-  function openGuardian(householdId: string | null, guardianId: string) {
-    if (!householdId) return;
-    router.push(`/staff/families/${householdId}?guardianId=${guardianId}`);
+  function openGuardian(guardianId: string) {
+    router.push(`/staff/guardians/${guardianId}`);
   }
 
   function openFamily(householdId: string | null) {
@@ -165,16 +166,13 @@ export function StaffGuardiansClient() {
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
               const familyId = row.household.id;
+              const roleLabel = formatGuardianRelationshipRole(row.relationshipRole);
               const actions = [
                 {
                   id: "edit",
                   label: "Edit",
                   tone: "edit" as const,
-                  disabled: !familyId,
-                  onSelect: () => {
-                    if (!familyId) return;
-                    router.push(`/staff/families/${familyId}?guardianId=${row.id}`);
-                  },
+                  onSelect: () => openGuardian(row.id),
                 },
                 {
                   id: "open-family",
@@ -187,7 +185,7 @@ export function StaffGuardiansClient() {
                 <StaffDirectoryCard
                   key={row.id}
                   title={fullName}
-                  subtitle={row.email}
+                  subtitle={roleLabel ? `${row.email} · ${roleLabel}` : row.email}
                   status={
                     <span className={`pill ${statusTone(row.linkStatus)}`}>
                       {formatStatusLabel(row.linkStatus)}
@@ -195,7 +193,7 @@ export function StaffGuardiansClient() {
                   }
                   fields={[{ label: "Family", value: row.household.displayName }]}
                   actions={actions}
-                  onOpen={() => openGuardian(familyId, row.id)}
+                  onOpen={() => openGuardian(row.id)}
                 />
               );
             })}
@@ -212,22 +210,25 @@ export function StaffGuardiansClient() {
             {guardians.map((row) => {
               const fullName = `${row.firstName} ${row.lastName}`.trim();
               const familyId = row.household.id;
+              const roleLabel = formatGuardianRelationshipRole(row.relationshipRole);
               return (
                 <div
                   key={row.id}
-                  className={`table-row staff-dir-cols-guardians${familyId ? "" : " staff-dir-row-muted"}`}
-                  role={familyId ? "link" : undefined}
-                  tabIndex={familyId ? 0 : undefined}
-                  onClick={() => openGuardian(familyId, row.id)}
+                  className="table-row staff-dir-cols-guardians"
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => openGuardian(row.id)}
                   onKeyDown={(event) => {
-                    if (!familyId) return;
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      openGuardian(familyId, row.id);
+                      openGuardian(row.id);
                     }
                   }}
                 >
-                  <strong>{fullName}</strong>
+                  <span>
+                    <strong>{fullName}</strong>
+                    {roleLabel ? <small className="family-guardian-link-status">{roleLabel}</small> : null}
+                  </span>
                   <span>{row.email}</span>
                   <span>{row.household.displayName}</span>
                   <span className="staff-dir-col-status">
@@ -243,11 +244,7 @@ export function StaffGuardiansClient() {
                           id: "edit",
                           label: "Edit",
                           tone: "edit",
-                          disabled: !familyId,
-                          onSelect: () => {
-                            if (!familyId) return;
-                            router.push(`/staff/families/${familyId}?guardianId=${row.id}`);
-                          },
+                          onSelect: () => openGuardian(row.id),
                         },
                         {
                           id: "open-family",

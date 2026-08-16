@@ -16,7 +16,7 @@ import {
   StaffIconButton,
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
-import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
+import { isValidPhone } from "@/lib/validation/contact";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -35,6 +35,7 @@ type GuardianRow = {
   lastName: string;
   email: string;
   phone: string | null;
+  relationshipRole: "parent_1" | "parent_2" | null;
   isBillingOwner: boolean;
   canManageStudents: boolean;
   canRequestServices: boolean;
@@ -170,6 +171,12 @@ function formatDate(value: string) {
 /** Quiet badge only for non-default portal states (Clerk link itself is not shown). */
 function guardianPortalBadge(g: GuardianRow) {
   if (g.invitePending) return "Invite pending";
+  return null;
+}
+
+function guardianRoleLabel(role: GuardianRow["relationshipRole"]) {
+  if (role === "parent_1") return "Parent 1";
+  if (role === "parent_2") return "Parent 2";
   return null;
 }
 
@@ -457,9 +464,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [editingHousehold, setEditingHousehold] = useState(false);
   const [householdForm, setHouseholdForm] = useState<HouseholdEdit | null>(null);
   const [savingHousehold, setSavingHousehold] = useState(false);
-  const [editingGuardianId, setEditingGuardianId] = useState<string | null>(null);
-  const [guardianForm, setGuardianForm] = useState<GuardianRow | null>(null);
-  const [savingGuardian, setSavingGuardian] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [studentBusyId, setStudentBusyId] = useState<string | null>(null);
   const [memberBusyId, setMemberBusyId] = useState<string | null>(null);
@@ -507,18 +511,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   }, [familyId]);
 
   useEffect(() => {
-    if (!editingGuardianId) return;
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setEditingGuardianId(null);
-        setGuardianForm(null);
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [editingGuardianId]);
-
-  useEffect(() => {
     void reload();
   }, [reload]);
 
@@ -528,10 +520,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     const match = family.guardians.find((g) => g.id === deepLinkedGuardianId);
     if (!match) return;
     deepLinkHandled.current = deepLinkedGuardianId;
-    setGuardianForm({ ...match });
-    setEditingGuardianId(match.id);
-    router.replace(`/staff/families/${familyId}`, { scroll: false });
-  }, [family, deepLinkedGuardianId, familyId, router]);
+    router.replace(`/staff/guardians/${match.id}?from=family`);
+  }, [family, deepLinkedGuardianId, router]);
 
   function householdFormFromFamily(next: FamilyDetail): HouseholdEdit {
     return {
@@ -720,60 +710,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     }
   }
 
-  function openGuardianEdit(guardian: GuardianRow) {
+  function openGuardianDetail(guardian: GuardianRow) {
     setListModal(null);
-    setGuardianForm({ ...guardian });
-    setEditingGuardianId(guardian.id);
-  }
-
-  function closeGuardianEdit() {
-    setEditingGuardianId(null);
-    setGuardianForm(null);
-  }
-
-  async function saveGuardian(event: FormEvent) {
-    event.preventDefault();
-    if (!guardianForm || !editingGuardianId || savingGuardian) return;
-    if (!guardianForm.firstName.trim() || !guardianForm.lastName.trim()) {
-      toast.error("Guardian first and last name are required.");
-      return;
-    }
-    if (!isValidEmail(guardianForm.email)) {
-      toast.error("Enter a valid guardian email.");
-      return;
-    }
-    if (guardianForm.phone?.trim() && !isValidPhone(guardianForm.phone)) {
-      toast.error("Enter a valid guardian phone number.");
-      return;
-    }
-    setSavingGuardian(true);
-
-    try {
-      const response = await fetch(`/api/staff/families/${familyId}/guardians/${editingGuardianId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: guardianForm.firstName,
-          lastName: guardianForm.lastName,
-          email: guardianForm.email,
-          phone: guardianForm.phone,
-          canManageStudents: guardianForm.canManageStudents,
-          canRequestServices: guardianForm.canRequestServices,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        toast.error(data.error || "Unable to save guardian.");
-        return;
-      }
-      closeGuardianEdit();
-      toast.success("Guardian updated.");
-      await softReload();
-    } catch {
-      toast.error("Unable to save guardian.");
-    } finally {
-      setSavingGuardian(false);
-    }
+    router.push(`/staff/guardians/${guardian.id}?from=family`);
   }
 
   async function setStatus(status: "active" | "archived", options?: { fromUndo?: boolean }) {
@@ -1139,7 +1078,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         id: "edit",
         label: "Edit",
         tone: "edit",
-        onSelect: () => openGuardianEdit(g),
+        onSelect: () => openGuardianDetail(g),
       },
       {
         id: "unassign",
@@ -1192,6 +1131,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </div>
         {rows.map((g) => {
           const portalBadge = guardianPortalBadge(g);
+          const roleLabel = guardianRoleLabel(g.relationshipRole);
           return (
           <div
             key={g.id}
@@ -1199,11 +1139,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             role="link"
             tabIndex={0}
             aria-label={`Open guardian ${g.firstName} ${g.lastName}`}
-            onClick={() => openGuardianEdit(g)}
+            onClick={() => openGuardianDetail(g)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                openGuardianEdit(g);
+                openGuardianDetail(g);
               }
             }}
           >
@@ -1211,6 +1151,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               <strong>
                 {g.firstName} {g.lastName}
               </strong>
+              {roleLabel ? <small className="family-guardian-link-status">{roleLabel}</small> : null}
               {portalBadge ? (
                 <small className="family-guardian-link-status">{portalBadge}</small>
               ) : null}
@@ -1616,7 +1557,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                     <button
                       type="button"
                       className="family-household-payer-link"
-                      onClick={() => openGuardianEdit(billingOwner)}
+                      onClick={() => openGuardianDetail(billingOwner)}
                     >
                       {family.billingOwnerName}
                     </button>
@@ -2019,102 +1960,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 {assignBusyId ? "Assigning…" : "Assign"}
               </button>
             </div>
-          </div>
-        </div>
-      ) : null}
-
-      {editingGuardianId && guardianForm ? (
-        <div
-          className="staff-modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeGuardianEdit();
-          }}
-        >
-          <div
-            className="staff-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="guardian-edit-title"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") closeGuardianEdit();
-            }}
-          >
-            <div className="family-list-modal-header">
-              <h3 id="guardian-edit-title">
-                Edit guardian · {guardianForm.firstName} {guardianForm.lastName}
-              </h3>
-              <StaffIconButton label="Close" title="Cancel" tone="muted" onClick={closeGuardianEdit}>
-                <IconClose size={18} />
-              </StaffIconButton>
-            </div>
-            <form onSubmit={saveGuardian} className="staff-modal-form">
-              <div className="input-grid staff-modal-fields">
-                <label>
-                  First name
-                  <input
-                    value={guardianForm.firstName}
-                    onChange={(e) => setGuardianForm({ ...guardianForm, firstName: e.target.value })}
-                    required
-                  />
-                </label>
-                <label>
-                  Last name
-                  <input
-                    value={guardianForm.lastName}
-                    onChange={(e) => setGuardianForm({ ...guardianForm, lastName: e.target.value })}
-                    required
-                  />
-                </label>
-                <label>
-                  Email
-                  <input
-                    type="email"
-                    value={guardianForm.email}
-                    onChange={(e) => setGuardianForm({ ...guardianForm, email: e.target.value })}
-                    required
-                  />
-                </label>
-                <label>
-                  Phone
-                  <input
-                    type="tel"
-                    value={guardianForm.phone || ""}
-                    onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
-                  />
-                </label>
-              </div>
-              <div className="guardian-perm-row" role="group" aria-label="Permissions">
-                <label className="guardian-perm-option">
-                  <input
-                    type="checkbox"
-                    checked={guardianForm.canManageStudents}
-                    onChange={(e) =>
-                      setGuardianForm({ ...guardianForm, canManageStudents: e.target.checked })
-                    }
-                  />
-                  <span>Can manage students</span>
-                </label>
-                <label className="guardian-perm-option">
-                  <input
-                    type="checkbox"
-                    checked={guardianForm.canRequestServices}
-                    onChange={(e) =>
-                      setGuardianForm({ ...guardianForm, canRequestServices: e.target.checked })
-                    }
-                  />
-                  <span>Can request services</span>
-                </label>
-              </div>
-              <div className="staff-modal-actions">
-                <button type="button" className="secondary-button" onClick={closeGuardianEdit}>
-                  Cancel
-                </button>
-                <button type="submit" className="primary-button" disabled={savingGuardian}>
-                  {savingGuardian ? "Saving…" : "Save guardian"}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       ) : null}
