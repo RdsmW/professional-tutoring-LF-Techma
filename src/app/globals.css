@@ -54,11 +54,9 @@
   --nav-icon: #c4922e;
   --nav-icon-active: #d8a840;
   --nav-accent: #d8a840;
-  /* Search/Alerts: labels readable (nav-text grade); icons muted chrome — never --nav-icon gold. */
+  /* Search/Alerts: labels chrome text; icons match sidebar gold (--nav-icon). */
   --chrome-label: #b8c4d1;
   --chrome-label-hover: #ffffff;
-  --chrome-icon: #8ea3b9;
-  --chrome-icon-hover: #d5dee8;
   --violet: #7566a8;
   --violet-soft: #f2effb;
   --rose: #b85a72;
@@ -336,7 +334,7 @@ button { color: inherit; }
   background: transparent;
   border-radius: 4px;
   cursor: pointer;
-  /* Label default; icons override below. Gold (--nav-icon) is sidebar nav only. */
+  /* Label default; icons use --nav-icon gold below. */
   color: var(--chrome-label);
   display: inline-flex;
   align-items: center;
@@ -349,10 +347,10 @@ button { color: inherit; }
 .sidebar-chrome-actions .chrome-label {
   color: var(--chrome-label);
 }
-/* Explicit icon tint — SVG stroke uses currentColor; never inherit --nav-icon gold. */
+/* SVG stroke uses currentColor — gold like sidebar nav icons; labels stay chrome. */
 .sidebar-chrome-actions .chrome-icon,
 .sidebar-chrome-actions .app-icon {
-  color: var(--chrome-icon);
+  color: var(--nav-icon);
   stroke: currentColor;
 }
 .sidebar-chrome-actions button:hover {
@@ -364,7 +362,7 @@ button { color: inherit; }
 }
 .sidebar-chrome-actions button:hover .chrome-icon,
 .sidebar-chrome-actions button:hover .app-icon {
-  color: var(--chrome-icon-hover);
+  color: var(--nav-icon-active);
 }
 .app-shell.is-nav-collapsed .sidebar-chrome-actions {
   flex-direction: column;
