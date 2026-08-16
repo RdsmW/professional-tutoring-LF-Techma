@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, ilike, ne, SQL, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, ne, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { bookings, courseEnrollments, households, students } from "@/lib/db/schema";
+import { bookings, courseEnrollments, guardians, households, students } from "@/lib/db/schema";
+import { buildStudentListLabel } from "@/lib/staff/students";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 const LIFECYCLES = new Set(["prospect", "active", "paused", "completed", "archived"]);
@@ -44,12 +45,15 @@ export async function GET(request: Request) {
       .select({
         id: students.id,
         displayName: students.displayName,
+        firstName: students.firstName,
+        lastName: students.lastName,
         gradeLabel: students.gradeLabel,
         schoolName: students.schoolName,
         graduationYear: students.graduationYear,
         lifecycle: students.lifecycle,
         householdId: students.householdId,
         householdDisplayName: households.displayName,
+        householdBillingOwnerGuardianId: households.billingOwnerGuardianId,
         updatedAt: students.updatedAt,
         bookingCount: sql<number>`count(distinct ${bookings.id})::int`.mapWith(Number),
         enrollmentCount: sql<number>`count(distinct ${courseEnrollments.id})::int`.mapWith(Number),
@@ -62,24 +66,64 @@ export async function GET(request: Request) {
       .groupBy(
         students.id,
         students.displayName,
+        students.firstName,
+        students.lastName,
         students.gradeLabel,
         students.schoolName,
         students.graduationYear,
         students.lifecycle,
         students.householdId,
         households.displayName,
+        households.billingOwnerGuardianId,
         students.updatedAt,
       )
       .orderBy(desc(students.updatedAt));
+
+    const householdIds = [
+      ...new Set(rows.map((row) => row.householdId).filter((id): id is string => Boolean(id))),
+    ];
+    const billingEmailByHousehold = new Map<string, string>();
+    if (householdIds.length > 0) {
+      const guardianRows = await database
+        .select({
+          id: guardians.id,
+          householdId: guardians.householdId,
+          email: guardians.email,
+          isBillingOwner: guardians.isBillingOwner,
+        })
+        .from(guardians)
+        .where(inArray(guardians.householdId, householdIds));
+
+      for (const householdIdValue of householdIds) {
+        const householdGuardians = guardianRows.filter((g) => g.householdId === householdIdValue);
+        const row = rows.find((r) => r.householdId === householdIdValue);
+        const billing =
+          householdGuardians.find((g) => g.id === row?.householdBillingOwnerGuardianId) ||
+          householdGuardians.find((g) => g.isBillingOwner) ||
+          householdGuardians[0];
+        if (billing?.email) billingEmailByHousehold.set(householdIdValue, billing.email);
+      }
+    }
 
     return NextResponse.json({
       ok: true,
       students: rows.map((row) => {
         const bookingCount = Number(row.bookingCount ?? 0);
         const enrollmentCount = Number(row.enrollmentCount ?? 0);
+        const billingEmail = row.householdId ? billingEmailByHousehold.get(row.householdId) ?? null : null;
+        const listLabel = buildStudentListLabel({
+          firstName: row.firstName,
+          lastName: row.lastName,
+          displayName: row.displayName,
+          billingEmail,
+        });
         return {
           id: row.id,
           displayName: row.displayName,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          listLabel,
+          billingEmail,
           gradeLabel: row.gradeLabel,
           schoolName: row.schoolName,
           graduationYear: row.graduationYear,

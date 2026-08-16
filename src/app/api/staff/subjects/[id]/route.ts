@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { count, eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { bookings, subjects, tutorSubjects } from "@/lib/db/schema";
+import { bookings, studentSubjects, subjects, tutorSubjects } from "@/lib/db/schema";
 import { getStaffContext } from "@/lib/staff/session";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -126,15 +126,20 @@ export async function DELETE(_request: Request, context: RouteContext) {
       .select({ total: count(bookings.id) })
       .from(bookings)
       .where(eq(bookings.subjectId, id));
+    const [studentUse] = await database
+      .select({ total: count(studentSubjects.id) })
+      .from(studentSubjects)
+      .where(eq(studentSubjects.subjectId, id));
 
     const tutorCount = Number(tutorUse?.total ?? 0);
     const bookingCount = Number(bookingUse?.total ?? 0);
-    if (tutorCount > 0 || bookingCount > 0) {
+    const studentCount = Number(studentUse?.total ?? 0);
+    if (tutorCount > 0 || bookingCount > 0 || studentCount > 0) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "Subject is in use (tutor assignments or bookings). Deactivate it instead of deleting.",
+            "Subject is in use (tutor assignments, student subjects, or bookings). Deactivate it instead of deleting.",
         },
         { status: 409 },
       );

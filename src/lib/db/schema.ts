@@ -130,6 +130,23 @@ export const students = pgTable("students", {
   changeRequestStatus: text("change_request_status"),
   pendingIntakeNote: text("pending_intake_note"),
   serviceHistory: jsonb("service_history").$type<string[]>().notNull().default([]),
+  /** Deal / CRM description (staff). */
+  description: text("description"),
+  zohoDealId: text("zoho_deal_id"),
+  zohoDealUrl: text("zoho_deal_url"),
+  academicYear: text("academic_year"),
+  preferredSchedule: text("preferred_schedule"),
+  hoursRatePackage: text("hours_rate_package"),
+  advancedHoursRatePackage: text("advanced_hours_rate_package"),
+  paymentPlan: text("payment_plan"),
+  depositCents: integer("deposit_cents"),
+  /** Student-owned mailing address (separate from family billing SoT). */
+  addressLine1: text("address_line1"),
+  addressLine2: text("address_line2"),
+  city: text("city"),
+  state: varchar("state", { length: 32 }),
+  postalCode: varchar("postal_code", { length: 32 }),
+  country: text("country").notNull().default("United States"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -185,6 +202,17 @@ export const tutorSubjects = pgTable("tutor_subjects", {
     .notNull()
     .references(() => subjects.id),
   priority: integer("priority").notNull().default(0),
+});
+
+export const studentSubjects = pgTable("student_subjects", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  subjectId: uuid("subject_id")
+    .notNull()
+    .references(() => subjects.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const courseOfferings = pgTable("course_offerings", {
@@ -508,6 +536,23 @@ export const guardianNotes = pgTable("guardian_notes", {
   guardianId: uuid("guardian_id")
     .notNull()
     .references(() => guardians.id),
+  authorStaffId: uuid("author_staff_id").references(() => staffProfiles.id),
+  authorDisplayName: text("author_display_name").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  editorStaffId: uuid("editor_staff_id").references(() => staffProfiles.id),
+  editorDisplayName: text("editor_display_name"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedByStaffId: uuid("deleted_by_staff_id").references(() => staffProfiles.id),
+});
+
+/** Staff notes on a student (never shown in family portal). Soft-deleted for ~30 days. */
+export const studentNotes = pgTable("student_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
   authorStaffId: uuid("author_staff_id").references(() => staffProfiles.id),
   authorDisplayName: text("author_display_name").notNull(),
   body: text("body").notNull(),

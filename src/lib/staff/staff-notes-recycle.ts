@@ -6,8 +6,8 @@
 
 export const STAFF_NOTE_RECYCLE_DAYS = 30;
 
-/** Recycle item kinds currently supported in Settings. Extend when Student/Tutor notes land. */
-export type StaffRecycledNoteKind = "guardian_note" | "household_note";
+/** Recycle item kinds currently supported in Settings. */
+export type StaffRecycledNoteKind = "guardian_note" | "household_note" | "student_note";
 
 export type StaffRecycledNote = {
   id: string;

@@ -12,6 +12,7 @@ import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 type StudentRow = {
   id: string;
   displayName: string;
+  listLabel?: string;
   gradeLabel: string | null;
   schoolName: string | null;
   graduationYear: number | null;
@@ -349,7 +350,7 @@ export function StaffStudentsClient() {
               return (
                 <StaffDirectoryCard
                   key={row.id}
-                  title={row.displayName}
+                  title={row.listLabel || row.displayName}
                   subtitle={row.householdDisplayName}
                   status={
                     <span className={`pill ${statusTone(row.lifecycle)}`}>
@@ -390,7 +391,7 @@ export function StaffStudentsClient() {
                   }
                 }}
               >
-                <strong>{row.displayName}</strong>
+                <strong>{row.listLabel || row.displayName}</strong>
                 <span>{row.householdDisplayName}</span>
                 <span>{row.gradeLabel ?? "—"}</span>
                 <span>{row.schoolName ?? "—"}</span>
