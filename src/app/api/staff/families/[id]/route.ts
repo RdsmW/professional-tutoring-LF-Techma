@@ -17,6 +17,7 @@ import {
   refreshHouseholdDisplayNameIfAuto,
 } from "@/lib/staff/household-display-name";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
+import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
 export async function GET(
@@ -118,8 +119,17 @@ export async function GET(
       null;
 
     // Soft-heal: when guardians exist, ensure exactly one billing owner.
+    // When none exist, clear a stale household billing pointer.
     let healedBillingOwner = false;
-    if (guardianRows.length > 0) {
+    if (guardianRows.length === 0) {
+      if (household.billingOwnerGuardianId) {
+        await database
+          .update(households)
+          .set({ billingOwnerGuardianId: null, updatedAt: new Date() })
+          .where(eq(households.id, id));
+        household.billingOwnerGuardianId = null;
+      }
+    } else {
       if (!billingOwner) {
         billingOwner = guardianRows[0] ?? null;
       }
@@ -433,6 +443,19 @@ export async function PATCH(
         updates.stripeDefaultPaymentMethodId = null;
         updates.cardBrand = null;
         updates.cardLast4 = null;
+        // Soft-clear Stripe default so the next refreshCardOnFile does not re-promote it.
+        if (existing.stripeCustomerId && isStripeConfigured()) {
+          try {
+            const stripe = getStripe();
+            if (stripe) {
+              await stripe.customers.update(existing.stripeCustomerId, {
+                invoice_settings: { default_payment_method: "" },
+              });
+            }
+          } catch (error) {
+            console.warn("[staff/families/id] clear Stripe default PM soft-fail", error);
+          }
+        }
       }
     }
 

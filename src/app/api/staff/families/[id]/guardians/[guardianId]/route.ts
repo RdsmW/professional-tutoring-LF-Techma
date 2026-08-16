@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { guardians, households } from "@/lib/db/schema";
+import { guardians } from "@/lib/db/schema";
+import { refreshHouseholdDisplayNameIfAuto } from "@/lib/staff/household-display-name";
 import { getStaffContext } from "@/lib/staff/session";
 import { isValidEmail, isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
@@ -28,6 +29,16 @@ export async function PATCH(
     const { id, guardianId } = await contextParams.params;
     const body = (await request.json()) as GuardianPatchBody;
     const database = requireDb();
+
+    if (body.isBillingOwner !== undefined) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Change the payer on the household (Responsible for payment), not on the guardian.",
+        },
+        { status: 400 },
+      );
+    }
 
     const [existing] = await database
       .select()
@@ -71,57 +82,12 @@ export async function PATCH(
     if (typeof body.canManageStudents === "boolean") updates.canManageStudents = body.canManageStudents;
     if (typeof body.canRequestServices === "boolean") updates.canRequestServices = body.canRequestServices;
 
-    const makeBillingOwner = body.isBillingOwner === true;
-    const clearBillingOwner = body.isBillingOwner === false;
-
-    if (makeBillingOwner) {
-      await database
-        .update(guardians)
-        .set({ isBillingOwner: false, updatedAt: new Date() })
-        .where(eq(guardians.householdId, id));
-      updates.isBillingOwner = true;
-      await database
-        .update(households)
-        .set({ billingOwnerGuardianId: guardianId, updatedAt: new Date() })
-        .where(eq(households.id, id));
-    } else if (clearBillingOwner) {
-      updates.isBillingOwner = false;
-      const [household] = await database
-        .select({ billingOwnerGuardianId: households.billingOwnerGuardianId })
-        .from(households)
-        .where(eq(households.id, id))
-        .limit(1);
-      if (household?.billingOwnerGuardianId === guardianId) {
-        const remaining = await database
-          .select({ id: guardians.id })
-          .from(guardians)
-          .where(and(eq(guardians.householdId, id), ne(guardians.id, guardianId)))
-          .limit(1);
-        if (remaining[0]) {
-          await database
-            .update(guardians)
-            .set({ isBillingOwner: true, updatedAt: new Date() })
-            .where(eq(guardians.id, remaining[0].id));
-          await database
-            .update(households)
-            .set({ billingOwnerGuardianId: remaining[0].id, updatedAt: new Date() })
-            .where(eq(households.id, id));
-        } else {
-          await database
-            .update(households)
-            .set({ billingOwnerGuardianId: null, updatedAt: new Date() })
-            .where(eq(households.id, id));
-        }
-      }
-    }
-
     const [updated] = await database
       .update(guardians)
       .set(updates)
       .where(eq(guardians.id, guardianId))
       .returning();
 
-    const { refreshHouseholdDisplayNameIfAuto } = await import("@/lib/staff/household-display-name");
     await refreshHouseholdDisplayNameIfAuto(id);
 
     return NextResponse.json({

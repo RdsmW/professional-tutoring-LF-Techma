@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardians, households, students } from "@/lib/db/schema";
 
@@ -87,3 +87,58 @@ export async function refreshHouseholdDisplayNameIfAuto(householdId: string) {
 
 export const MAX_GUARDIANS_PER_HOUSEHOLD = 2;
 export const HOUSEHOLD_COUNTRY_US = "United States";
+
+/**
+ * After a guardian leaves a household (unassign / move), ensure the household
+ * has exactly one payer when anyone remains; otherwise clear the billing pointer.
+ * Preserves an existing valid billing owner when the removed guardian was not the payer.
+ */
+export async function reassignBillingOwnerAfterGuardianRemoved(
+  householdId: string,
+  removedGuardianId: string,
+) {
+  const database = requireDb();
+  const [household] = await database
+    .select({ billingOwnerGuardianId: households.billingOwnerGuardianId })
+    .from(households)
+    .where(eq(households.id, householdId))
+    .limit(1);
+
+  const remaining = await database
+    .select({ id: guardians.id, isBillingOwner: guardians.isBillingOwner })
+    .from(guardians)
+    .where(and(eq(guardians.householdId, householdId), ne(guardians.id, removedGuardianId)));
+
+  if (remaining.length === 0) {
+    if (household?.billingOwnerGuardianId) {
+      await database
+        .update(households)
+        .set({ billingOwnerGuardianId: null, updatedAt: new Date() })
+        .where(eq(households.id, householdId));
+    }
+    return null;
+  }
+
+  const pointer = household?.billingOwnerGuardianId ?? null;
+  const pointerValid =
+    Boolean(pointer) &&
+    pointer !== removedGuardianId &&
+    remaining.some((g) => g.id === pointer);
+  const nextOwnerId = pointerValid ? pointer! : remaining[0]!.id;
+
+  await database
+    .update(guardians)
+    .set({ isBillingOwner: false, updatedAt: new Date() })
+    .where(eq(guardians.householdId, householdId));
+  await database
+    .update(guardians)
+    .set({ isBillingOwner: true, updatedAt: new Date() })
+    .where(eq(guardians.id, nextOwnerId));
+  if (household?.billingOwnerGuardianId !== nextOwnerId) {
+    await database
+      .update(households)
+      .set({ billingOwnerGuardianId: nextOwnerId, updatedAt: new Date() })
+      .where(eq(households.id, householdId));
+  }
+  return nextOwnerId;
+}

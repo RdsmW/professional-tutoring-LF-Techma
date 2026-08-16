@@ -4,6 +4,7 @@ import { requireDb } from "@/lib/db";
 import { guardians, households } from "@/lib/db/schema";
 import {
   MAX_GUARDIANS_PER_HOUSEHOLD,
+  reassignBillingOwnerAfterGuardianRemoved,
   refreshHouseholdDisplayNameIfAuto,
 } from "@/lib/staff/household-display-name";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
@@ -61,20 +62,6 @@ export async function POST(
 
     const previousHouseholdId = guardian.householdId;
 
-    if (previousHouseholdId) {
-      const [prev] = await database
-        .select({ billingOwnerGuardianId: households.billingOwnerGuardianId })
-        .from(households)
-        .where(eq(households.id, previousHouseholdId))
-        .limit(1);
-      if (prev?.billingOwnerGuardianId === guardianId) {
-        await database
-          .update(households)
-          .set({ billingOwnerGuardianId: null, updatedAt: new Date() })
-          .where(eq(households.id, previousHouseholdId));
-      }
-    }
-
     const [targetBilling] = await database
       .select({ billingOwnerGuardianId: households.billingOwnerGuardianId })
       .from(households)
@@ -106,7 +93,9 @@ export async function POST(
         .where(eq(households.id, householdId));
     }
 
+    // Previous household must not be left with 0 payers (or a stale pointer).
     if (previousHouseholdId) {
+      await reassignBillingOwnerAfterGuardianRemoved(previousHouseholdId, guardianId);
       await refreshHouseholdDisplayNameIfAuto(previousHouseholdId);
     }
     await refreshHouseholdDisplayNameIfAuto(householdId);

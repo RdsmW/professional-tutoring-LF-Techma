@@ -83,12 +83,22 @@ export async function refreshCardOnFile(householdId: string): Promise<CardOnFile
     }
 
     if (!paymentMethodId) {
-      const listed = await stripe.paymentMethods.list({
-        customer: household.stripeCustomerId,
-        type: "card",
-        limit: 1,
-      });
-      paymentMethodId = listed.data[0]?.id ?? null;
+      // Do not invent a default card after staff cleared card-on-file
+      // (cardOnFile false + no local PM/last4). List-adopt only when we already
+      // believe a card should be on file or denormalized fields exist.
+      const mayAdoptListedCard =
+        Boolean(household.cardOnFile) ||
+        Boolean(household.cardBrand) ||
+        Boolean(household.cardLast4) ||
+        Boolean(household.stripeDefaultPaymentMethodId);
+      if (mayAdoptListedCard) {
+        const listed = await stripe.paymentMethods.list({
+          customer: household.stripeCustomerId,
+          type: "card",
+          limit: 1,
+        });
+        paymentMethodId = listed.data[0]?.id ?? null;
+      }
     }
 
     if (!paymentMethodId) {
