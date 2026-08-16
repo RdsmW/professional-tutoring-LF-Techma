@@ -1014,15 +1014,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
               Country
               <input value="United States" disabled readOnly />
             </label>
-            <label className="guardian-other-info-field" style={{ gridColumn: "1 / -1" }}>
-              Other information
-              <textarea
-                value={profileForm.otherInformation}
-                onChange={(e) => setProfileForm({ ...profileForm, otherInformation: e.target.value })}
-                rows={4}
-                placeholder="Optional context about this guardian…"
-              />
-            </label>
             <label>
               Parent role
               <select
@@ -1067,6 +1058,15 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                 page first.
               </p>
             ) : null}
+            <label className="guardian-other-info-field" style={{ gridColumn: "1 / -1" }}>
+              Other information
+              <textarea
+                value={profileForm.otherInformation}
+                onChange={(e) => setProfileForm({ ...profileForm, otherInformation: e.target.value })}
+                rows={4}
+                placeholder="Optional context about this guardian…"
+              />
+            </label>
             <div className="family-household-edit-actions">
               <button type="submit" className="primary-button" disabled={saving}>
                 {saving ? "Saving…" : "Save guardian"}
@@ -1126,16 +1126,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                   )}
                 </span>
               </div>
-              <div className="guardian-identity-other-row">
-                <span className="guardian-identity-other-field">
-                  <small>Other information</small>
-                  {guardian.otherInformation?.trim() ? (
-                    <strong className="guardian-other-info-text">{guardian.otherInformation}</strong>
-                  ) : (
-                    <strong className="guardian-other-info-empty">No other information</strong>
-                  )}
-                </span>
-              </div>
             </div>
           </div>
         </Panel>
@@ -1167,6 +1157,16 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                 <span>
                   <small>Responsible for payment</small>
                   <strong>{yesNo(guardian.isBillingOwner)}</strong>
+                </span>
+              </div>
+              <div className="guardian-household-other-row">
+                <span className="guardian-household-other-field">
+                  <small>Other information</small>
+                  {guardian.otherInformation?.trim() ? (
+                    <strong className="guardian-other-info-text">{guardian.otherInformation}</strong>
+                  ) : (
+                    <strong className="guardian-other-info-empty">No other information</strong>
+                  )}
                 </span>
               </div>
               {!guardian.household ? (

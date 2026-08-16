@@ -1657,13 +1657,13 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .guardian-identity-dense .guardian-identity-address-row {
   grid-template-columns: minmax(0, 1fr);
 }
-.guardian-identity-other-row {
+.guardian-household-other-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   width: 100%;
   min-width: 0;
 }
-.guardian-identity-other-field {
+.guardian-household-other-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
