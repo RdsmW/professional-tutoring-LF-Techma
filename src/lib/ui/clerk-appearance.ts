@@ -20,7 +20,7 @@ const sharedElements = {
 export function staffUserButtonAppearance(): ClerkAppearance {
   return {
     variables: {
-      colorPrimary: "#e96d5e",
+      colorPrimary: "#010345",
       colorPrimaryForeground: "#ffffff",
       colorBackground: "#ffffff",
       colorForeground: "#172133",
@@ -45,7 +45,7 @@ export function staffUserButtonAppearance(): ClerkAppearance {
 export function familyUserButtonAppearance(): ClerkAppearance {
   return {
     variables: {
-      colorPrimary: "#ca6d52",
+      colorPrimary: "#24382f",
       colorPrimaryForeground: "#ffffff",
       colorBackground: "#ffffff",
       colorForeground: "#172133",

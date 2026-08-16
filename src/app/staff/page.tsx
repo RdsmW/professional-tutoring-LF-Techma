@@ -214,7 +214,7 @@ async function loadDashboardData() {
       title: `${formatStatusLabel(row.changeType)} · ${row.studentName}`,
       copy: `${row.householdName} · ${formatStatusLabel(row.requestedOutcome)}`,
       meta: formatStatusLabel(row.status),
-      tone: statusTone(row.status) || (row.status === "under_review" ? "blue" : "coral"),
+      tone: statusTone(row.status) || (row.status === "under_review" ? "blue" : "rose"),
       href: `/staff/sessions?exceptionId=${row.id}`,
     }));
 
@@ -283,7 +283,7 @@ export default async function StaffDashboardPage() {
 
       <section className="metric-grid" aria-label="Dashboard metrics">
         <article className="metric-card">
-          <span className="metric-mark coral" />
+          <span className="metric-mark navy" />
           <p>Onboarding families</p>
           <strong>{data.onboardingFamilies}</strong>
           <small>Pending / incomplete households</small>

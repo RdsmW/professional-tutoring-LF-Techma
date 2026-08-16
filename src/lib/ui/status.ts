@@ -10,7 +10,7 @@ export function formatStatusLabel(status: string | null | undefined) {
     .join(" ");
 }
 
-export type StatusTone = "mint" | "green" | "amber" | "gold" | "coral" | "blue" | "violet" | "";
+export type StatusTone = "mint" | "green" | "amber" | "gold" | "rose" | "blue" | "violet" | "";
 
 /** Map domain status strings to pill tone classes. */
 export function statusTone(status: string | null | undefined): StatusTone {
@@ -70,7 +70,7 @@ export function statusTone(status: string | null | undefined): StatusTone {
       "refunded",
     ].includes(key)
   ) {
-    return "coral";
+    return "rose";
   }
 
   if (["waived", "paid"].includes(key)) {
