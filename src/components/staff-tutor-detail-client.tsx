@@ -72,7 +72,7 @@ const WEEKDAY_OPTIONS = [
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function formatTimeLabel(value: string) {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(value.trim());
   if (!match) return value;
   const hour = Number.parseInt(match[1]!, 10);
   const minute = match[2]!;

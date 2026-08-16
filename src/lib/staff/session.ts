@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { ensureStaffProfile } from "@/lib/auth/roles";
-import { db, requireDb } from "@/lib/db";
+import { db, requireDb, withDbRetry } from "@/lib/db";
 import { staffProfiles } from "@/lib/db/schema";
 
 export type StaffContext = {
@@ -27,13 +27,15 @@ export function staffAuthErrorPayload(): { error: string; status: number } {
 }
 
 async function loadStaffByClerkId(clerkUserId: string) {
-  const database = requireDb();
-  const [staff] = await database
-    .select()
-    .from(staffProfiles)
-    .where(eq(staffProfiles.clerkUserId, clerkUserId))
-    .limit(1);
-  return staff ?? null;
+  return withDbRetry(async () => {
+    const database = requireDb();
+    const [staff] = await database
+      .select()
+      .from(staffProfiles)
+      .where(eq(staffProfiles.clerkUserId, clerkUserId))
+      .limit(1);
+    return staff ?? null;
+  });
 }
 
 async function bootstrapStaffFromSession(userId: string, claims: SessionClaims | null | undefined) {

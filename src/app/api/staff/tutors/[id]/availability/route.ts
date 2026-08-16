@@ -15,8 +15,9 @@ type CreateBody = {
   scheduleWindowId?: string | null;
 };
 
-const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
 
+/** Accept HH:MM or HH:MM:SS from forms/DB; always store/return HH:MM. */
 function normalizeTime(value: string): string | null {
   const trimmed = value.trim();
   const match = TIME_RE.exec(trimmed);
@@ -31,8 +32,8 @@ function serializeSlot(slot: typeof availabilitySlots.$inferSelect) {
     id: slot.id,
     tutorId: slot.tutorId,
     dayOfWeek: slot.dayOfWeek,
-    startTimeLocal: slot.startTimeLocal,
-    endTimeLocal: slot.endTimeLocal,
+    startTimeLocal: normalizeTime(slot.startTimeLocal) ?? slot.startTimeLocal,
+    endTimeLocal: normalizeTime(slot.endTimeLocal) ?? slot.endTimeLocal,
     capacitySeats: slot.capacitySeats,
     heldSeats: slot.heldSeats,
     bookedSeats: slot.bookedSeats,
@@ -143,21 +144,28 @@ export async function POST(request: Request, context: RouteContext) {
         ? null
         : String(body.scheduleWindowId).trim() || null;
 
-    const [existing] = await database
-      .select({ id: availabilitySlots.id })
+    const sameDaySlots = await database
+      .select({
+        id: availabilitySlots.id,
+        startTimeLocal: availabilitySlots.startTimeLocal,
+        endTimeLocal: availabilitySlots.endTimeLocal,
+      })
       .from(availabilitySlots)
       .where(
         and(
           eq(availabilitySlots.tutorId, tutorId),
           eq(availabilitySlots.dayOfWeek, dayOfWeek),
-          eq(availabilitySlots.startTimeLocal, startTimeLocal),
-          eq(availabilitySlots.endTimeLocal, endTimeLocal),
           eq(availabilitySlots.active, true),
         ),
-      )
-      .limit(1);
+      );
 
-    if (existing) {
+    const duplicate = sameDaySlots.find(
+      (slot) =>
+        (normalizeTime(slot.startTimeLocal) ?? slot.startTimeLocal) === startTimeLocal &&
+        (normalizeTime(slot.endTimeLocal) ?? slot.endTimeLocal) === endTimeLocal,
+    );
+
+    if (duplicate) {
       return NextResponse.json(
         { ok: false, error: "An open hour already exists for that day and time." },
         { status: 409 },
