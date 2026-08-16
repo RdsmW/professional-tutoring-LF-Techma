@@ -1,6 +1,7 @@
 import { and, desc, eq, ilike, isNotNull, isNull, ne, or, SQL } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { guardians, households } from "@/lib/db/schema";
+import { guardianNotes, guardians, households, students } from "@/lib/db/schema";
+import { HOUSEHOLD_COUNTRY_US } from "@/lib/staff/household-display-name";
 import {
   formatGuardianRelationshipRole,
   isGuardianRelationshipRole,
@@ -8,6 +9,7 @@ import {
   type GuardianRelationshipRole,
   type StaffGuardianDetail,
   type StaffGuardianListRow,
+  type StaffGuardianNote,
 } from "@/lib/staff/guardian-shared";
 
 export type {
@@ -15,6 +17,8 @@ export type {
   GuardianRelationshipRole,
   StaffGuardianDetail,
   StaffGuardianListRow,
+  StaffGuardianNote,
+  StaffGuardianStudentRow,
 } from "@/lib/staff/guardian-shared";
 export { formatGuardianRelationshipRole, isGuardianRelationshipRole } from "@/lib/staff/guardian-shared";
 
@@ -32,6 +36,17 @@ function deriveLinkStatus(row: {
   if (row.clerkUserId) return "linked";
   if (row.inviteToken && !row.inviteAcceptedAt) return "invite_pending";
   return "unlinked";
+}
+
+function serializeNote(note: typeof guardianNotes.$inferSelect): StaffGuardianNote {
+  return {
+    id: note.id,
+    body: note.body,
+    authorDisplayName: note.authorDisplayName,
+    createdAt: note.createdAt.toISOString(),
+    editorDisplayName: note.editorDisplayName ?? null,
+    updatedAt: note.updatedAt ? note.updatedAt.toISOString() : null,
+  };
 }
 
 /** Next free Parent 1 / Parent 2 slot for a household, or null if both taken. */
@@ -85,6 +100,40 @@ export async function assertUniqueRelationshipRole(input: {
   return `${label} is already assigned to ${name || "another guardian"} on this family.`;
 }
 
+/** Copy payer guardian mailing address onto household billing address (Family SoT). */
+export async function syncHouseholdBillingAddressFromGuardian(
+  householdId: string,
+  guardianId: string,
+) {
+  const database = requireDb();
+  const [guardian] = await database
+    .select({
+      id: guardians.id,
+      addressLine1: guardians.addressLine1,
+      addressLine2: guardians.addressLine2,
+      city: guardians.city,
+      state: guardians.state,
+      postalCode: guardians.postalCode,
+    })
+    .from(guardians)
+    .where(and(eq(guardians.id, guardianId), eq(guardians.householdId, householdId)))
+    .limit(1);
+  if (!guardian) return;
+
+  await database
+    .update(households)
+    .set({
+      addressLine1: guardian.addressLine1,
+      addressLine2: guardian.addressLine2,
+      city: guardian.city,
+      state: guardian.state,
+      postalCode: guardian.postalCode,
+      country: HOUSEHOLD_COUNTRY_US,
+      updatedAt: new Date(),
+    })
+    .where(eq(households.id, householdId));
+}
+
 /** Atomic household payer update (Family is source of truth). */
 export async function setHouseholdBillingOwner(householdId: string, guardianId: string) {
   const database = requireDb();
@@ -109,6 +158,8 @@ export async function setHouseholdBillingOwner(householdId: string, guardianId: 
     .update(households)
     .set({ billingOwnerGuardianId: guardianId, updatedAt: new Date() })
     .where(eq(households.id, householdId));
+
+  await syncHouseholdBillingAddressFromGuardian(householdId, guardianId);
 }
 
 /** Staff Guardians directory query. */
@@ -219,12 +270,46 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
         .where(and(eq(guardians.householdId, householdId), ne(guardians.id, guardianId)))
     : [];
 
+  let noteRows: StaffGuardianNote[] = [];
+  try {
+    const rows = await database
+      .select()
+      .from(guardianNotes)
+      .where(eq(guardianNotes.guardianId, guardianId))
+      .orderBy(desc(guardianNotes.createdAt));
+    noteRows = rows.map(serializeNote);
+  } catch (error) {
+    console.warn("[staff/guardians] notes soft-fail", error);
+  }
+
+  const studentRows =
+    g.isBillingOwner && householdId
+      ? await database
+          .select({
+            id: students.id,
+            displayName: students.displayName,
+            gradeLabel: students.gradeLabel,
+            schoolName: students.schoolName,
+            graduationYear: students.graduationYear,
+          })
+          .from(students)
+          .where(eq(students.householdId, householdId))
+          .orderBy(desc(students.updatedAt))
+      : [];
+
   return {
     id: g.id,
     firstName: g.firstName,
     lastName: g.lastName,
     email: g.email,
     phone: g.phone,
+    otherInformation: g.otherInformation,
+    addressLine1: g.addressLine1,
+    addressLine2: g.addressLine2,
+    city: g.city,
+    state: g.state,
+    postalCode: g.postalCode,
+    country: g.country || HOUSEHOLD_COUNTRY_US,
     relationshipRole: isGuardianRelationshipRole(g.relationshipRole) ? g.relationshipRole : null,
     isBillingOwner: g.isBillingOwner,
     canManageStudents: g.canManageStudents,
@@ -250,5 +335,15 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
       relationshipRole: isGuardianRelationshipRole(row.relationshipRole) ? row.relationshipRole : null,
       isBillingOwner: row.isBillingOwner,
     })),
+    students: studentRows.map((row) => ({
+      id: row.id,
+      displayName: row.displayName,
+      gradeLabel: row.gradeLabel,
+      schoolName: row.schoolName,
+      graduationYear: row.graduationYear,
+    })),
+    notes: noteRows,
   };
 }
+
+export { serializeNote as serializeGuardianNote };

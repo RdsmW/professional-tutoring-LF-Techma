@@ -84,6 +84,16 @@ export const guardians = pgTable("guardians", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   phone: varchar("phone", { length: 64 }),
+  /** Free-text ops notes about this guardian (often student-adjacent context). */
+  otherInformation: text("other_information"),
+  /** Guardian mailing address (own copy; payer syncs into household billing address). */
+  addressLine1: text("address_line1"),
+  addressLine2: text("address_line2"),
+  city: text("city"),
+  state: varchar("state", { length: 32 }),
+  postalCode: varchar("postal_code", { length: 32 }),
+  /** Always United States for this product; locked in UI/API. */
+  country: text("country").notNull().default("United States"),
   /** Parent 1 / Parent 2 within a household; null when unassigned or unset. */
   relationshipRole: guardianRelationshipRoleEnum("relationship_role"),
   isBillingOwner: boolean("is_billing_owner").notNull().default(false),
@@ -478,6 +488,21 @@ export const householdNotes = pgTable("household_notes", {
   householdId: uuid("household_id")
     .notNull()
     .references(() => households.id),
+  authorStaffId: uuid("author_staff_id").references(() => staffProfiles.id),
+  authorDisplayName: text("author_display_name").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  editorStaffId: uuid("editor_staff_id").references(() => staffProfiles.id),
+  editorDisplayName: text("editor_display_name"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
+/** Staff notes on a guardian (never shown in family portal). Editable with audit trail. */
+export const guardianNotes = pgTable("guardian_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  guardianId: uuid("guardian_id")
+    .notNull()
+    .references(() => guardians.id),
   authorStaffId: uuid("author_staff_id").references(() => staffProfiles.id),
   authorDisplayName: text("author_display_name").notNull(),
   body: text("body").notNull(),

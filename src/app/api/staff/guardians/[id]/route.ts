@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardians } from "@/lib/db/schema";
-import { refreshHouseholdDisplayNameIfAuto } from "@/lib/staff/household-display-name";
+import {
+  HOUSEHOLD_COUNTRY_US,
+  refreshHouseholdDisplayNameIfAuto,
+} from "@/lib/staff/household-display-name";
 import {
   assertUniqueRelationshipRole,
   getStaffGuardianDetail,
   isGuardianRelationshipRole,
   setHouseholdBillingOwner,
+  syncHouseholdBillingAddressFromGuardian,
   type GuardianRelationshipRole,
 } from "@/lib/staff/guardians";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
@@ -18,11 +22,23 @@ type PatchBody = {
   lastName?: string;
   email?: string;
   phone?: string | null;
+  otherInformation?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
   relationshipRole?: GuardianRelationshipRole | null;
   isBillingOwner?: boolean;
   canManageStudents?: boolean;
   canRequestServices?: boolean;
 };
+
+function optionalTrimmedText(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
 
 export async function GET(
   _request: Request,
@@ -69,6 +85,8 @@ export async function PATCH(
     }
 
     const updates: Partial<typeof guardians.$inferInsert> = { updatedAt: new Date() };
+    let addressTouched = false;
+    let becameBillingOwner = false;
 
     if (typeof body.firstName === "string") {
       const firstName = body.firstName.trim();
@@ -98,6 +116,41 @@ export async function PATCH(
       }
       updates.phone = normalizePhone(phone);
     }
+    if (body.otherInformation !== undefined) {
+      updates.otherInformation = optionalTrimmedText(
+        typeof body.otherInformation === "string" ? body.otherInformation : null,
+      );
+    }
+    if (body.addressLine1 !== undefined) {
+      updates.addressLine1 = optionalTrimmedText(
+        typeof body.addressLine1 === "string" ? body.addressLine1 : null,
+      );
+      addressTouched = true;
+    }
+    if (body.addressLine2 !== undefined) {
+      updates.addressLine2 = optionalTrimmedText(
+        typeof body.addressLine2 === "string" ? body.addressLine2 : null,
+      );
+      addressTouched = true;
+    }
+    if (body.city !== undefined) {
+      updates.city = optionalTrimmedText(typeof body.city === "string" ? body.city : null);
+      addressTouched = true;
+    }
+    if (body.state !== undefined) {
+      updates.state = optionalTrimmedText(typeof body.state === "string" ? body.state : null);
+      addressTouched = true;
+    }
+    if (body.postalCode !== undefined) {
+      updates.postalCode = optionalTrimmedText(
+        typeof body.postalCode === "string" ? body.postalCode : null,
+      );
+      addressTouched = true;
+    }
+    if (addressTouched) {
+      updates.country = HOUSEHOLD_COUNTRY_US;
+    }
+
     if (typeof body.canManageStudents === "boolean") updates.canManageStudents = body.canManageStudents;
     if (typeof body.canRequestServices === "boolean") updates.canRequestServices = body.canRequestServices;
 
@@ -136,6 +189,7 @@ export async function PATCH(
       }
       if (body.isBillingOwner) {
         await setHouseholdBillingOwner(existing.householdId, id);
+        becameBillingOwner = true;
       } else if (existing.isBillingOwner) {
         return NextResponse.json(
           {
@@ -151,6 +205,14 @@ export async function PATCH(
     const hasIdentityUpdates = Object.keys(updates).some((key) => key !== "updatedAt");
     if (hasIdentityUpdates) {
       await database.update(guardians).set(updates).where(eq(guardians.id, id));
+    }
+
+    const isPayerAfter =
+      becameBillingOwner || existing.isBillingOwner || body.isBillingOwner === true;
+
+    // setHouseholdBillingOwner syncs before address writes; re-sync when address changed for the payer.
+    if (existing.householdId && addressTouched && isPayerAfter) {
+      await syncHouseholdBillingAddressFromGuardian(existing.householdId, id);
     }
 
     if (existing.householdId) {
