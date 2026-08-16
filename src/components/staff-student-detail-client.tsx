@@ -668,8 +668,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
             <h2>Tutoring</h2>
           </div>
           <div className="family-household-summary">
-            <div className="family-household-dense">
-              <div className="family-household-upper" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+            <div className="family-household-dense student-tutoring-dense">
+              <div className="family-household-upper student-tutoring-primary-row">
                 <span>
                   <small>Academic year</small>
                   <strong>{student.academicYear || "—"}</strong>
@@ -677,7 +677,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 <span>
                   <small>Subjects</small>
                   {student.subjects.length > 0 ? (
-                    <div className="field-cloud" style={{ marginTop: 4 }}>
+                    <div className="field-cloud">
                       {student.subjects.map((subject) => (
                         <span key={subject.id}>{subject.name}</span>
                       ))}
@@ -686,10 +686,10 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                     <strong>—</strong>
                   )}
                 </span>
-                <span style={{ gridColumn: "1 / -1" }}>
+                <span>
                   <small>Preferred schedule</small>
                   {scheduleChips.length > 0 ? (
-                    <div className="field-cloud" style={{ marginTop: 4 }}>
+                    <div className="field-cloud">
                       {scheduleChips.map((chip) => (
                         <span key={chip.id}>{chip.label}</span>
                       ))}
@@ -698,6 +698,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                     <strong>—</strong>
                   )}
                 </span>
+              </div>
+              <div className="family-household-upper student-tutoring-rates-row">
                 <span>
                   <small>Hours/Rates</small>
                   <strong>{optionLabel(ACADEMIC_RATE_PACKAGES, student.hoursRatePackage)}</strong>
