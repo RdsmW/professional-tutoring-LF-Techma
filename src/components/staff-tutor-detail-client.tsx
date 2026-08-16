@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
+import { IconPencil } from "@/components/staff-action-icons";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
 import { PageIntro, Panel } from "@/components/ui";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -32,36 +32,12 @@ type TutorDetail = {
   canDelete: boolean;
 };
 
-type ProfileForm = {
-  displayName: string;
-  email: string;
-  phone: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-};
-
 type CatalogSubject = {
   id: string;
   code: string;
   name: string;
   category: string | null;
 };
-
-function toProfileForm(tutor: TutorDetail): ProfileForm {
-  return {
-    displayName: tutor.displayName,
-    email: tutor.email ?? "",
-    phone: tutor.phone ?? "",
-    addressLine1: tutor.addressLine1 ?? "",
-    addressLine2: tutor.addressLine2 ?? "",
-    city: tutor.city ?? "",
-    state: tutor.state ?? "",
-    postalCode: tutor.postalCode ?? "",
-  };
-}
 
 export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const router = useRouter();
@@ -79,9 +55,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [profileForm, setProfileForm] = useState<ProfileForm | null>(null);
-  const [savingProfile, setSavingProfile] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -121,14 +94,10 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   }, [reload]);
 
   useEffect(() => {
-    if (!tutor || !deepLinkEdit || editDeepLinkHandled.current) return;
+    if (!deepLinkEdit || editDeepLinkHandled.current) return;
     editDeepLinkHandled.current = true;
-    setProfileForm(toProfileForm(tutor));
-    setEditing(true);
-    setError(null);
-    setMessage(null);
-    router.replace(`/staff/tutors/${tutorId}`, { scroll: false });
-  }, [tutor, deepLinkEdit, tutorId, router]);
+    router.replace(`/staff/tutors/${tutorId}/edit`);
+  }, [deepLinkEdit, tutorId, router]);
 
   const availableSubjects = useMemo(() => {
     if (!tutor) return catalog;
@@ -143,12 +112,11 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     }
   }, [availableSubjects, selectedSubjectId]);
 
-  async function patchTutor(body: Record<string, unknown>, mode: "seats" | "active" | "profile") {
+  async function patchTutor(body: Record<string, unknown>, mode: "seats" | "active") {
     setError(null);
     setMessage(null);
     if (mode === "seats") setSavingSeats(true);
     if (mode === "active") setTogglingActive(true);
-    if (mode === "profile") setSavingProfile(true);
     try {
       const response = await fetch(`/api/staff/tutors/${tutorId}`, {
         method: "PATCH",
@@ -161,14 +129,12 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         return;
       }
       setMessage("Saved.");
-      if (mode === "profile") setEditing(false);
       await reload();
     } catch {
       setError("Unable to update tutor.");
     } finally {
       setSavingSeats(false);
       setTogglingActive(false);
-      setSavingProfile(false);
     }
   }
 
@@ -308,18 +274,14 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           ← Tutors
         </Link>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className="action-btn action-btn-edit"
-            onClick={() => {
-              setProfileForm(toProfileForm(tutor));
-              setEditing(true);
-              setError(null);
-              setMessage(null);
-            }}
+          <Link
+            href={`/staff/tutors/${tutorId}/edit`}
+            className="staff-icon-btn staff-icon-btn-edit"
+            aria-label="Edit"
+            title="Edit"
           >
-            Edit
-          </button>
+            <IconPencil size={15} />
+          </Link>
           {!tutor.active ? (
             <button
               type="button"
@@ -360,121 +322,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
       />
       {error ? <p className="form-error">{error}</p> : null}
       {message ? <p style={{ fontSize: 14, marginBottom: 12 }}>{message}</p> : null}
-
-      {editing && profileForm ? (
-        <Panel title="Edit tutor">
-          <form
-            className="input-grid"
-            style={{ gap: 12 }}
-            onSubmit={(e) => {
-              e.preventDefault();
-              void patchTutor(
-                {
-                  displayName: profileForm.displayName,
-                  email: profileForm.email || null,
-                  phone: profileForm.phone || null,
-                  addressLine1: profileForm.addressLine1 || null,
-                  addressLine2: profileForm.addressLine2 || null,
-                  city: profileForm.city || null,
-                  state: profileForm.state || null,
-                  postalCode: profileForm.postalCode || null,
-                  country: "United States",
-                },
-                "profile",
-              );
-            }}
-          >
-            <label>
-              Display name
-              <input
-                value={profileForm.displayName}
-                onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Email
-              <input
-                type="email"
-                value={profileForm.email}
-                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-              />
-            </label>
-            <label>
-              Phone
-              <input
-                type="tel"
-                value={profileForm.phone}
-                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-              />
-            </label>
-
-            <p className="guardian-edit-section-label">Mailing address</p>
-            <label>
-              Street
-              <AddressAutocompleteInput
-                value={profileForm.addressLine1}
-                onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
-                onSelect={(suggestion) =>
-                  setProfileForm({
-                    ...profileForm,
-                    addressLine1: suggestion.addressLine1,
-                    city: suggestion.city || profileForm.city,
-                    state: suggestion.state || profileForm.state,
-                    postalCode: suggestion.postalCode || profileForm.postalCode,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Address line 2
-              <input
-                value={profileForm.addressLine2}
-                onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
-              />
-            </label>
-            <label>
-              City
-              <input
-                value={profileForm.city}
-                onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
-              />
-            </label>
-            <label>
-              State
-              <input
-                value={profileForm.state}
-                onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
-              />
-            </label>
-            <label>
-              ZIP
-              <input
-                value={profileForm.postalCode}
-                onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
-              />
-            </label>
-            <label>
-              Country
-              <input value="United States" readOnly />
-            </label>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="submit" className="primary-button" disabled={savingProfile}>
-                {savingProfile ? "Saving…" : "Save profile"}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={savingProfile}
-                onClick={() => setEditing(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Panel>
-      ) : null}
 
       <div className="profile-layout">
         <Panel title="Profile" eyebrow="Tutor">
