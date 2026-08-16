@@ -176,71 +176,79 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
         onSubmit={(event) => void saveHousehold(event)}
       >
         <StaffEditSectionLabel>Household</StaffEditSectionLabel>
-        <label>
-          Family name
-          <input
-            value={householdForm.displayName}
-            onChange={(e) => setHouseholdForm({ ...householdForm, displayName: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          Phone
-          <input
-            type="tel"
-            value={householdForm.primaryPhone}
-            onChange={(e) => setHouseholdForm({ ...householdForm, primaryPhone: e.target.value })}
-          />
-        </label>
-        <label>
-          Street
-          <AddressAutocompleteInput
-            value={householdForm.addressLine1}
-            onChange={(addressLine1) => setHouseholdForm({ ...householdForm, addressLine1 })}
-            onSelect={(suggestion) =>
-              setHouseholdForm({
-                ...householdForm,
-                addressLine1: suggestion.addressLine1,
-                city: suggestion.city || householdForm.city,
-                state: suggestion.state || householdForm.state,
-                postalCode: suggestion.postalCode || householdForm.postalCode,
-              })
-            }
-          />
-        </label>
-        <label>
-          Billing address line 2
-          <input
-            value={householdForm.addressLine2}
-            onChange={(e) => setHouseholdForm({ ...householdForm, addressLine2: e.target.value })}
-          />
-        </label>
-        <label>
-          City
-          <input
-            value={householdForm.city}
-            onChange={(e) => setHouseholdForm({ ...householdForm, city: e.target.value })}
-          />
-        </label>
-        <label>
-          State
-          <input
-            value={householdForm.state}
-            onChange={(e) => setHouseholdForm({ ...householdForm, state: e.target.value })}
-          />
-        </label>
-        <label>
-          ZIP
-          <input
-            value={householdForm.postalCode}
-            onChange={(e) => setHouseholdForm({ ...householdForm, postalCode: e.target.value })}
-          />
-        </label>
-        <label>
-          Country
-          <input value="United States" disabled readOnly />
-        </label>
-        <div className="family-household-edit-zoho-row">
+        <div className="staff-edit-field-row staff-edit-field-row--2">
+          <label>
+            Family name
+            <input
+              value={householdForm.displayName}
+              onChange={(e) => setHouseholdForm({ ...householdForm, displayName: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            Phone
+            <input
+              type="tel"
+              value={householdForm.primaryPhone}
+              onChange={(e) => setHouseholdForm({ ...householdForm, primaryPhone: e.target.value })}
+            />
+          </label>
+        </div>
+
+        <StaffEditSectionLabel>Address</StaffEditSectionLabel>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            Street
+            <AddressAutocompleteInput
+              value={householdForm.addressLine1}
+              onChange={(addressLine1) => setHouseholdForm({ ...householdForm, addressLine1 })}
+              onSelect={(suggestion) =>
+                setHouseholdForm({
+                  ...householdForm,
+                  addressLine1: suggestion.addressLine1,
+                  city: suggestion.city || householdForm.city,
+                  state: suggestion.state || householdForm.state,
+                  postalCode: suggestion.postalCode || householdForm.postalCode,
+                })
+              }
+            />
+          </label>
+          <label>
+            Address line 2
+            <input
+              value={householdForm.addressLine2}
+              onChange={(e) => setHouseholdForm({ ...householdForm, addressLine2: e.target.value })}
+            />
+          </label>
+          <label>
+            City
+            <input
+              value={householdForm.city}
+              onChange={(e) => setHouseholdForm({ ...householdForm, city: e.target.value })}
+            />
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            State
+            <input
+              value={householdForm.state}
+              onChange={(e) => setHouseholdForm({ ...householdForm, state: e.target.value })}
+            />
+          </label>
+          <label>
+            ZIP
+            <input
+              value={householdForm.postalCode}
+              onChange={(e) => setHouseholdForm({ ...householdForm, postalCode: e.target.value })}
+            />
+          </label>
+          <label>
+            Country
+            <input value="United States" readOnly />
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--2">
           <label>
             Zoho CRM ID
             <input
@@ -248,7 +256,7 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
               onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmId: e.target.value })}
             />
           </label>
-          <label className="family-household-edit-zoho-url">
+          <label>
             Zoho CRM URL
             <input
               type="url"
@@ -258,41 +266,45 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
             />
           </label>
         </div>
-        <label>
-          Responsible for payment
-          <select
-            value={householdForm.billingOwnerGuardianId}
-            onChange={(e) => setHouseholdForm({ ...householdForm, billingOwnerGuardianId: e.target.value })}
-            required={family.guardians.length > 0}
-          >
-            <option value="">{family.guardians.length > 0 ? "Select guardian…" : "Unassigned"}</option>
-            {family.guardians.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.firstName} {g.lastName} ({g.email})
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Card on file
-          <select
-            value={householdForm.cardOnFile ? "yes" : "no"}
-            onChange={(e) => setHouseholdForm({ ...householdForm, cardOnFile: e.target.value === "yes" })}
-          >
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </label>
-        <label>
-          Auto-charge
-          <select
-            value={householdForm.autoCharge ? "yes" : "no"}
-            onChange={(e) => setHouseholdForm({ ...householdForm, autoCharge: e.target.value === "yes" })}
-          >
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </label>
+
+        <StaffEditSectionLabel>Billing</StaffEditSectionLabel>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            Responsible for payment
+            <select
+              value={householdForm.billingOwnerGuardianId}
+              onChange={(e) => setHouseholdForm({ ...householdForm, billingOwnerGuardianId: e.target.value })}
+              required={family.guardians.length > 0}
+            >
+              <option value="">{family.guardians.length > 0 ? "Select guardian…" : "Unassigned"}</option>
+              {family.guardians.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.firstName} {g.lastName} ({g.email})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Card on file
+            <select
+              value={householdForm.cardOnFile ? "yes" : "no"}
+              onChange={(e) => setHouseholdForm({ ...householdForm, cardOnFile: e.target.value === "yes" })}
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label>
+            Auto-charge
+            <select
+              value={householdForm.autoCharge ? "yes" : "no"}
+              onChange={(e) => setHouseholdForm({ ...householdForm, autoCharge: e.target.value === "yes" })}
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+        </div>
       </StaffRecordEditShell>
     </>
   );
