@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { Panel } from "@/components/ui";
 import {
   IconArchive,
@@ -18,7 +17,6 @@ import {
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { StaffNotesSection } from "@/components/staff-notes-section";
-import { isValidPhone } from "@/lib/validation/contact";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -101,21 +99,6 @@ type FamilyDetail = {
       createdAt: string;
     }>;
   };
-};
-
-type HouseholdEdit = {
-  displayName: string;
-  primaryPhone: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  zohoCrmId: string;
-  zohoCrmUrl: string;
-  billingOwnerGuardianId: string;
-  cardOnFile: boolean;
-  autoCharge: boolean;
 };
 
 type AssignGuardianOption = {
@@ -434,9 +417,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingHousehold, setEditingHousehold] = useState(false);
-  const [householdForm, setHouseholdForm] = useState<HouseholdEdit | null>(null);
-  const [savingHousehold, setSavingHousehold] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [studentBusyId, setStudentBusyId] = useState<string | null>(null);
   const [memberBusyId, setMemberBusyId] = useState<string | null>(null);
@@ -495,23 +475,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     deepLinkHandled.current = deepLinkedGuardianId;
     router.replace(`/staff/guardians/${match.id}?from=family`);
   }, [family, deepLinkedGuardianId, router]);
-
-  function householdFormFromFamily(next: FamilyDetail): HouseholdEdit {
-    return {
-      displayName: next.displayName,
-      primaryPhone: next.primaryPhone || "",
-      addressLine1: next.addressLine1 || "",
-      addressLine2: next.addressLine2 || "",
-      city: next.city || "",
-      state: next.state || "",
-      postalCode: next.postalCode || "",
-      zohoCrmId: next.zohoCrmId || "",
-      zohoCrmUrl: next.zohoCrmUrl || "",
-      billingOwnerGuardianId: next.billingOwnerGuardianId || "",
-      cardOnFile: Boolean(next.cardOnFile),
-      autoCharge: Boolean(next.autoCharge),
-    };
-  }
 
   async function refreshInvite(guardianId: string) {
     try {
@@ -601,72 +564,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     );
   }
 
-  function openHouseholdEdit() {
-    if (!family) return;
-    setHouseholdForm(householdFormFromFamily(family));
-    setEditingHousehold(true);
-  }
-
   useEffect(() => {
-    if (!family || !deepLinkEdit || editDeepLinkHandled.current) return;
+    if (!deepLinkEdit || editDeepLinkHandled.current) return;
     editDeepLinkHandled.current = true;
-    setHouseholdForm(householdFormFromFamily(family));
-    setEditingHousehold(true);
-    router.replace(`/staff/families/${familyId}`, { scroll: false });
-  }, [family, deepLinkEdit, familyId, router]);
-
-  async function saveHousehold(event: FormEvent) {
-    event.preventDefault();
-    if (!householdForm || savingHousehold) return;
-    if (!householdForm.displayName.trim()) {
-      toast.error("Household name is required.");
-      return;
-    }
-    if (householdForm.primaryPhone.trim() && !isValidPhone(householdForm.primaryPhone)) {
-      toast.error("Enter a valid household phone number.");
-      return;
-    }
-    if ((family?.guardians.length ?? 0) > 0 && !householdForm.billingOwnerGuardianId) {
-      toast.error("Select who is responsible for payment.");
-      return;
-    }
-    setSavingHousehold(true);
-
-    try {
-      const response = await fetch(`/api/staff/families/${familyId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          displayName: householdForm.displayName,
-          displayNameManual: true,
-          primaryPhone: householdForm.primaryPhone,
-          addressLine1: householdForm.addressLine1,
-          addressLine2: householdForm.addressLine2,
-          city: householdForm.city,
-          state: householdForm.state,
-          postalCode: householdForm.postalCode,
-          country: "United States",
-          zohoCrmId: householdForm.zohoCrmId,
-          zohoCrmUrl: householdForm.zohoCrmUrl,
-          billingOwnerGuardianId: householdForm.billingOwnerGuardianId || null,
-          cardOnFile: householdForm.cardOnFile,
-          autoCharge: householdForm.autoCharge,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        toast.error(data.error || "Unable to save household.");
-        return;
-      }
-      setEditingHousehold(false);
-      toast.success("Household updated.");
-      await softReload();
-    } catch {
-      toast.error("Unable to save household.");
-    } finally {
-      setSavingHousehold(false);
-    }
-  }
+    router.replace(`/staff/families/${familyId}/edit`);
+  }, [deepLinkEdit, familyId, router]);
 
   function openGuardianDetail(guardian: GuardianRow) {
     setListModal(null);
@@ -1269,15 +1171,14 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           ← Families
         </Link>
         <div className="family-detail-topbar-actions">
-          <StaffIconButton
-            label="Edit"
+          <Link
+            href={`/staff/families/${familyId}/edit`}
+            className="staff-icon-btn staff-icon-btn-edit"
+            aria-label="Edit"
             title="Edit"
-            tone="edit"
-            disabled={lifecycleBusy}
-            onClick={openHouseholdEdit}
           >
             <IconPencil size={15} />
-          </StaffIconButton>
+          </Link>
           {householdLifecycleButtons.map((action) => (
             <StaffIconButton
               key={action.id}
@@ -1308,150 +1209,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           {formatStatusLabel(family.status)}
         </span>
       </section>
-
-      {editingHousehold && householdForm ? (
-        <Panel title="Edit household" className="family-equal-panel">
-          <form onSubmit={saveHousehold} className="input-grid family-household-edit-grid">
-            <label>
-              Family name
-              <input
-                value={householdForm.displayName}
-                onChange={(e) => setHouseholdForm({ ...householdForm, displayName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Phone
-              <input
-                type="tel"
-                value={householdForm.primaryPhone}
-                onChange={(e) => setHouseholdForm({ ...householdForm, primaryPhone: e.target.value })}
-              />
-            </label>
-            <label>
-              Street
-              <AddressAutocompleteInput
-                value={householdForm.addressLine1}
-                onChange={(addressLine1) => setHouseholdForm({ ...householdForm, addressLine1 })}
-                onSelect={(suggestion) =>
-                  setHouseholdForm({
-                    ...householdForm,
-                    addressLine1: suggestion.addressLine1,
-                    city: suggestion.city || householdForm.city,
-                    state: suggestion.state || householdForm.state,
-                    postalCode: suggestion.postalCode || householdForm.postalCode,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Billing address line 2
-              <input
-                value={householdForm.addressLine2}
-                onChange={(e) => setHouseholdForm({ ...householdForm, addressLine2: e.target.value })}
-              />
-            </label>
-            <label>
-              City
-              <input
-                value={householdForm.city}
-                onChange={(e) => setHouseholdForm({ ...householdForm, city: e.target.value })}
-              />
-            </label>
-            <label>
-              State
-              <input
-                value={householdForm.state}
-                onChange={(e) => setHouseholdForm({ ...householdForm, state: e.target.value })}
-              />
-            </label>
-            <label>
-              ZIP
-              <input
-                value={householdForm.postalCode}
-                onChange={(e) => setHouseholdForm({ ...householdForm, postalCode: e.target.value })}
-              />
-            </label>
-            <label>
-              Country
-              <input value="United States" disabled readOnly />
-            </label>
-            <div className="family-household-edit-zoho-row">
-              <label>
-                Zoho CRM ID
-                <input
-                  value={householdForm.zohoCrmId}
-                  onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmId: e.target.value })}
-                />
-              </label>
-              <label className="family-household-edit-zoho-url">
-                Zoho CRM URL
-                <input
-                  type="url"
-                  placeholder="https://…"
-                  value={householdForm.zohoCrmUrl}
-                  onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmUrl: e.target.value })}
-                />
-              </label>
-            </div>
-            <label>
-              Responsible for payment
-              <select
-                value={householdForm.billingOwnerGuardianId}
-                onChange={(e) =>
-                  setHouseholdForm({ ...householdForm, billingOwnerGuardianId: e.target.value })
-                }
-                required={family.guardians.length > 0}
-              >
-                <option value="">
-                  {family.guardians.length > 0 ? "Select guardian…" : "Unassigned"}
-                </option>
-                {family.guardians.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.firstName} {g.lastName} ({g.email})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Card on file
-              <select
-                value={householdForm.cardOnFile ? "yes" : "no"}
-                onChange={(e) =>
-                  setHouseholdForm({ ...householdForm, cardOnFile: e.target.value === "yes" })
-                }
-              >
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </label>
-            <label>
-              Auto-charge
-              <select
-                value={householdForm.autoCharge ? "yes" : "no"}
-                onChange={(e) =>
-                  setHouseholdForm({ ...householdForm, autoCharge: e.target.value === "yes" })
-                }
-              >
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </label>
-            <div className="family-household-edit-actions">
-              <button type="submit" className="primary-button" disabled={savingHousehold}>
-                {savingHousehold ? "Saving…" : "Save household"}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setEditingHousehold(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Panel>
-      ) : null}
 
       <div className="family-detail-layout family-detail-stack">
         <Panel className="family-equal-panel">
