@@ -688,6 +688,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                     <strong>—</strong>
                   )}
                 </span>
+              </div>
+              <div className="family-household-upper student-tutoring-schedule-row">
                 <span>
                   <small>Preferred schedule</small>
                   {scheduleChips.length > 0 ? (

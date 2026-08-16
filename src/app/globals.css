@@ -1687,9 +1687,12 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .student-profile-dense .family-household-upper {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
-/* Student Tutoring view: Row1 Academic year|Subjects|Schedule; Row2 Hours/Rates|Advanced */
+/* Student Tutoring view: Row1 Academic year|Subjects; Row2 Preferred schedule; Row3 Hours/Rates|Advanced */
 .student-tutoring-dense .student-tutoring-primary-row {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.student-tutoring-dense .student-tutoring-schedule-row {
+  grid-template-columns: minmax(0, 1fr);
 }
 .student-tutoring-dense .student-tutoring-rates-row {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2179,11 +2182,12 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .student-profile-dense .family-household-upper {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .student-tutoring-dense .student-tutoring-primary-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
+  .student-tutoring-dense .student-tutoring-primary-row,
   .student-tutoring-dense .student-tutoring-rates-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .student-tutoring-dense .student-tutoring-schedule-row {
+    grid-template-columns: minmax(0, 1fr);
   }
   .guardian-identity-dense .family-household-upper {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -2209,6 +2213,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .student-profile-dense .student-profile-description-row,
   .student-profile-dense .student-profile-family-description-row,
   .student-tutoring-dense .student-tutoring-primary-row,
+  .student-tutoring-dense .student-tutoring-schedule-row,
   .student-tutoring-dense .student-tutoring-rates-row,
   .guardian-identity-dense .family-household-upper,
   .guardian-identity-dense .guardian-identity-address-row,
