@@ -485,7 +485,7 @@ export const identityMergeRequests = pgTable("identity_merge_requests", {
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 });
 
-/** Staff notes on a household (never shown in family portal). Editable with audit trail. */
+/** Staff notes on a household (never shown in family portal). Editable with audit trail. Soft-deleted for ~30 days. */
 export const householdNotes = pgTable("household_notes", {
   id: uuid("id").defaultRandom().primaryKey(),
   householdId: uuid("household_id")
@@ -498,6 +498,8 @@ export const householdNotes = pgTable("household_notes", {
   editorStaffId: uuid("editor_staff_id").references(() => staffProfiles.id),
   editorDisplayName: text("editor_display_name"),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedByStaffId: uuid("deleted_by_staff_id").references(() => staffProfiles.id),
 });
 
 /** Staff notes on a guardian (never shown in family portal). Editable with audit trail. Soft-deleted for ~30 days. */

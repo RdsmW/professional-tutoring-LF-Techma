@@ -1,9 +1,30 @@
-import { and, desc, eq, ilike, ne, or, SQL, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, isNotNull, isNull, lt, ne, or, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { bookings, courseEnrollments, guardians, households, students } from "@/lib/db/schema";
+import {
+  bookings,
+  courseEnrollments,
+  guardians,
+  householdNotes,
+  households,
+  students,
+} from "@/lib/db/schema";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
+import {
+  notePurgeAtFromDeletedAt,
+  noteRecycleCutoffDate,
+  type StaffRecycledNote,
+} from "@/lib/staff/staff-notes-recycle";
 
 export type { StaffFamilyListRow };
+
+export type StaffHouseholdNote = {
+  id: string;
+  body: string;
+  authorDisplayName: string;
+  createdAt: string;
+  editorDisplayName: string | null;
+  updatedAt: string | null;
+};
 
 export type ListStaffFamiliesFilters = {
   q?: string;
@@ -12,6 +33,102 @@ export type ListStaffFamiliesFilters = {
 };
 
 const HOUSEHOLD_STATUSES = new Set(["pending", "active", "inactive", "archived"]);
+
+function serializeHouseholdNote(note: typeof householdNotes.$inferSelect): StaffHouseholdNote {
+  return {
+    id: note.id,
+    body: note.body,
+    authorDisplayName: note.authorDisplayName,
+    createdAt: note.createdAt.toISOString(),
+    editorDisplayName: note.editorDisplayName ?? null,
+    updatedAt: note.updatedAt ? note.updatedAt.toISOString() : null,
+  };
+}
+
+export { serializeHouseholdNote };
+
+/** Permanently remove soft-deleted household notes past the retention window. */
+export async function purgeExpiredHouseholdNotes() {
+  const database = requireDb();
+  await database
+    .delete(householdNotes)
+    .where(and(isNotNull(householdNotes.deletedAt), lt(householdNotes.deletedAt, noteRecycleCutoffDate())));
+}
+
+export async function softDeleteHouseholdNote(input: {
+  householdId: string;
+  noteId: string;
+  staffId: string;
+}): Promise<StaffHouseholdNote | null> {
+  const database = requireDb();
+  await purgeExpiredHouseholdNotes();
+  const now = new Date();
+  const [note] = await database
+    .update(householdNotes)
+    .set({
+      deletedAt: now,
+      deletedByStaffId: input.staffId,
+    })
+    .where(
+      and(
+        eq(householdNotes.id, input.noteId),
+        eq(householdNotes.householdId, input.householdId),
+        isNull(householdNotes.deletedAt),
+      ),
+    )
+    .returning();
+  return note ? serializeHouseholdNote(note) : null;
+}
+
+export async function restoreHouseholdNote(
+  noteId: string,
+): Promise<{ id: string; householdId: string } | null> {
+  const database = requireDb();
+  await purgeExpiredHouseholdNotes();
+  const [note] = await database
+    .update(householdNotes)
+    .set({
+      deletedAt: null,
+      deletedByStaffId: null,
+    })
+    .where(and(eq(householdNotes.id, noteId), isNotNull(householdNotes.deletedAt)))
+    .returning({ id: householdNotes.id, householdId: householdNotes.householdId });
+  return note ?? null;
+}
+
+export async function listDeletedHouseholdNotes(): Promise<StaffRecycledNote[]> {
+  const database = requireDb();
+  await purgeExpiredHouseholdNotes();
+
+  const rows = await database
+    .select({
+      note: householdNotes,
+      displayName: households.displayName,
+    })
+    .from(householdNotes)
+    .innerJoin(households, eq(householdNotes.householdId, households.id))
+    .where(isNotNull(householdNotes.deletedAt))
+    .orderBy(desc(householdNotes.deletedAt));
+
+  return rows
+    .filter((row): row is typeof row & { note: typeof row.note & { deletedAt: Date } } =>
+      Boolean(row.note.deletedAt),
+    )
+    .map((row) => {
+      const deletedAt = row.note.deletedAt;
+      const householdId = row.note.householdId;
+      const entityLabel = row.displayName.trim() || "Family";
+      return {
+        ...serializeHouseholdNote(row.note),
+        kind: "household_note" as const,
+        entityId: householdId,
+        entityLabel,
+        entityHref: `/staff/families/${householdId}`,
+        deletedAt: deletedAt.toISOString(),
+        purgeAt: notePurgeAtFromDeletedAt(deletedAt).toISOString(),
+      };
+    });
+}
 
 /** Single aggregated query for the staff Families directory. */
 export async function listStaffFamilies(

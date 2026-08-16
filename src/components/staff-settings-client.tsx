@@ -59,13 +59,15 @@ const TABS = [
 
 type SettingsTab = (typeof TABS)[number]["id"];
 
-type RecycledGuardianNote = {
+type RecycledStaffNote = {
   id: string;
+  kind: "guardian_note" | "household_note";
   body: string;
   authorDisplayName: string;
   createdAt: string;
-  guardianId: string;
-  guardianDisplayName: string;
+  entityId: string;
+  entityLabel: string;
+  entityHref: string;
   deletedAt: string;
   purgeAt: string;
 };
@@ -100,7 +102,7 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
   const [priceSaving, setPriceSaving] = useState(false);
   const [priceSaved, setPriceSaved] = useState(false);
   const [priceNote, setPriceNote] = useState<string | null>(null);
-  const [recycleNotes, setRecycleNotes] = useState<RecycledGuardianNote[]>([]);
+  const [recycleNotes, setRecycleNotes] = useState<RecycledStaffNote[]>([]);
   const [recycleLoading, setRecycleLoading] = useState(false);
   const [recycleError, setRecycleError] = useState<string | null>(null);
   const [recycleBusyId, setRecycleBusyId] = useState<string | null>(null);
@@ -186,22 +188,22 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
-  async function restoreRecycledNote(noteId: string) {
+  async function restoreRecycledNote(note: RecycledStaffNote) {
     if (recycleBusyId) return;
-    setRecycleBusyId(noteId);
+    setRecycleBusyId(note.id);
     setRecycleError(null);
     try {
       const response = await fetch("/api/staff/settings/recycle-bin/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "guardian_note", noteId }),
+        body: JSON.stringify({ kind: note.kind, noteId: note.id }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
         setRecycleError(data.error || "Unable to restore note.");
         return;
       }
-      setRecycleNotes((prev) => prev.filter((note) => note.id !== noteId));
+      setRecycleNotes((prev) => prev.filter((row) => row.id !== note.id));
     } catch {
       setRecycleError("Unable to restore note.");
     } finally {
@@ -547,7 +549,7 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
         <Panel title="Recycle bin">
           <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 0 }}>
             Soft-deleted notes stay here for {retentionDays} days, then are permanently removed. Restore returns a
-            note to its guardian record.
+            note to its family or guardian record.
           </p>
           {recycleError ? <p className="form-error">{recycleError}</p> : null}
           {recycleLoading ? (
@@ -557,10 +559,14 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
           ) : (
             <div className="settings-recycle-list">
               {recycleNotes.map((note) => (
-                <div key={note.id} className="settings-recycle-row">
+                <div key={`${note.kind}:${note.id}`} className="settings-recycle-row">
                   <div className="settings-recycle-copy">
                     <strong>
-                      <a href={`/staff/guardians/${note.guardianId}`}>{note.guardianDisplayName}</a>
+                      <a href={note.entityHref}>{note.entityLabel}</a>
+                      <span style={{ color: "var(--muted)", fontWeight: 500 }}>
+                        {" "}
+                        · {note.kind === "household_note" ? "Family note" : "Guardian note"}
+                      </span>
                     </strong>
                     <span className="settings-recycle-body">{note.body}</span>
                     <small>
@@ -573,7 +579,7 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
                     type="button"
                     className="secondary-button"
                     disabled={recycleBusyId === note.id}
-                    onClick={() => void restoreRecycledNote(note.id)}
+                    onClick={() => void restoreRecycledNote(note)}
                   >
                     {recycleBusyId === note.id ? "Restoring…" : "Restore"}
                   </button>

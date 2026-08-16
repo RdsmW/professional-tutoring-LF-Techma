@@ -456,6 +456,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteEditDraft, setNoteEditDraft] = useState("");
   const [savingNoteEdit, setSavingNoteEdit] = useState(false);
+  const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [editingHousehold, setEditingHousehold] = useState(false);
   const [householdForm, setHouseholdForm] = useState<HouseholdEdit | null>(null);
   const [savingHousehold, setSavingHousehold] = useState(false);
@@ -602,6 +604,36 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   function cancelEditNote() {
     setEditingNoteId(null);
     setNoteEditDraft("");
+  }
+
+  async function deleteNote(noteId: string) {
+    if (deletingNoteId) return;
+    setDeletingNoteId(noteId);
+    try {
+      const response = await fetch(`/api/staff/families/${familyId}/notes/${noteId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        toast.error(data.error || "Unable to delete note.");
+        return;
+      }
+      setFamily((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: prev.notes.filter((note) => note.id !== noteId),
+            }
+          : prev,
+      );
+      if (editingNoteId === noteId) cancelEditNote();
+      setConfirmDeleteNoteId(null);
+      toast.success("Note moved to Recycle bin.");
+    } catch {
+      toast.error("Unable to delete note.");
+    } finally {
+      setDeletingNoteId(null);
+    }
   }
 
   async function saveNoteEdit(event: FormEvent) {
@@ -1313,18 +1345,32 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 <td className="family-notes-col-who">{note.authorDisplayName}</td>
                 <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
                 <td className="family-notes-col-edit">
-                  <StaffIconButton
-                    label="Edit"
-                    title="Edit"
-                    tone="muted"
-                    className="family-notes-edit-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      startEditNote(note);
-                    }}
-                  >
-                    <IconPencil size={14} />
-                  </StaffIconButton>
+                  <div className="family-notes-action-group" onClick={(event) => event.stopPropagation()}>
+                    <StaffIconButton
+                      label="Edit"
+                      title="Edit"
+                      tone="muted"
+                      className="family-notes-edit-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        startEditNote(note);
+                      }}
+                    >
+                      <IconPencil size={14} />
+                    </StaffIconButton>
+                    <StaffIconButton
+                      label="Delete"
+                      title="Delete"
+                      tone="danger"
+                      className="family-notes-edit-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setConfirmDeleteNoteId(note.id);
+                      }}
+                    >
+                      <IconTrash size={14} />
+                    </StaffIconButton>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1782,7 +1828,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           className="staff-modal-backdrop"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) cancelEditNote();
+            if (event.target === event.currentTarget && !confirmDeleteNoteId) cancelEditNote();
           }}
         >
           <div
@@ -1827,6 +1873,16 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               </label>
               <div className="staff-modal-actions">
                 <button
+                  type="button"
+                  className="danger-button"
+                  disabled={!!deletingNoteId}
+                  onClick={() => {
+                    if (editingNoteId) setConfirmDeleteNoteId(editingNoteId);
+                  }}
+                >
+                  Delete
+                </button>
+                <button
                   type="submit"
                   className="action-btn action-btn-edit"
                   disabled={savingNoteEdit || !noteEditDraft.trim()}
@@ -1837,6 +1893,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             </form>
           </div>
         </div>
+      ) : null}
+
+      {confirmDeleteNoteId ? (
+        <ConfirmActionModal
+          title="Delete this note?"
+          body="The note moves to Settings → Recycle bin for 30 days, then is permanently removed."
+          confirmLabel="Delete"
+          destructive
+          busy={deletingNoteId === confirmDeleteNoteId}
+          onCancel={() => {
+            if (!deletingNoteId) setConfirmDeleteNoteId(null);
+          }}
+          onConfirm={() => void deleteNote(confirmDeleteNoteId)}
+        />
       ) : null}
 
       {assignModal ? (

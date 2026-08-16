@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { listDeletedHouseholdNotes } from "@/lib/staff/families";
 import { listDeletedGuardianNotes } from "@/lib/staff/guardians";
+import { STAFF_NOTE_RECYCLE_DAYS, type StaffRecycledNote } from "@/lib/staff/staff-notes-recycle";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 export async function GET() {
@@ -10,10 +12,18 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: authError.error }, { status: authError.status });
     }
 
-    const notes = await listDeletedGuardianNotes();
+    const [guardianNotes, householdNotes] = await Promise.all([
+      listDeletedGuardianNotes(),
+      listDeletedHouseholdNotes(),
+    ]);
+
+    const notes: StaffRecycledNote[] = [...guardianNotes, ...householdNotes].sort(
+      (a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime(),
+    );
+
     return NextResponse.json({
       ok: true,
-      retentionDays: 30,
+      retentionDays: STAFF_NOTE_RECYCLE_DAYS,
       notes,
     });
   } catch (error) {

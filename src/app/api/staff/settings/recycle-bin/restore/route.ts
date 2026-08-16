@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { restoreHouseholdNote } from "@/lib/staff/families";
 import { restoreGuardianNote } from "@/lib/staff/guardians";
+import type { StaffRecycledNoteKind } from "@/lib/staff/staff-notes-recycle";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 export async function POST(request: Request) {
@@ -11,25 +13,40 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as { kind?: string; noteId?: string };
-    const kind = (body.kind ?? "guardian_note").trim();
+    const kind = (body.kind ?? "guardian_note").trim() as StaffRecycledNoteKind | string;
     const noteId = (body.noteId ?? "").trim();
 
-    if (kind !== "guardian_note") {
+    if (kind !== "guardian_note" && kind !== "household_note") {
       return NextResponse.json({ ok: false, error: "Unsupported recycle item." }, { status: 400 });
     }
     if (!noteId) {
       return NextResponse.json({ ok: false, error: "noteId is required." }, { status: 400 });
     }
 
-    const restored = await restoreGuardianNote(noteId);
+    if (kind === "guardian_note") {
+      const restored = await restoreGuardianNote(noteId);
+      if (!restored) {
+        return NextResponse.json(
+          { ok: false, error: "Note not found or retention window expired." },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json({ ok: true, kind, noteId: restored.id, guardianId: restored.guardianId });
+    }
+
+    const restored = await restoreHouseholdNote(noteId);
     if (!restored) {
       return NextResponse.json(
         { ok: false, error: "Note not found or retention window expired." },
         { status: 404 },
       );
     }
-
-    return NextResponse.json({ ok: true, noteId: restored.id, guardianId: restored.guardianId });
+    return NextResponse.json({
+      ok: true,
+      kind,
+      noteId: restored.id,
+      householdId: restored.householdId,
+    });
   } catch (error) {
     console.warn("[staff/settings/recycle-bin/restore] POST soft-fail", error);
     return NextResponse.json({ ok: false, error: "Unable to restore note." }, { status: 500 });

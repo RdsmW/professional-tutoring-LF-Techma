@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { householdNotes, households } from "@/lib/db/schema";
+import { serializeHouseholdNote, softDeleteHouseholdNote } from "@/lib/staff/families";
 import { getStaffContext } from "@/lib/staff/session";
-
-function serializeNote(note: typeof householdNotes.$inferSelect) {
-  return {
-    id: note.id,
-    body: note.body,
-    authorDisplayName: note.authorDisplayName,
-    createdAt: note.createdAt.toISOString(),
-    editorDisplayName: note.editorDisplayName ?? null,
-    updatedAt: note.updatedAt ? note.updatedAt.toISOString() : null,
-  };
-}
 
 export async function PATCH(
   request: Request,
@@ -51,7 +41,13 @@ export async function PATCH(
         editorDisplayName: context.staff.fullName,
         updatedAt: now,
       })
-      .where(and(eq(householdNotes.id, noteId), eq(householdNotes.householdId, id)))
+      .where(
+        and(
+          eq(householdNotes.id, noteId),
+          eq(householdNotes.householdId, id),
+          isNull(householdNotes.deletedAt),
+        ),
+      )
       .returning();
 
     if (!note) {
@@ -60,10 +56,38 @@ export async function PATCH(
 
     return NextResponse.json({
       ok: true,
-      note: serializeNote(note),
+      note: serializeHouseholdNote(note),
     });
   } catch (error) {
     console.warn("[staff/families/id/notes/noteId] PATCH soft-fail", error);
     return NextResponse.json({ ok: false, error: "Unable to update note." }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  contextParams: { params: Promise<{ id: string; noteId: string }> },
+) {
+  try {
+    const context = await getStaffContext();
+    if (!context) {
+      return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
+    }
+
+    const { id, noteId } = await contextParams.params;
+    const note = await softDeleteHouseholdNote({
+      householdId: id,
+      noteId,
+      staffId: context.staff.id,
+    });
+
+    if (!note) {
+      return NextResponse.json({ ok: false, error: "Note not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true, note });
+  } catch (error) {
+    console.warn("[staff/families/id/notes/noteId] DELETE soft-fail", error);
+    return NextResponse.json({ ok: false, error: "Unable to delete note." }, { status: 500 });
   }
 }

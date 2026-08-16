@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { refreshCardOnFile } from "@/lib/billing/refresh-card-on-file";
 import { requireDb } from "@/lib/db";
 import {
@@ -12,6 +12,7 @@ import {
   students,
   tutors,
 } from "@/lib/db/schema";
+import { purgeExpiredHouseholdNotes } from "@/lib/staff/families";
 import {
   HOUSEHOLD_COUNTRY_US,
   refreshHouseholdDisplayNameIfAuto,
@@ -53,6 +54,7 @@ export async function GET(
       updatedAt: Date | null;
     }> = [];
     try {
+      await purgeExpiredHouseholdNotes();
       noteRows = await database
         .select({
           id: householdNotes.id,
@@ -63,7 +65,7 @@ export async function GET(
           updatedAt: householdNotes.updatedAt,
         })
         .from(householdNotes)
-        .where(eq(householdNotes.householdId, id))
+        .where(and(eq(householdNotes.householdId, id), isNull(householdNotes.deletedAt)))
         .orderBy(desc(householdNotes.createdAt))
         .limit(100);
     } catch (error) {

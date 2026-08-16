@@ -19,15 +19,19 @@ import {
   type StaffGuardianListRow,
   type StaffGuardianNote,
 } from "@/lib/staff/guardian-shared";
+import {
+  notePurgeAtFromDeletedAt,
+  noteRecycleCutoffDate,
+  STAFF_NOTE_RECYCLE_DAYS,
+  type StaffRecycledNote,
+} from "@/lib/staff/staff-notes-recycle";
 
-/** Soft-deleted guardian notes are retained this long before purge. */
-export const GUARDIAN_NOTE_RECYCLE_DAYS = 30;
+/** @deprecated Prefer STAFF_NOTE_RECYCLE_DAYS — kept for existing imports. */
+export const GUARDIAN_NOTE_RECYCLE_DAYS = STAFF_NOTE_RECYCLE_DAYS;
 
-export type StaffRecycledGuardianNote = StaffGuardianNote & {
+export type StaffRecycledGuardianNote = StaffRecycledNote & {
   guardianId: string;
   guardianDisplayName: string;
-  deletedAt: string;
-  purgeAt: string;
 };
 
 export type {
@@ -76,20 +80,12 @@ function serializeNote(note: typeof guardianNotes.$inferSelect): StaffGuardianNo
   };
 }
 
-function recycleCutoffDate(now = new Date()) {
-  return new Date(now.getTime() - GUARDIAN_NOTE_RECYCLE_DAYS * 24 * 60 * 60 * 1000);
-}
-
-function purgeAtFromDeletedAt(deletedAt: Date) {
-  return new Date(deletedAt.getTime() + GUARDIAN_NOTE_RECYCLE_DAYS * 24 * 60 * 60 * 1000);
-}
-
 /** Permanently remove soft-deleted guardian notes past the retention window. */
 export async function purgeExpiredGuardianNotes() {
   const database = requireDb();
   await database
     .delete(guardianNotes)
-    .where(and(isNotNull(guardianNotes.deletedAt), lt(guardianNotes.deletedAt, recycleCutoffDate())));
+    .where(and(isNotNull(guardianNotes.deletedAt), lt(guardianNotes.deletedAt, noteRecycleCutoffDate())));
 }
 
 export async function softDeleteGuardianNote(input: {
@@ -152,12 +148,18 @@ export async function listDeletedGuardianNotes(): Promise<StaffRecycledGuardianN
     )
     .map((row) => {
       const deletedAt = row.note.deletedAt;
+      const guardianDisplayName = `${row.firstName} ${row.lastName}`.trim() || "Guardian";
+      const guardianId = row.note.guardianId;
       return {
         ...serializeNote(row.note),
-        guardianId: row.note.guardianId,
-        guardianDisplayName: `${row.firstName} ${row.lastName}`.trim() || "Guardian",
+        kind: "guardian_note" as const,
+        entityId: guardianId,
+        entityLabel: guardianDisplayName,
+        entityHref: `/staff/guardians/${guardianId}`,
+        guardianId,
+        guardianDisplayName,
         deletedAt: deletedAt.toISOString(),
-        purgeAt: purgeAtFromDeletedAt(deletedAt).toISOString(),
+        purgeAt: notePurgeAtFromDeletedAt(deletedAt).toISOString(),
       };
     });
 }
