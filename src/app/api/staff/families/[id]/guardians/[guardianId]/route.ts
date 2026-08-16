@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardians, households } from "@/lib/db/schema";
 import { getStaffContext } from "@/lib/staff/session";
@@ -92,10 +92,26 @@ export async function PATCH(
         .where(eq(households.id, id))
         .limit(1);
       if (household?.billingOwnerGuardianId === guardianId) {
-        await database
-          .update(households)
-          .set({ billingOwnerGuardianId: null, updatedAt: new Date() })
-          .where(eq(households.id, id));
+        const remaining = await database
+          .select({ id: guardians.id })
+          .from(guardians)
+          .where(and(eq(guardians.householdId, id), ne(guardians.id, guardianId)))
+          .limit(1);
+        if (remaining[0]) {
+          await database
+            .update(guardians)
+            .set({ isBillingOwner: true, updatedAt: new Date() })
+            .where(eq(guardians.id, remaining[0].id));
+          await database
+            .update(households)
+            .set({ billingOwnerGuardianId: remaining[0].id, updatedAt: new Date() })
+            .where(eq(households.id, id));
+        } else {
+          await database
+            .update(households)
+            .set({ billingOwnerGuardianId: null, updatedAt: new Date() })
+            .where(eq(households.id, id));
+        }
       }
     }
 

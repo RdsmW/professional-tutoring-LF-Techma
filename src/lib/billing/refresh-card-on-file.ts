@@ -11,9 +11,19 @@ export type CardOnFile = {
   cardOnFile: boolean;
 };
 
+function derivedCardOnFile(row: {
+  cardOnFile?: boolean;
+  stripeDefaultPaymentMethodId: string | null;
+  cardLast4: string | null;
+}): boolean {
+  const hasStripeCard = Boolean(row.stripeDefaultPaymentMethodId && row.cardLast4);
+  return Boolean(row.cardOnFile) || hasStripeCard;
+}
+
 /**
  * Refresh denormalized card brand/last4 from Stripe when the household has a
  * customer (and preferably a default payment method). Soft-fails to DB values.
+ * Keeps households.card_on_file in sync when Stripe confirms a payment method.
  */
 export async function refreshCardOnFile(householdId: string): Promise<CardOnFile> {
   const database = requireDb();
@@ -24,6 +34,7 @@ export async function refreshCardOnFile(householdId: string): Promise<CardOnFile
       stripeDefaultPaymentMethodId: households.stripeDefaultPaymentMethodId,
       cardBrand: households.cardBrand,
       cardLast4: households.cardLast4,
+      cardOnFile: households.cardOnFile,
     })
     .from(households)
     .where(eq(households.id, householdId))
@@ -39,12 +50,18 @@ export async function refreshCardOnFile(householdId: string): Promise<CardOnFile
     };
   }
 
-  const asCard = (row: typeof household): CardOnFile => ({
+  const asCard = (row: {
+    stripeCustomerId: string | null;
+    stripeDefaultPaymentMethodId: string | null;
+    cardBrand: string | null;
+    cardLast4: string | null;
+    cardOnFile?: boolean;
+  }): CardOnFile => ({
     stripeCustomerId: row.stripeCustomerId,
     stripeDefaultPaymentMethodId: row.stripeDefaultPaymentMethodId,
     cardBrand: row.cardBrand,
     cardLast4: row.cardLast4,
-    cardOnFile: Boolean(row.stripeDefaultPaymentMethodId && row.cardLast4),
+    cardOnFile: derivedCardOnFile(row),
   });
 
   if (!household.stripeCustomerId || !isStripeConfigured()) {
@@ -82,6 +99,7 @@ export async function refreshCardOnFile(householdId: string): Promise<CardOnFile
             stripeDefaultPaymentMethodId: null,
             cardBrand: null,
             cardLast4: null,
+            cardOnFile: false,
             updatedAt: new Date(),
           })
           .where(eq(households.id, householdId))
@@ -90,8 +108,9 @@ export async function refreshCardOnFile(householdId: string): Promise<CardOnFile
             stripeDefaultPaymentMethodId: households.stripeDefaultPaymentMethodId,
             cardBrand: households.cardBrand,
             cardLast4: households.cardLast4,
+            cardOnFile: households.cardOnFile,
           });
-        return asCard({ id: householdId, ...cleared });
+        return asCard({ ...cleared });
       }
       return asCard(household);
     }
@@ -103,7 +122,8 @@ export async function refreshCardOnFile(householdId: string): Promise<CardOnFile
     if (
       brand === household.cardBrand &&
       last4 === household.cardLast4 &&
-      paymentMethodId === household.stripeDefaultPaymentMethodId
+      paymentMethodId === household.stripeDefaultPaymentMethodId &&
+      household.cardOnFile
     ) {
       return asCard(household);
     }
@@ -114,6 +134,7 @@ export async function refreshCardOnFile(householdId: string): Promise<CardOnFile
         stripeDefaultPaymentMethodId: paymentMethodId,
         cardBrand: brand,
         cardLast4: last4,
+        cardOnFile: true,
         updatedAt: new Date(),
       })
       .where(eq(households.id, householdId))
@@ -122,9 +143,10 @@ export async function refreshCardOnFile(householdId: string): Promise<CardOnFile
         stripeDefaultPaymentMethodId: households.stripeDefaultPaymentMethodId,
         cardBrand: households.cardBrand,
         cardLast4: households.cardLast4,
+        cardOnFile: households.cardOnFile,
       });
 
-    return asCard({ id: householdId, ...updated });
+    return asCard({ ...updated });
   } catch (error) {
     console.warn("[refresh-card-on-file] soft-fail", error);
     return asCard(household);

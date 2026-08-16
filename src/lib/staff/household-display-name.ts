@@ -2,7 +2,18 @@ import { asc, eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { guardians, households, students } from "@/lib/db/schema";
 
-/** Auto family name: `{StudentLastName} - {billingGuardianEmail}` with sensible fallbacks. */
+/**
+ * Auto family name formula (when displayNameManual is false):
+ *   `{firstStudentLastName} - {billingGuardianEmail}`
+ *
+ * Fallbacks (in order):
+ * 1. last + email → `{last} - {email}`
+ * 2. last only → `{last} Family` (uses student last name, else billing guardian last name)
+ * 3. email only → `{email}`
+ * 4. neither → `Family`
+ *
+ * "First student" = earliest by students.createdAt (primary/first enrolled).
+ */
 export function buildHouseholdDisplayName(input: {
   studentLastName?: string | null;
   billingLastName?: string | null;

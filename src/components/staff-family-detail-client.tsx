@@ -68,10 +68,12 @@ type FamilyDetail = {
   zohoCrmUrl: string | null;
   billingOwnerGuardianId: string | null;
   billingOwnerName: string | null;
+  billingOwnerPhone: string | null;
   billingEmail: string | null;
   cardOnFile: boolean;
   cardBrand: string | null;
   cardLast4: string | null;
+  autoCharge: boolean;
   canDelete: boolean;
   maxGuardians: number;
   notes: NoteRow[];
@@ -106,6 +108,8 @@ type HouseholdEdit = {
   zohoCrmId: string;
   zohoCrmUrl: string;
   billingOwnerGuardianId: string;
+  cardOnFile: boolean;
+  autoCharge: boolean;
 };
 
 type AssignGuardianOption = {
@@ -541,6 +545,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       zohoCrmId: next.zohoCrmId || "",
       zohoCrmUrl: next.zohoCrmUrl || "",
       billingOwnerGuardianId: next.billingOwnerGuardianId || "",
+      cardOnFile: Boolean(next.cardOnFile),
+      autoCharge: Boolean(next.autoCharge),
     };
   }
 
@@ -672,6 +678,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
       toast.error("Enter a valid household phone number.");
       return;
     }
+    if ((family?.guardians.length ?? 0) > 0 && !householdForm.billingOwnerGuardianId) {
+      toast.error("Select who is responsible for payment.");
+      return;
+    }
     setSavingHousehold(true);
 
     try {
@@ -691,6 +701,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           zohoCrmId: householdForm.zohoCrmId,
           zohoCrmUrl: householdForm.zohoCrmUrl,
           billingOwnerGuardianId: householdForm.billingOwnerGuardianId || null,
+          cardOnFile: householdForm.cardOnFile,
+          autoCharge: householdForm.autoCharge,
         }),
       });
       const data = await response.json();
@@ -745,7 +757,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           lastName: guardianForm.lastName,
           email: guardianForm.email,
           phone: guardianForm.phone,
-          isBillingOwner: guardianForm.isBillingOwner,
           canManageStudents: guardianForm.canManageStudents,
           canRequestServices: guardianForm.canRequestServices,
         }),
@@ -1044,9 +1055,12 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   if (!family) return null;
 
   const addressLines = formatHouseholdAddressLines(family);
-  const billingCue = family.cardLast4
+  const cardLabel = family.cardLast4
     ? `${(family.cardBrand || "Card").toUpperCase()} ···· ${family.cardLast4}`
-    : "No card on file";
+    : family.cardOnFile
+      ? "Yes"
+      : "No";
+  const payerPhone = family.billingOwnerPhone || null;
   const isArchived = family.status === "archived";
   const guardiansAtMax = family.guardians.length >= (family.maxGuardians || MAX_GUARDIANS);
   const zohoLink = zohoHref(family);
@@ -1167,7 +1181,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <div className="table-head family-detail-cols-guardians">
           <span>Name</span>
           <span>Email</span>
-          <span className="family-detail-col-flag">Billing owner</span>
+          <span className="family-detail-col-flag">Payer</span>
           <span className="family-detail-col-flag">Manage students</span>
           <span className="family-detail-col-flag">Request services</span>
           <span className="staff-dir-col-actions" aria-label="Actions" />
@@ -1369,9 +1383,12 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           <h2>{family.displayName}</h2>
           <p className="family-record-hero-meta">
             {[
-              family.billingEmail ? `Billing: ${family.billingEmail}` : null,
-              family.billingOwnerName,
-              billingCue,
+              family.billingOwnerName
+                ? `Payer: ${family.billingOwnerName}`
+                : null,
+              family.billingEmail || null,
+              `Card: ${cardLabel}`,
+              `Auto-charge: ${yesNo(family.autoCharge)}`,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -1459,19 +1476,46 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               </label>
             </div>
             <label>
-              Billing owner
+              Responsible for payment
               <select
                 value={householdForm.billingOwnerGuardianId}
                 onChange={(e) =>
                   setHouseholdForm({ ...householdForm, billingOwnerGuardianId: e.target.value })
                 }
+                required={family.guardians.length > 0}
               >
-                <option value="">Unassigned</option>
+                <option value="">
+                  {family.guardians.length > 0 ? "Select guardian…" : "Unassigned"}
+                </option>
                 {family.guardians.map((g) => (
                   <option key={g.id} value={g.id}>
-                    {g.firstName} {g.lastName}
+                    {g.firstName} {g.lastName} ({g.email})
                   </option>
                 ))}
+              </select>
+            </label>
+            <label>
+              Card on file
+              <select
+                value={householdForm.cardOnFile ? "yes" : "no"}
+                onChange={(e) =>
+                  setHouseholdForm({ ...householdForm, cardOnFile: e.target.value === "yes" })
+                }
+              >
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+            <label>
+              Auto-charge
+              <select
+                value={householdForm.autoCharge ? "yes" : "no"}
+                onChange={(e) =>
+                  setHouseholdForm({ ...householdForm, autoCharge: e.target.value === "yes" })
+                }
+              >
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
               </select>
             </label>
             <div className="family-household-edit-actions">
@@ -1507,19 +1551,21 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 <small>Phone</small>
                 <strong>{family.primaryPhone || "—"}</strong>
               </span>
-              <span className="family-household-field-email">
-                <small>Billing email</small>
-                <strong title={family.billingEmail || undefined}>
-                  {family.billingEmail || "—"}
-                </strong>
-              </span>
-              <span className="family-household-field-owner">
-                <small>Billing owner</small>
+              <span className="family-household-field-payer">
+                <small>Responsible for payment</small>
                 <strong>{family.billingOwnerName || "—"}</strong>
+                <span className="family-household-payer-line" title={family.billingEmail || undefined}>
+                  {family.billingEmail || "—"}
+                </span>
+                <span className="family-household-payer-line">{payerPhone || "—"}</span>
               </span>
               <span className="family-household-field-card">
-                <small>Card</small>
-                <strong>{billingCue}</strong>
+                <small>Card on file</small>
+                <strong>{cardLabel}</strong>
+              </span>
+              <span className="family-household-field-autocharge">
+                <small>Auto-charge</small>
+                <strong>{yesNo(family.autoCharge)}</strong>
               </span>
               <div className="family-household-lower">
                 <span className="family-household-field-address">
@@ -1971,16 +2017,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                 </label>
               </div>
               <div className="guardian-perm-row" role="group" aria-label="Permissions">
-                <label className="guardian-perm-option">
-                  <input
-                    type="checkbox"
-                    checked={guardianForm.isBillingOwner}
-                    onChange={(e) =>
-                      setGuardianForm({ ...guardianForm, isBillingOwner: e.target.checked })
-                    }
-                  />
-                  <span>Billing owner</span>
-                </label>
                 <label className="guardian-perm-option">
                   <input
                     type="checkbox"

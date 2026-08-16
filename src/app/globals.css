@@ -1553,21 +1553,31 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   word-break: normal;
 }
 .family-household-field-phone {
-  grid-column: span 3;
+  grid-column: span 2;
 }
-.family-household-field-email {
-  grid-column: span 4;
-}
-.family-household-field-owner {
-  grid-column: span 3;
+.family-household-field-payer {
+  grid-column: span 6;
 }
 .family-household-field-card {
   grid-column: span 2;
 }
-.family-household-field-email strong {
+.family-household-field-autocharge {
+  grid-column: span 2;
+}
+.family-household-payer-line {
+  display: block;
+  font-size: var(--text-content);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+  min-width: 0;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.family-household-field-payer strong {
+  margin-bottom: 2px;
 }
 .family-household-lower {
   grid-column: 1 / -1;
@@ -1636,12 +1646,14 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
   .family-household-field-phone,
-  .family-household-field-email,
-  .family-household-field-owner,
-  .family-household-field-card {
+  .family-household-field-card,
+  .family-household-field-autocharge {
     grid-column: span 3;
   }
-  .family-household-field-email strong {
+  .family-household-field-payer {
+    grid-column: span 6;
+  }
+  .family-household-payer-line {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1652,9 +1664,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
     grid-template-columns: 1fr;
   }
   .family-household-field-phone,
-  .family-household-field-email,
-  .family-household-field-owner,
+  .family-household-field-payer,
   .family-household-field-card,
+  .family-household-field-autocharge,
   .family-household-lower,
   .family-household-field-zoho-url {
     grid-column: 1 / -1;
@@ -1673,7 +1685,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
     width: auto;
     max-width: 100%;
   }
-  .family-household-field-email strong {
+  .family-household-payer-line {
     white-space: normal;
     overflow: visible;
     text-overflow: unset;

@@ -112,9 +112,54 @@ export async function GET(
         : [];
     const courseNameById = new Map(courseRows.map((row) => [row.id, row.name]));
 
-    const billingOwner =
+    let billingOwner =
       guardianRows.find((g) => g.id === household.billingOwnerGuardianId) ||
-      guardianRows.find((g) => g.isBillingOwner);
+      guardianRows.find((g) => g.isBillingOwner) ||
+      null;
+
+    // Soft-heal: when guardians exist, ensure exactly one billing owner.
+    let healedBillingOwner = false;
+    if (guardianRows.length > 0) {
+      if (!billingOwner) {
+        billingOwner = guardianRows[0] ?? null;
+      }
+      if (billingOwner) {
+        const extras = guardianRows.filter((g) => g.isBillingOwner && g.id !== billingOwner!.id);
+        const pointerMismatch = household.billingOwnerGuardianId !== billingOwner.id;
+        const missingFlag = !billingOwner.isBillingOwner;
+        if (extras.length > 0 || pointerMismatch || missingFlag || !household.billingOwnerGuardianId) {
+          await database
+            .update(guardians)
+            .set({ isBillingOwner: false, updatedAt: new Date() })
+            .where(eq(guardians.householdId, id));
+          await database
+            .update(guardians)
+            .set({ isBillingOwner: true, updatedAt: new Date() })
+            .where(eq(guardians.id, billingOwner.id));
+          await database
+            .update(households)
+            .set({ billingOwnerGuardianId: billingOwner.id, updatedAt: new Date() })
+            .where(eq(households.id, id));
+          healedBillingOwner = true;
+          billingOwner = { ...billingOwner, isBillingOwner: true };
+          for (const g of guardianRows) {
+            g.isBillingOwner = g.id === billingOwner.id;
+          }
+        }
+      }
+    }
+
+    if (healedBillingOwner && !household.displayNameManual) {
+      await refreshHouseholdDisplayNameIfAuto(id);
+      const [renamed] = await database
+        .select({ displayName: households.displayName })
+        .from(households)
+        .where(eq(households.id, id))
+        .limit(1);
+      if (renamed) {
+        household.displayName = renamed.displayName;
+      }
+    }
 
     const [bookingCount] = await database
       .select({ value: count() })
@@ -170,14 +215,16 @@ export async function GET(
         country: household.country || HOUSEHOLD_COUNTRY_US,
         zohoCrmId: household.zohoCrmId,
         zohoCrmUrl: household.zohoCrmUrl,
-        billingOwnerGuardianId: household.billingOwnerGuardianId,
+        billingOwnerGuardianId: billingOwner?.id ?? household.billingOwnerGuardianId,
         billingOwnerName: billingOwner
           ? `${billingOwner.firstName} ${billingOwner.lastName}`.trim()
           : null,
+        billingOwnerPhone: billingOwner?.phone ?? null,
         billingEmail: billingOwner?.email ?? null,
-        cardOnFile: card.cardOnFile,
+        cardOnFile: card.cardOnFile || household.cardOnFile,
         cardBrand: card.cardBrand,
         cardLast4: card.cardLast4,
+        autoCharge: household.autoCharge,
         canDelete,
         maxGuardians: 2,
         notes: noteRows.map((row) => ({
@@ -261,6 +308,8 @@ export async function PATCH(
       zohoCrmId?: string | null;
       zohoCrmUrl?: string | null;
       billingOwnerGuardianId?: string | null;
+      cardOnFile?: boolean;
+      autoCharge?: boolean;
     };
 
     const database = requireDb();
@@ -331,7 +380,18 @@ export async function PATCH(
     }
 
     if (body.billingOwnerGuardianId !== undefined) {
-      if (body.billingOwnerGuardianId === null) {
+      const guardianCountRows = await database
+        .select({ id: guardians.id })
+        .from(guardians)
+        .where(eq(guardians.householdId, id));
+
+      if (body.billingOwnerGuardianId === null || body.billingOwnerGuardianId === "") {
+        if (guardianCountRows.length > 0) {
+          return NextResponse.json(
+            { ok: false, error: "Select a guardian responsible for payment." },
+            { status: 400 },
+          );
+        }
         updates.billingOwnerGuardianId = null;
         await database
           .update(guardians)
@@ -344,8 +404,12 @@ export async function PATCH(
           .where(and(eq(guardians.id, body.billingOwnerGuardianId), eq(guardians.householdId, id)))
           .limit(1);
         if (!owner) {
-          return NextResponse.json({ ok: false, error: "Billing owner must be a household guardian." }, { status: 400 });
+          return NextResponse.json(
+            { ok: false, error: "Responsible for payment must be a household guardian." },
+            { status: 400 },
+          );
         }
+        // Atomic: clear all guardian flags, set owner flag, set household pointer.
         updates.billingOwnerGuardianId = owner.id;
         await database
           .update(guardians)
@@ -355,6 +419,20 @@ export async function PATCH(
           .update(guardians)
           .set({ isBillingOwner: true, updatedAt: new Date() })
           .where(eq(guardians.id, owner.id));
+      }
+    }
+
+    if (typeof body.autoCharge === "boolean") {
+      updates.autoCharge = body.autoCharge;
+    }
+
+    if (typeof body.cardOnFile === "boolean") {
+      updates.cardOnFile = body.cardOnFile;
+      if (!body.cardOnFile) {
+        // Clearing staff card flag also clears denormalized Stripe card display fields.
+        updates.stripeDefaultPaymentMethodId = null;
+        updates.cardBrand = null;
+        updates.cardLast4 = null;
       }
     }
 
@@ -371,6 +449,11 @@ export async function PATCH(
     }
 
     const [fresh] = await database.select().from(households).where(eq(households.id, id)).limit(1);
+    const ownerGuardians = await database.select().from(guardians).where(eq(guardians.householdId, id));
+    const billingOwner =
+      ownerGuardians.find((g) => g.id === fresh.billingOwnerGuardianId) ||
+      ownerGuardians.find((g) => g.isBillingOwner) ||
+      null;
 
     return NextResponse.json({
       ok: true,
@@ -389,6 +472,15 @@ export async function PATCH(
         zohoCrmId: fresh.zohoCrmId,
         zohoCrmUrl: fresh.zohoCrmUrl,
         billingOwnerGuardianId: fresh.billingOwnerGuardianId,
+        billingOwnerName: billingOwner
+          ? `${billingOwner.firstName} ${billingOwner.lastName}`.trim()
+          : null,
+        billingOwnerPhone: billingOwner?.phone ?? null,
+        billingEmail: billingOwner?.email ?? null,
+        cardOnFile: Boolean(fresh.cardOnFile || (fresh.stripeDefaultPaymentMethodId && fresh.cardLast4)),
+        cardBrand: fresh.cardBrand,
+        cardLast4: fresh.cardLast4,
+        autoCharge: fresh.autoCharge,
       },
     });
   } catch (error) {

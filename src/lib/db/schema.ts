@@ -56,6 +56,13 @@ export const households = pgTable("households", {
   stripeDefaultPaymentMethodId: text("stripe_default_payment_method_id"),
   cardBrand: text("card_brand"),
   cardLast4: varchar("card_last4", { length: 4 }),
+  /**
+   * Staff-facing card-on-file flag (Family source of truth).
+   * Synced true when Stripe has a default PM + last4; staff may also set for ops without live Stripe.
+   */
+  cardOnFile: boolean("card_on_file").notNull().default(false),
+  /** When true, household opts into automatic card charges for recurring/monthly billing. */
+  autoCharge: boolean("auto_charge").notNull().default(false),
   paymentMethodConsentAt: timestamp("payment_method_consent_at", { withTimezone: true }),
   paymentMethodConsentVersion: text("payment_method_consent_version"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

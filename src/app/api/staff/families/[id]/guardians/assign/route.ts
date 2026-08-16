@@ -75,14 +75,36 @@ export async function POST(
       }
     }
 
+    const [targetBilling] = await database
+      .select({ billingOwnerGuardianId: households.billingOwnerGuardianId })
+      .from(households)
+      .where(eq(households.id, householdId))
+      .limit(1);
+    const becomeBillingOwner =
+      Number(guardianCount?.value ?? 0) === 0 || !targetBilling?.billingOwnerGuardianId;
+
+    if (becomeBillingOwner) {
+      await database
+        .update(guardians)
+        .set({ isBillingOwner: false, updatedAt: new Date() })
+        .where(eq(guardians.householdId, householdId));
+    }
+
     await database
       .update(guardians)
       .set({
         householdId,
-        isBillingOwner: false,
+        isBillingOwner: becomeBillingOwner,
         updatedAt: new Date(),
       })
       .where(eq(guardians.id, guardianId));
+
+    if (becomeBillingOwner) {
+      await database
+        .update(households)
+        .set({ billingOwnerGuardianId: guardianId, updatedAt: new Date() })
+        .where(eq(households.id, householdId));
+    }
 
     if (previousHouseholdId) {
       await refreshHouseholdDisplayNameIfAuto(previousHouseholdId);

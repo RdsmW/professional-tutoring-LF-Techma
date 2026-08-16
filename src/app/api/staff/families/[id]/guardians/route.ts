@@ -67,7 +67,16 @@ export async function POST(
     }
 
     const makeBillingOwner = Boolean(body.isBillingOwner);
-    if (makeBillingOwner) {
+    const [householdBilling] = await database
+      .select({ billingOwnerGuardianId: households.billingOwnerGuardianId })
+      .from(households)
+      .where(eq(households.id, id))
+      .limit(1);
+    const existingCount = Number(guardianCount?.value ?? 0);
+    const shouldBeBillingOwner =
+      makeBillingOwner || existingCount === 0 || !householdBilling?.billingOwnerGuardianId;
+
+    if (shouldBeBillingOwner) {
       await database
         .update(guardians)
         .set({ isBillingOwner: false, updatedAt: new Date() })
@@ -82,14 +91,14 @@ export async function POST(
         lastName,
         email,
         phone: normalizePhone(phone),
-        isBillingOwner: makeBillingOwner,
+        isBillingOwner: shouldBeBillingOwner,
         canManageStudents: true,
         canRequestServices: true,
         updatedAt: new Date(),
       })
       .returning({ id: guardians.id });
 
-    if (makeBillingOwner) {
+    if (shouldBeBillingOwner) {
       await database
         .update(households)
         .set({ billingOwnerGuardianId: guardian.id, updatedAt: new Date() })

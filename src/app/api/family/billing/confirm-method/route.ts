@@ -84,6 +84,7 @@ export async function POST(request: Request) {
           stripeDefaultPaymentMethodId: paymentMethodId,
           cardBrand: card?.brand ?? null,
           cardLast4: card?.last4 ?? null,
+          cardOnFile: true,
           paymentMethodConsentAt: new Date(),
           paymentMethodConsentVersion: PAYMENT_METHOD_CONSENT_VERSION,
           updatedAt: new Date(),

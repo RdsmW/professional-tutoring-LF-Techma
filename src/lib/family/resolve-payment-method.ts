@@ -83,6 +83,7 @@ export async function resolveFamilyPaymentMethod(
         stripeDefaultPaymentMethodId: paymentMethodId,
         cardBrand: brand,
         cardLast4: last4,
+        cardOnFile: true,
         paymentMethodConsentAt: new Date(),
         paymentMethodConsentVersion: PAYMENT_METHOD_CONSENT_VERSION,
         updatedAt: new Date(),

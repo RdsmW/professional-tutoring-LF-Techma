@@ -54,6 +54,27 @@ export async function POST(
       })
       .where(eq(guardians.id, guardianId));
 
+    // Keep a single payer when another guardian remains.
+    const remaining = await database
+      .select({ id: guardians.id })
+      .from(guardians)
+      .where(eq(guardians.householdId, householdId))
+      .limit(1);
+    if (remaining[0]) {
+      await database
+        .update(guardians)
+        .set({ isBillingOwner: false, updatedAt: new Date() })
+        .where(eq(guardians.householdId, householdId));
+      await database
+        .update(guardians)
+        .set({ isBillingOwner: true, updatedAt: new Date() })
+        .where(eq(guardians.id, remaining[0].id));
+      await database
+        .update(households)
+        .set({ billingOwnerGuardianId: remaining[0].id, updatedAt: new Date() })
+        .where(eq(households.id, householdId));
+    }
+
     await refreshHouseholdDisplayNameIfAuto(householdId);
 
     return NextResponse.json({ ok: true });
