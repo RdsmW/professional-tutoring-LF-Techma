@@ -1,16 +1,32 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
+import { AppToastHost, useAppToast } from "@/components/app-toast";
+import {
+  IconArchive,
+  IconLink,
+  IconPencil,
+  IconRestore,
+  IconTrash,
+  StaffIconButton,
+} from "@/components/staff-action-icons";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
-import { PageIntro, Panel } from "@/components/ui";
+import { Panel } from "@/components/ui";
+import {
+  composeLearningNeeds,
+  learningNeedNotes,
+  learningNeedsToEditState,
+  parseLearningNeeds,
+} from "@/lib/family/learning-needs";
 import {
   ACADEMIC_ADVANCED_RATE_PACKAGES,
   ACADEMIC_PAYMENT_PLANS,
   ACADEMIC_RATE_PACKAGES,
   ACADEMIC_SCHEDULE_WINDOWS,
+  ACADEMIC_SUBJECTS,
   GENDER,
   GRADE_LABELS,
   GRADUATION_YEARS,
@@ -63,6 +79,7 @@ type StudentDetail = {
     displayName: string;
     billingEmail: string | null;
     payerName: string | null;
+    billingOwnerGuardianId: string | null;
     cardOnFile: boolean;
     cardBrand: string | null;
     cardLast4: string | null;
@@ -96,7 +113,8 @@ type ProfileForm = {
   schoolName: string;
   email: string;
   cellPhone: string;
-  learningNeeds: string;
+  learningNeedSubjectIds: string[];
+  learningNeedNotes: string;
   availabilityNotes: string;
   emergencyContact: string;
   description: string;
@@ -119,6 +137,10 @@ type ProfileForm = {
 };
 
 const LIFECYCLE_OPTIONS = ["prospect", "active", "paused", "completed", "archived"];
+const LEARNING_CHIP_PREVIEW = 8;
+const PREVIEW_LIMIT = 3;
+
+type StudentLifecycleConfirm = "archive" | "restore" | "delete";
 
 function parseScheduleIds(value: string | null | undefined) {
   if (!value) return [] as string[];
@@ -146,7 +168,50 @@ function dollarsInputToCents(value: string): number | null {
   return Math.round(amount * 100);
 }
 
+function initials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("") || "ST"
+  );
+}
+
+function yesNo(value: boolean) {
+  return value ? "Yes" : "No";
+}
+
+function formatMailingAddressLines(student: {
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+}): string[] {
+  const hasLocalAddress = Boolean(
+    student.addressLine1 || student.addressLine2 || student.city || student.state || student.postalCode,
+  );
+  if (!hasLocalAddress) return [];
+
+  const lines: string[] = [];
+  const line1 = (student.addressLine1 || "").trim();
+  const line2 = (student.addressLine2 || "").trim();
+  if (line1 && line2) lines.push(`${line1}, ${line2}`);
+  else if (line1 || line2) lines.push(line1 || line2);
+
+  const city = (student.city || "").trim();
+  const state = (student.state || "").trim();
+  const postal = (student.postalCode || "").trim();
+  const cityStateZip = [city, [state, postal].filter(Boolean).join(" ").trim()].filter(Boolean).join(", ");
+  if (cityStateZip) lines.push(cityStateZip);
+
+  return lines;
+}
+
 function toProfileForm(student: StudentDetail): ProfileForm {
+  const learningEdit = learningNeedsToEditState(student.learningNeeds);
   return {
     firstName: student.firstName,
     lastName: student.lastName,
@@ -158,7 +223,8 @@ function toProfileForm(student: StudentDetail): ProfileForm {
     schoolName: student.schoolName ?? "",
     email: student.email ?? "",
     cellPhone: student.cellPhone ?? "",
-    learningNeeds: student.learningNeeds ?? "",
+    learningNeedSubjectIds: learningEdit.subjectIds,
+    learningNeedNotes: learningEdit.notes,
     availabilityNotes: student.availabilityNotes ?? "",
     emergencyContact: student.emergencyContact ?? "",
     description: student.description ?? "",
@@ -181,20 +247,138 @@ function toProfileForm(student: StudentDetail): ProfileForm {
   };
 }
 
+function ConfirmActionModal({
+  title,
+  body,
+  confirmLabel,
+  destructive,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onCancel();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [busy, onCancel]);
+
+  return (
+    <div
+      className="staff-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onCancel();
+      }}
+    >
+      <div
+        className="staff-modal staff-confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="staff-confirm-modal-title"
+      >
+        <h3 id="staff-confirm-modal-title">{title}</h3>
+        <div className="staff-confirm-modal-body">
+          <p>{body}</p>
+        </div>
+        <div className="staff-modal-actions">
+          <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={destructive ? "danger-button" : "primary-button"}
+            disabled={busy}
+            onClick={onConfirm}
+          >
+            {busy ? "Working…" : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ListPreview({
+  total,
+  empty,
+  onViewMore,
+  children,
+}: {
+  total: number;
+  empty: ReactNode;
+  onViewMore: () => void;
+  children: ReactNode;
+}) {
+  if (total === 0) return <>{empty}</>;
+  return (
+    <div className="family-list-preview-shell">
+      <div className="family-list-preview">{children}</div>
+      {total > PREVIEW_LIMIT ? (
+        <button type="button" className="text-button family-view-more" onClick={onViewMore}>
+          View more
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ListModal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="staff-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="staff-modal family-list-modal" role="dialog" aria-modal="true">
+        <div className="family-list-modal-header">
+          <h3>{title}</h3>
+          <button type="button" className="secondary-button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <div className="family-list-modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useAppToast();
   const deepLinkEdit = searchParams.get("edit") === "1";
   const editDeepLinkHandled = useRef(false);
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [catalogSubjects, setCatalogSubjects] = useState<CatalogSubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [profileForm, setProfileForm] = useState<ProfileForm | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  const [lifecycleConfirm, setLifecycleConfirm] = useState<StudentLifecycleConfirm | null>(null);
+  const [listModal, setListModal] = useState<"enrollments" | "bookings" | null>(null);
+  const [learningChipsExpanded, setLearningChipsExpanded] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -235,7 +419,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     if (lifecycleBusy) return;
     setLifecycleBusy(true);
     setError(null);
-    setSaveMessage(null);
     try {
       const response = await fetch(`/api/staff/students/${studentId}`, {
         method: "PATCH",
@@ -245,12 +428,15 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
       const data = await response.json();
       if (!response.ok || !data.ok) {
         setError(data.error || "Unable to update status.");
+        toast.error(data.error || "Unable to update status.");
         return;
       }
       setStudent(data.student as StudentDetail);
-      setSaveMessage(nextLifecycle === "archived" ? "Student archived." : "Student restored.");
+      setLifecycleConfirm(null);
+      toast.success(nextLifecycle === "archived" ? "Student archived." : "Student restored.");
     } catch {
       setError("Unable to update status.");
+      toast.error("Unable to update status.");
     } finally {
       setLifecycleBusy(false);
     }
@@ -258,7 +444,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
 
   async function deleteStudent() {
     if (!student?.canDelete || lifecycleBusy) return;
-    if (!window.confirm("Permanently delete this student? This cannot be undone.")) return;
     setLifecycleBusy(true);
     setError(null);
     try {
@@ -266,11 +451,13 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
       const data = await response.json();
       if (!response.ok || !data.ok) {
         setError(data.error || "Unable to delete student.");
+        toast.error(data.error || "Unable to delete student.");
         return;
       }
       router.push("/staff/students");
     } catch {
       setError("Unable to delete student.");
+      toast.error("Unable to delete student.");
     } finally {
       setLifecycleBusy(false);
     }
@@ -281,7 +468,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     setProfileForm(toProfileForm(student));
     setEditing(true);
     setError(null);
-    setSaveMessage(null);
   }
 
   useEffect(() => {
@@ -290,7 +476,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     setProfileForm(toProfileForm(student));
     setEditing(true);
     setError(null);
-    setSaveMessage(null);
     router.replace(`/staff/students/${studentId}`, { scroll: false });
   }, [student, deepLinkEdit, studentId, router]);
 
@@ -300,11 +485,11 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     const depositCents = dollarsInputToCents(profileForm.depositDollars);
     if (Number.isNaN(depositCents)) {
       setError("Enter a valid deposit amount in dollars.");
+      toast.error("Enter a valid deposit amount in dollars.");
       return;
     }
     setSavingProfile(true);
     setError(null);
-    setSaveMessage(null);
     try {
       const response = await fetch(`/api/staff/students/${studentId}`, {
         method: "PATCH",
@@ -320,7 +505,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           schoolName: profileForm.schoolName || null,
           email: profileForm.email || null,
           cellPhone: profileForm.cellPhone || null,
-          learningNeeds: profileForm.learningNeeds || null,
+          learningNeeds:
+            composeLearningNeeds(profileForm.learningNeedSubjectIds, profileForm.learningNeedNotes) || null,
           availabilityNotes: profileForm.availabilityNotes || null,
           emergencyContact: profileForm.emergencyContact || null,
           description: profileForm.description || null,
@@ -346,15 +532,17 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
       const data = await response.json();
       if (!response.ok || !data.ok) {
         setError(data.error || "Unable to save student.");
+        toast.error(data.error || "Unable to save student.");
         return;
       }
       const next = data.student as StudentDetail;
       setStudent(next);
       setProfileForm(toProfileForm(next));
       setEditing(false);
-      setSaveMessage("Student saved.");
+      toast.success("Student saved.");
     } catch {
       setError("Unable to save student.");
+      toast.error("Unable to save student.");
     } finally {
       setSavingProfile(false);
     }
@@ -403,78 +591,184 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
   const scheduleLabels = parseScheduleIds(student.preferredSchedule).map((id) =>
     optionLabel(ACADEMIC_SCHEDULE_WINDOWS, id),
   );
-  const cardLabel = student.household?.cardOnFile
-    ? [student.household.cardBrand, student.household.cardLast4 ? `•••• ${student.household.cardLast4}` : null]
-        .filter(Boolean)
-        .join(" ") || "Yes"
-    : "No card on file";
+  const addressLines = formatMailingAddressLines(student);
+  const learningParsed = parseLearningNeeds(student.learningNeeds);
+  const learningNotesText = learningNeedNotes(student.learningNeeds);
+  const visibleLearningChips = learningChipsExpanded
+    ? learningParsed.chips
+    : learningParsed.chips.slice(0, LEARNING_CHIP_PREVIEW);
+  const learningChipRemaining = learningParsed.chips.length - visibleLearningChips.length;
+  const zohoUrl = (student.zohoDealUrl || "").trim();
+  const payerHref = student.household?.billingOwnerGuardianId
+    ? `/staff/guardians/${student.household.billingOwnerGuardianId}`
+    : student.household
+      ? `/staff/families/${student.household.id}`
+      : null;
+
+  const lifecycleButtons: Array<{
+    id: string;
+    label: string;
+    tone: "archive" | "restore" | "danger";
+    onClick: () => void;
+    icon: "archive" | "restore" | "delete";
+  }> = [];
+  if (isArchived) {
+    lifecycleButtons.push({
+      id: "restore",
+      label: "Restore",
+      tone: "restore",
+      onClick: () => setLifecycleConfirm("restore"),
+      icon: "restore",
+    });
+  } else {
+    lifecycleButtons.push({
+      id: "archive",
+      label: "Archive",
+      tone: "archive",
+      onClick: () => setLifecycleConfirm("archive"),
+      icon: "archive",
+    });
+  }
+  if (student.canDelete) {
+    lifecycleButtons.push({
+      id: "delete",
+      label: "Delete",
+      tone: "danger",
+      onClick: () => setLifecycleConfirm("delete"),
+      icon: "delete",
+    });
+  }
+
+  const lifecycleConfirmCopy: Record<
+    StudentLifecycleConfirm,
+    { title: string; body: string; confirmLabel: string; destructive?: boolean }
+  > = {
+    archive: {
+      title: "Archive this student?",
+      body: "Archived students are hidden from the default Students list. You can restore them later.",
+      confirmLabel: "Archive",
+    },
+    restore: {
+      title: "Restore this student?",
+      body: "This student will appear in the active Students list again.",
+      confirmLabel: "Restore",
+    },
+    delete: {
+      title: "Permanently delete this student?",
+      body: "This cannot be undone. Only students with no enrollments or bookings can be deleted.",
+      confirmLabel: "Delete",
+      destructive: true,
+    },
+  };
+
+  const previewEnrollments = student.enrollments.slice(0, PREVIEW_LIMIT);
+  const previewBookings = student.bookings.slice(0, PREVIEW_LIMIT);
+
+  function renderEnrollmentRow(enrollment: StudentDetail["enrollments"][number]) {
+    return (
+      <div key={enrollment.id} className="staff-detail-list-row" style={{ cursor: "default" }}>
+        <span>
+          <strong>{enrollment.courseName}</strong>
+          <small>
+            {enrollment.courseCode} · {new Date(enrollment.createdAt).toLocaleString()}
+          </small>
+        </span>
+        <span className={`pill ${statusTone(enrollment.status)}`}>{formatStatusLabel(enrollment.status)}</span>
+      </div>
+    );
+  }
+
+  function renderBookingRow(booking: StudentDetail["bookings"][number]) {
+    return (
+      <div key={booking.id} className="staff-detail-list-row" style={{ cursor: "default" }}>
+        <span>
+          <strong>{booking.subjectName || booking.status}</strong>
+          <small>
+            {booking.tutorName ? `Tutor: ${booking.tutorName}` : "Tutor unassigned"} ·{" "}
+            {new Date(booking.createdAt).toLocaleString()}
+          </small>
+        </span>
+        <span className={`pill ${statusTone(booking.status)}`}>{formatStatusLabel(booking.status)}</span>
+      </div>
+    );
+  }
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-          marginBottom: 12,
-        }}
-      >
+      <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
+
+      {lifecycleConfirm ? (
+        <ConfirmActionModal
+          title={lifecycleConfirmCopy[lifecycleConfirm].title}
+          body={lifecycleConfirmCopy[lifecycleConfirm].body}
+          confirmLabel={lifecycleConfirmCopy[lifecycleConfirm].confirmLabel}
+          destructive={lifecycleConfirmCopy[lifecycleConfirm].destructive}
+          busy={lifecycleBusy}
+          onCancel={() => {
+            if (!lifecycleBusy) setLifecycleConfirm(null);
+          }}
+          onConfirm={() => {
+            if (lifecycleConfirm === "archive") void setLifecycleStatus("archived");
+            else if (lifecycleConfirm === "restore") void setLifecycleStatus("active");
+            else void deleteStudent();
+          }}
+        />
+      ) : null}
+
+      <div className="family-detail-topbar">
         <Link href="/staff/students" className="page-back">
           ← Students
         </Link>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div className="family-detail-topbar-actions">
           {student.household ? (
-            <Link href={`/staff/families/${student.household.id}`} className="secondary-button">
-              Family
+            <Link
+              href={`/staff/families/${student.household.id}`}
+              className="staff-icon-btn staff-icon-btn-muted"
+              aria-label="Family"
+              title="Family"
+            >
+              <IconLink size={15} />
             </Link>
           ) : null}
-          <button type="button" className="action-btn action-btn-edit" onClick={openEdit}>
-            Edit
-          </button>
-          {isArchived ? (
-            <button
-              type="button"
-              className="action-btn action-btn-restore"
+          <StaffIconButton label="Edit" title="Edit" tone="edit" disabled={lifecycleBusy} onClick={openEdit}>
+            <IconPencil size={15} />
+          </StaffIconButton>
+          {lifecycleButtons.map((action) => (
+            <StaffIconButton
+              key={action.id}
+              label={action.label}
+              title={action.label}
+              tone={action.tone}
               disabled={lifecycleBusy}
-              onClick={() => void setLifecycleStatus("active")}
+              onClick={action.onClick}
             >
-              Restore
-            </button>
-          ) : student.canDelete ? (
-            <button
-              type="button"
-              className="action-btn action-btn-delete"
-              disabled={lifecycleBusy}
-              onClick={() => void deleteStudent()}
-            >
-              Delete
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="action-btn action-btn-archive"
-              disabled={lifecycleBusy}
-              onClick={() => void setLifecycleStatus("archived")}
-            >
-              Archive
-            </button>
-          )}
+              {action.icon === "archive" ? (
+                <IconArchive size={15} />
+              ) : action.icon === "restore" ? (
+                <IconRestore size={15} />
+              ) : (
+                <IconTrash size={15} />
+              )}
+            </StaffIconButton>
+          ))}
         </div>
       </div>
 
-      <PageIntro
-        title={student.listLabel}
-        description={`${student.gradeLabel || "Grade pending"} · ${student.schoolName || "School pending"}`}
-        action={<span className={`pill ${statusTone(student.lifecycle)}`}>{formatStatusLabel(student.lifecycle)}</span>}
-      />
+      <section className="family-record-hero">
+        <span className="avatar navy">{initials(student.fullName || student.displayName)}</span>
+        <div className="family-record-hero-copy">
+          <h2>{student.listLabel}</h2>
+        </div>
+        <span className={`pill family-record-hero-status-pill ${statusTone(student.lifecycle)}`}>
+          {formatStatusLabel(student.lifecycle)}
+        </span>
+      </section>
+
       {error ? <p className="form-error">{error}</p> : null}
-      {saveMessage ? <p style={{ fontSize: 14, marginBottom: 12, color: "var(--mint)" }}>{saveMessage}</p> : null}
 
       {editing && profileForm ? (
-        <Panel title="Edit student">
-          <form onSubmit={(e) => void saveProfile(e)} className="input-grid" style={{ gap: 12 }}>
+        <Panel title="Edit student" className="family-equal-panel">
+          <form onSubmit={(e) => void saveProfile(e)} className="input-grid family-household-edit-grid">
             <p className="guardian-edit-section-label">Identity</p>
             <label>
               First name
@@ -587,6 +881,26 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               />
             </label>
 
+            <p className="guardian-edit-section-label">Availability</p>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Availability
+              <textarea
+                value={profileForm.availabilityNotes}
+                onChange={(e) => setProfileForm({ ...profileForm, availabilityNotes: e.target.value })}
+                rows={3}
+              />
+            </label>
+
+            <p className="guardian-edit-section-label">Description</p>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Description
+              <textarea
+                value={profileForm.description}
+                onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
+                rows={3}
+              />
+            </label>
+
             <p className="guardian-edit-section-label">Mailing address</p>
             <label>
               Street
@@ -638,26 +952,28 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
             </label>
 
             <p className="guardian-edit-section-label">CRM</p>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Description
-              <textarea
-                value={profileForm.description}
-                onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
-                rows={3}
-              />
-            </label>
             <label>
-              Zoho Deal ID
+              Zoho CRM ID
               <input
                 value={profileForm.zohoDealId}
                 onChange={(e) => setProfileForm({ ...profileForm, zohoDealId: e.target.value })}
               />
             </label>
             <label>
-              Zoho Deal URL
+              Zoho CRM URL
               <input
                 value={profileForm.zohoDealUrl}
                 onChange={(e) => setProfileForm({ ...profileForm, zohoDealUrl: e.target.value })}
+              />
+            </label>
+
+            <p className="guardian-edit-section-label">Emergency contact</p>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Emergency contact
+              <textarea
+                value={profileForm.emergencyContact}
+                onChange={(e) => setProfileForm({ ...profileForm, emergencyContact: e.target.value })}
+                rows={2}
               />
             </label>
 
@@ -741,7 +1057,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   ))}
                 </select>
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+              <div className="field-cloud" style={{ marginTop: 8 }}>
                 {profileForm.subjectIds.map((subjectId) => {
                   const subject =
                     catalogSubjects.find((row) => row.id === subjectId) ||
@@ -750,7 +1066,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                     <button
                       key={subjectId}
                       type="button"
-                      className="secondary-button"
                       onClick={() =>
                         setProfileForm({
                           ...profileForm,
@@ -793,30 +1108,42 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               />
             </label>
 
-            <label style={{ gridColumn: "1 / -1" }}>
-              Learning needs
-              <textarea
-                value={profileForm.learningNeeds}
-                onChange={(e) => setProfileForm({ ...profileForm, learningNeeds: e.target.value })}
-                rows={3}
-              />
-            </label>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Availability
-              <textarea
-                value={profileForm.availabilityNotes}
-                onChange={(e) => setProfileForm({ ...profileForm, availabilityNotes: e.target.value })}
-                rows={3}
-              />
-            </label>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Emergency contact
-              <textarea
-                value={profileForm.emergencyContact}
-                onChange={(e) => setProfileForm({ ...profileForm, emergencyContact: e.target.value })}
-                rows={2}
-              />
-            </label>
+            <p className="guardian-edit-section-label">Learning needs</p>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <strong style={{ display: "block", marginBottom: 8, fontSize: 13 }}>Subjects or learning goals</strong>
+              <div className="subject-multi-select" role="group" aria-label="Learning needs">
+                {ACADEMIC_SUBJECTS.options.map((option) => {
+                  const selected = profileForm.learningNeedSubjectIds.includes(option.id);
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={selected ? "selected" : undefined}
+                      aria-pressed={selected}
+                      onClick={() =>
+                        setProfileForm({
+                          ...profileForm,
+                          learningNeedSubjectIds: selected
+                            ? profileForm.learningNeedSubjectIds.filter((id) => id !== option.id)
+                            : [...profileForm.learningNeedSubjectIds, option.id],
+                        })
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <label className="full-input" style={{ marginTop: 12, display: "block" }}>
+                Additional notes (optional)
+                <textarea
+                  value={profileForm.learningNeedNotes}
+                  onChange={(e) => setProfileForm({ ...profileForm, learningNeedNotes: e.target.value })}
+                  rows={2}
+                  placeholder="Optional context beyond the chips…"
+                />
+              </label>
+            </div>
             <label style={{ gridColumn: "1 / -1" }}>
               Restricted support notes
               <textarea
@@ -826,7 +1153,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               />
             </label>
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div className="family-household-edit-actions">
               <button type="submit" className="primary-button" disabled={savingProfile}>
                 {savingProfile ? "Saving…" : "Save student"}
               </button>
@@ -834,7 +1161,10 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 type="button"
                 className="secondary-button"
                 disabled={savingProfile}
-                onClick={() => setEditing(false)}
+                onClick={() => {
+                  setEditing(false);
+                  setProfileForm(null);
+                }}
               >
                 Cancel
               </button>
@@ -843,197 +1173,255 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         </Panel>
       ) : null}
 
-      <div className="profile-layout">
-        <Panel title="Profile" eyebrow="Student">
-          <div className="family-detail-grid profile-detail-grid">
-            <span>
-              <small>Legal name</small>
-              <strong>
-                {student.firstName} {student.lastName}
-              </strong>
-            </span>
-            <span>
-              <small>Preferred name</small>
-              <strong>{student.displayName}</strong>
-            </span>
-            <span>
-              <small>Gender</small>
-              <strong>{student.gender || "—"}</strong>
-            </span>
-            <span>
-              <small>Birthdate</small>
-              <strong>{student.birthdate || "—"}</strong>
-            </span>
-            <span>
-              <small>Grade</small>
-              <strong>{student.gradeLabel || "—"}</strong>
-            </span>
-            <span>
-              <small>Grad year</small>
-              <strong>{student.graduationYear ?? "—"}</strong>
-            </span>
-            <span>
-              <small>School</small>
-              <strong>{student.schoolName || "—"}</strong>
-            </span>
-            <span>
-              <small>Email</small>
-              <strong>{student.email || "—"}</strong>
-            </span>
-            <span>
-              <small>Cell phone</small>
-              <strong>{student.cellPhone || "—"}</strong>
-            </span>
+      <div className="family-detail-layout family-detail-stack">
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Profile</h2>
+          </div>
+          <div className="family-household-summary">
+            <div className="family-household-dense">
+              <div className="family-household-upper" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+                <span>
+                  <small>Legal name</small>
+                  <strong>
+                    {student.firstName} {student.lastName}
+                  </strong>
+                </span>
+                <span>
+                  <small>Preferred name</small>
+                  <strong>{student.displayName}</strong>
+                </span>
+                <span>
+                  <small>Gender</small>
+                  <strong>{student.gender || "—"}</strong>
+                </span>
+                <span>
+                  <small>Birthdate</small>
+                  <strong>{student.birthdate || "—"}</strong>
+                </span>
+                <span>
+                  <small>Grade</small>
+                  <strong>{student.gradeLabel || "—"}</strong>
+                </span>
+                <span>
+                  <small>Grad year</small>
+                  <strong>{student.graduationYear ?? "—"}</strong>
+                </span>
+                <span>
+                  <small>School</small>
+                  <strong>{student.schoolName || "—"}</strong>
+                </span>
+                <span>
+                  <small>Email</small>
+                  <strong>{student.email || "—"}</strong>
+                </span>
+                <span>
+                  <small>Cell phone</small>
+                  <strong>{student.cellPhone || "—"}</strong>
+                </span>
+                <span>
+                  <small>Availability</small>
+                  <strong style={{ whiteSpace: "pre-wrap" }}>{student.availabilityNotes || "—"}</strong>
+                </span>
+              </div>
+              <div className="family-household-lower" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
+                <span style={{ gridColumn: "1 / -1" }}>
+                  <small>Description</small>
+                  <strong style={{ whiteSpace: "pre-wrap" }}>{student.description || "—"}</strong>
+                </span>
+              </div>
+              <div className="family-household-lower">
+                <span className="family-household-field-address">
+                  <small>Mailing address</small>
+                  {addressLines.length ? (
+                    <div className="family-household-address-lines">
+                      {addressLines.map((line, index) => (
+                        <span key={`${index}-${line}`}>{line}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <strong>—</strong>
+                  )}
+                </span>
+                <span className="family-household-field-zoho-id">
+                  <small>Zoho CRM ID</small>
+                  <strong>{student.zohoDealId || "—"}</strong>
+                </span>
+                <span className="family-household-field-zoho-url">
+                  <small>Zoho CRM URL</small>
+                  {zohoUrl ? (
+                    <a href={zohoUrl} target="_blank" rel="noreferrer" className="family-zoho-url-link" title={zohoUrl}>
+                      {zohoUrl}
+                    </a>
+                  ) : (
+                    <strong>—</strong>
+                  )}
+                </span>
+              </div>
+              <div className="family-household-lower" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
+                <span>
+                  <small>Emergency contact</small>
+                  <strong style={{ whiteSpace: "pre-wrap" }}>{student.emergencyContact || "—"}</strong>
+                </span>
+              </div>
+            </div>
           </div>
         </Panel>
 
-        <Panel title="Mailing address">
-          <div className="family-detail-grid profile-detail-grid">
-            <span>
-              <small>Street</small>
-              <strong>{student.addressLine1 || "—"}</strong>
-            </span>
-            <span>
-              <small>Line 2</small>
-              <strong>{student.addressLine2 || "—"}</strong>
-            </span>
-            <span>
-              <small>City</small>
-              <strong>{student.city || "—"}</strong>
-            </span>
-            <span>
-              <small>State</small>
-              <strong>{student.state || "—"}</strong>
-            </span>
-            <span>
-              <small>ZIP</small>
-              <strong>{student.postalCode || "—"}</strong>
-            </span>
-            <span>
-              <small>Country</small>
-              <strong>{student.country || "United States"}</strong>
-            </span>
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Tutoring</h2>
+          </div>
+          <div className="family-household-summary">
+            <div className="family-household-dense">
+              <div className="family-household-upper" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+                <span>
+                  <small>Academic year</small>
+                  <strong>{student.academicYear || "—"}</strong>
+                </span>
+                <span>
+                  <small>Subjects</small>
+                  {student.subjects.length > 0 ? (
+                    <div className="field-cloud" style={{ marginTop: 4 }}>
+                      {student.subjects.map((subject) => (
+                        <span key={subject.id}>{subject.name}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <strong>—</strong>
+                  )}
+                </span>
+                <span style={{ gridColumn: "1 / -1" }}>
+                  <small>Preferred schedule</small>
+                  <strong>{scheduleLabels.length > 0 ? scheduleLabels.join(" · ") : "—"}</strong>
+                </span>
+                <span>
+                  <small>Hours/rates (standard)</small>
+                  <strong>{optionLabel(ACADEMIC_RATE_PACKAGES, student.hoursRatePackage)}</strong>
+                </span>
+                <span>
+                  <small>Hours/rates (advanced)</small>
+                  <strong>{optionLabel(ACADEMIC_ADVANCED_RATE_PACKAGES, student.advancedHoursRatePackage)}</strong>
+                </span>
+              </div>
+            </div>
           </div>
         </Panel>
       </div>
 
-      <div className="profile-layout">
-        <Panel title="CRM">
-          <div className="family-detail-grid profile-detail-grid">
-            <span style={{ gridColumn: "1 / -1" }}>
-              <small>Description</small>
-              <strong style={{ whiteSpace: "pre-wrap" }}>{student.description || "—"}</strong>
-            </span>
-            <span>
-              <small>Zoho Deal ID</small>
-              <strong>{student.zohoDealId || "—"}</strong>
-            </span>
-            <span>
-              <small>Zoho Deal URL</small>
-              <strong>
-                {student.zohoDealUrl ? (
-                  <a href={student.zohoDealUrl} target="_blank" rel="noreferrer">
-                    Open deal
-                  </a>
-                ) : (
-                  "—"
-                )}
-              </strong>
-            </span>
+      <div className="student-payment-learning-band">
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Payment</h2>
+          </div>
+          <div className="family-household-summary">
+            <div className="family-household-dense">
+              <div className="family-household-upper" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
+                <span>
+                  <small>Responsible for payment</small>
+                  {student.household?.payerName && payerHref ? (
+                    <Link href={payerHref} className="family-household-payer-link">
+                      {student.household.payerName}
+                    </Link>
+                  ) : (
+                    <strong>{student.household?.payerName || "—"}</strong>
+                  )}
+                </span>
+                <span>
+                  <small>Auto-charge (Family)</small>
+                  <strong>{student.household ? yesNo(student.household.autoCharge) : "—"}</strong>
+                </span>
+                <span>
+                  <small>Payment plan</small>
+                  <strong>{optionLabel(ACADEMIC_PAYMENT_PLANS, student.paymentPlan)}</strong>
+                </span>
+                <span>
+                  <small>Deposit</small>
+                  <strong>
+                    {student.depositCents == null ? "—" : `$${(student.depositCents / 100).toFixed(2)}`}
+                  </strong>
+                </span>
+              </div>
+              {!student.household ? (
+                <p className="family-empty" style={{ margin: 0 }}>
+                  Assign a family to show payer and auto-charge.
+                </p>
+              ) : null}
+            </div>
           </div>
         </Panel>
 
-        <Panel title="Tutoring">
-          <div className="family-detail-grid profile-detail-grid">
-            <span>
-              <small>Academic year</small>
-              <strong>{student.academicYear || "—"}</strong>
-            </span>
-            <span>
-              <small>Subjects</small>
-              <strong>
-                {student.subjects.length > 0 ? student.subjects.map((subject) => subject.name).join(", ") : "—"}
-              </strong>
-            </span>
-            <span style={{ gridColumn: "1 / -1" }}>
-              <small>Preferred schedule</small>
-              <strong>{scheduleLabels.length > 0 ? scheduleLabels.join(" · ") : "—"}</strong>
-            </span>
-            <span>
-              <small>Hours/rates (standard)</small>
-              <strong>{optionLabel(ACADEMIC_RATE_PACKAGES, student.hoursRatePackage)}</strong>
-            </span>
-            <span>
-              <small>Hours/rates (advanced)</small>
-              <strong>{optionLabel(ACADEMIC_ADVANCED_RATE_PACKAGES, student.advancedHoursRatePackage)}</strong>
-            </span>
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Learning needs</h2>
           </div>
-        </Panel>
-      </div>
-
-      <div className="profile-layout">
-        <Panel title="Payment">
-          <div className="family-detail-grid profile-detail-grid">
-            <span>
-              <small>Payer (Family)</small>
-              <strong>{student.household?.payerName || "—"}</strong>
-            </span>
-            <span>
-              <small>Billing email (Family)</small>
-              <strong>{student.household?.billingEmail || "—"}</strong>
-            </span>
-            <span>
-              <small>Card on file (Family)</small>
-              <strong>{cardLabel}</strong>
-            </span>
-            <span>
-              <small>Auto-charge (Family)</small>
-              <strong>{student.household ? (student.household.autoCharge ? "Yes" : "No") : "—"}</strong>
-            </span>
-            <span>
-              <small>Payment plan</small>
-              <strong>{optionLabel(ACADEMIC_PAYMENT_PLANS, student.paymentPlan)}</strong>
-            </span>
-            <span>
-              <small>Deposit</small>
-              <strong>
-                {student.depositCents == null ? "—" : `$${(student.depositCents / 100).toFixed(2)}`}
-              </strong>
-            </span>
-          </div>
-          {student.household ? (
-            <p style={{ margin: "12px 0 0", fontSize: 13, color: "var(--muted)" }}>
-              Payer, card, and auto-charge are read-only from{" "}
-              <Link href={`/staff/families/${student.household.id}`}>{student.household.displayName}</Link>.
-            </p>
-          ) : (
-            <p style={{ margin: "12px 0 0", fontSize: 13, color: "var(--muted)" }}>
-              Assign a family to show payer and card details.
-            </p>
-          )}
-        </Panel>
-
-        <Panel title="Learning & emergency">
-          <div className="family-detail-grid profile-detail-grid">
-            <span style={{ gridColumn: "1 / -1" }}>
-              <small>Learning needs</small>
-              <strong style={{ whiteSpace: "pre-wrap" }}>{student.learningNeeds || "—"}</strong>
-            </span>
-            <span>
-              <small>Availability</small>
-              <strong style={{ whiteSpace: "pre-wrap" }}>{student.availabilityNotes || "—"}</strong>
-            </span>
-            <span>
-              <small>Emergency contact</small>
-              <strong style={{ whiteSpace: "pre-wrap" }}>{student.emergencyContact || "—"}</strong>
-            </span>
+          <div className="student-learning-needs-body">
+            {learningParsed.chips.length > 0 ? (
+              <div className="field-cloud">
+                {visibleLearningChips.map((chip) => (
+                  <span key={chip}>{chip}</span>
+                ))}
+                {learningChipRemaining > 0 ? (
+                  <button
+                    type="button"
+                    className="student-chip-more"
+                    onClick={() => setLearningChipsExpanded(true)}
+                  >
+                    +{learningChipRemaining} more
+                  </button>
+                ) : null}
+                {learningChipsExpanded && learningParsed.chips.length > LEARNING_CHIP_PREVIEW ? (
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setLearningChipsExpanded(false)}
+                  >
+                    Show less
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <p className="family-empty" style={{ margin: 0 }}>
+                No learning needs listed.
+              </p>
+            )}
+            {learningNotesText ? <p className="student-learning-needs-notes">{learningNotesText}</p> : null}
             {student.supportNotesRestricted ? (
-              <span style={{ gridColumn: "1 / -1" }}>
-                <small>Restricted support notes</small>
+              <span>
+                <small style={{ display: "block", color: "var(--muted)", fontSize: 12, fontWeight: 800 }}>
+                  Restricted support notes
+                </small>
                 <strong style={{ whiteSpace: "pre-wrap" }}>{student.supportNotesRestricted}</strong>
               </span>
             ) : null}
           </div>
+        </Panel>
+      </div>
+
+      <div className="family-activity-band">
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Enrollments</h2>
+          </div>
+          <ListPreview
+            total={student.enrollments.length}
+            empty={<p className="family-empty">No enrollments yet.</p>}
+            onViewMore={() => setListModal("enrollments")}
+          >
+            <div className="staff-detail-list">{previewEnrollments.map(renderEnrollmentRow)}</div>
+          </ListPreview>
+        </Panel>
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Bookings</h2>
+          </div>
+          <ListPreview
+            total={student.bookings.length}
+            empty={<p className="family-empty">No bookings yet.</p>}
+            onViewMore={() => setListModal("bookings")}
+          >
+            <div className="staff-detail-list">{previewBookings.map(renderBookingRow)}</div>
+          </ListPreview>
         </Panel>
       </div>
 
@@ -1042,54 +1430,20 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         onCreate={createNote}
         onUpdate={updateNote}
         onDelete={deleteNote}
-        onSuccess={(message) => setSaveMessage(message)}
-        onError={(message) => setError(message)}
+        onSuccess={toast.success}
+        onError={toast.error}
       />
 
-      <div className="profile-layout">
-        <Panel title="Enrollments">
-          {student.enrollments.length === 0 ? (
-            <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>No enrollments yet.</p>
-          ) : (
-            <div className="table-panel">
-              {student.enrollments.map((enrollment) => (
-                <div key={enrollment.id} className="family-row" style={{ cursor: "default" }}>
-                  <span>
-                    <strong>{enrollment.courseName}</strong>
-                    <small>
-                      {enrollment.courseCode} · {new Date(enrollment.createdAt).toLocaleString()}
-                    </small>
-                  </span>
-                  <span className={`pill ${statusTone(enrollment.status)}`}>
-                    {formatStatusLabel(enrollment.status)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Panel>
-
-        <Panel title="Bookings">
-          {student.bookings.length === 0 ? (
-            <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>No bookings yet.</p>
-          ) : (
-            <div className="table-panel">
-              {student.bookings.map((booking) => (
-                <div key={booking.id} className="family-row" style={{ cursor: "default" }}>
-                  <span>
-                    <strong>{booking.subjectName || booking.status}</strong>
-                    <small>
-                      {booking.tutorName ? `Tutor: ${booking.tutorName}` : "Tutor unassigned"} ·{" "}
-                      {new Date(booking.createdAt).toLocaleString()}
-                    </small>
-                  </span>
-                  <span className={`pill ${statusTone(booking.status)}`}>{formatStatusLabel(booking.status)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Panel>
-      </div>
+      {listModal === "enrollments" ? (
+        <ListModal title="Enrollments" onClose={() => setListModal(null)}>
+          <div className="staff-detail-list">{student.enrollments.map(renderEnrollmentRow)}</div>
+        </ListModal>
+      ) : null}
+      {listModal === "bookings" ? (
+        <ListModal title="Bookings" onClose={() => setListModal(null)}>
+          <div className="staff-detail-list">{student.bookings.map(renderBookingRow)}</div>
+        </ListModal>
+      ) : null}
     </>
   );
 }

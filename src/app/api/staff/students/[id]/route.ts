@@ -81,6 +81,7 @@ async function loadStudentDetail(studentId: string) {
 
   let billingEmail: string | null = null;
   let payerName: string | null = null;
+  let billingOwnerGuardianId: string | null = null;
   if (joined.householdId) {
     const guardianRows = await database
       .select({
@@ -97,6 +98,7 @@ async function loadStudentDetail(studentId: string) {
       guardianRows.find((g) => g.isBillingOwner) ||
       guardianRows[0];
     if (billing) {
+      billingOwnerGuardianId = billing.id;
       billingEmail = billing.email;
       payerName = `${billing.firstName} ${billing.lastName}`.trim() || null;
     }
@@ -236,6 +238,7 @@ async function loadStudentDetail(studentId: string) {
           displayName: joined.householdDisplayName || "Family",
           billingEmail,
           payerName,
+          billingOwnerGuardianId,
           cardOnFile: Boolean(joined.householdCardOnFile),
           cardBrand: joined.householdCardBrand,
           cardLast4: joined.householdCardLast4,
