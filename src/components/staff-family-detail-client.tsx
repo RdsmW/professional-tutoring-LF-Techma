@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { Panel } from "@/components/ui";
 import {
   IconArchive,
@@ -1325,9 +1326,18 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             </label>
             <label>
               Street
-              <input
+              <AddressAutocompleteInput
                 value={householdForm.addressLine1}
-                onChange={(e) => setHouseholdForm({ ...householdForm, addressLine1: e.target.value })}
+                onChange={(addressLine1) => setHouseholdForm({ ...householdForm, addressLine1 })}
+                onSelect={(suggestion) =>
+                  setHouseholdForm({
+                    ...householdForm,
+                    addressLine1: suggestion.addressLine1,
+                    city: suggestion.city || householdForm.city,
+                    state: suggestion.state || householdForm.state,
+                    postalCode: suggestion.postalCode || householdForm.postalCode,
+                  })
+                }
               />
             </label>
             <label>

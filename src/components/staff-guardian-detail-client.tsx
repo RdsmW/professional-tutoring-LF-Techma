@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { Panel } from "@/components/ui";
 import {
   IconArchive,
@@ -937,9 +938,18 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             <p className="guardian-edit-section-label">Mailing address</p>
             <label>
               Street
-              <input
+              <AddressAutocompleteInput
                 value={profileForm.addressLine1}
-                onChange={(e) => setProfileForm({ ...profileForm, addressLine1: e.target.value })}
+                onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
+                onSelect={(suggestion) =>
+                  setProfileForm({
+                    ...profileForm,
+                    addressLine1: suggestion.addressLine1,
+                    city: suggestion.city || profileForm.city,
+                    state: suggestion.state || profileForm.state,
+                    postalCode: suggestion.postalCode || profileForm.postalCode,
+                  })
+                }
               />
             </label>
             <label>
