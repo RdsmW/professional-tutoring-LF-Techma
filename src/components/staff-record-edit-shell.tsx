@@ -124,14 +124,6 @@ export function StaffRecordEditShell({
         <Link href={backHref} className="page-back">
           {backLabel}
         </Link>
-        <div className="family-detail-topbar-actions">
-          <button type="button" className="secondary-button" disabled={saving} onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="submit" form="staff-record-edit-form" className="primary-button" disabled={saving}>
-            {saving ? "Saving…" : saveLabel}
-          </button>
-        </div>
       </div>
 
       <section className="staff-record-edit-header">
@@ -144,11 +136,11 @@ export function StaffRecordEditShell({
         <form id="staff-record-edit-form" onSubmit={onSubmit} className={formClassName}>
           {children}
           <div className="family-household-edit-actions">
-            <button type="submit" className="primary-button" disabled={saving}>
-              {saving ? "Saving…" : saveLabel}
-            </button>
             <button type="button" className="secondary-button" disabled={saving} onClick={onCancel}>
               Cancel
+            </button>
+            <button type="submit" className="primary-button" disabled={saving}>
+              {saving ? "Saving…" : saveLabel}
             </button>
           </div>
         </form>

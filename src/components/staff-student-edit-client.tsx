@@ -20,6 +20,7 @@ import {
   ACADEMIC_RATE_PACKAGES,
   ACADEMIC_SCHEDULE_WINDOWS,
   ACADEMIC_SUBJECTS,
+  ACADEMIC_YEARS,
   GENDER,
   GRADE_LABELS,
   GRADUATION_YEARS,
@@ -199,6 +200,15 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
     const selected = new Set(profileForm.subjectIds);
     return catalogSubjects.filter((subject) => !selected.has(subject.id));
   }, [catalogSubjects, profileForm]);
+
+  const academicYearOptions = useMemo(() => {
+    const options = [...ACADEMIC_YEARS.options];
+    const current = profileForm?.academicYear?.trim();
+    if (current && !options.some((option) => option.id === current || option.label === current)) {
+      options.unshift({ id: current, label: current });
+    }
+    return options;
+  }, [profileForm?.academicYear]);
 
   function goBack() {
     router.push(detailHref);
@@ -505,11 +515,17 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             <div className="staff-edit-field-row staff-edit-field-row--2">
               <label>
                 Academic year
-                <input
+                <select
                   value={profileForm.academicYear}
                   onChange={(e) => setProfileForm({ ...profileForm, academicYear: e.target.value })}
-                  placeholder="2025-2026"
-                />
+                >
+                  <option value="">—</option>
+                  {academicYearOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="staff-edit-subjects-field">
                 Subjects

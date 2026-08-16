@@ -2479,8 +2479,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-edit-actions {
   grid-column: 1 / -1;
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 8px;
 }
 @media (max-width: 640px) {
   .family-household-edit-zoho-row {

@@ -104,6 +104,16 @@ export const GRADUATION_YEARS: OptionList = {
   }),
 };
 
+/** US school years (YYYY–YYYY+1), centered on the current calendar year. */
+export const ACADEMIC_YEARS: OptionList = {
+  id: "ACADEMIC_YEARS",
+  options: Array.from({ length: 6 }, (_, i) => {
+    const start = currentYear - 2 + i;
+    const label = `${start}-${start + 1}`;
+    return { id: label, label };
+  }),
+};
+
 export const GRADE_LABELS: OptionList = {
   id: "GRADE_LABELS",
   options: opts([
@@ -335,6 +345,7 @@ const ALL_LISTS: Record<OptionListId, OptionList> = {
   US_STATES,
   REFERRAL_SOURCE,
   GRADUATION_YEARS,
+  ACADEMIC_YEARS,
   GRADE_LABELS,
   ACADEMIC_SUBJECTS,
   TEST_PREP_INTERESTS,
