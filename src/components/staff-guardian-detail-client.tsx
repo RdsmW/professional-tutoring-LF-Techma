@@ -772,7 +772,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
       isArchived: s.lifecycle === "archived",
       canDelete: Boolean(s.canDelete),
       busy: studentBusyId === s.id || memberBusyId === s.id,
-      onEdit: () => router.push(`/staff/students/${s.id}?edit=1`),
+      onEdit: () => router.push(`/staff/students/${s.id}/edit`),
       onArchive: () => void setStudentLifecycle(s.id, "archived"),
       onRestore: () => void setStudentLifecycle(s.id, "active"),
       onDelete: () => void deleteStudent(s.id),

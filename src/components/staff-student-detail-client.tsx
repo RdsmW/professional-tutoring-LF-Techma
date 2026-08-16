@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import {
   IconArchive,
-  IconLink,
   IconPencil,
   IconRestore,
   IconTrash,
@@ -15,21 +13,12 @@ import {
 } from "@/components/staff-action-icons";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
 import { Panel } from "@/components/ui";
-import {
-  composeLearningNeeds,
-  learningNeedNotes,
-  learningNeedsToEditState,
-  parseLearningNeeds,
-} from "@/lib/family/learning-needs";
+import { learningNeedNotes, parseLearningNeeds } from "@/lib/family/learning-needs";
 import {
   ACADEMIC_ADVANCED_RATE_PACKAGES,
   ACADEMIC_PAYMENT_PLANS,
   ACADEMIC_RATE_PACKAGES,
   ACADEMIC_SCHEDULE_WINDOWS,
-  ACADEMIC_SUBJECTS,
-  GENDER,
-  GRADE_LABELS,
-  GRADUATION_YEARS,
 } from "@/lib/forms/options";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -102,39 +91,6 @@ type StudentDetail = {
   }>;
 };
 
-type ProfileForm = {
-  firstName: string;
-  lastName: string;
-  displayName: string;
-  gender: string;
-  birthdate: string;
-  gradeLabel: string;
-  graduationYear: string;
-  schoolName: string;
-  cellPhone: string;
-  learningNeedSubjectIds: string[];
-  learningNeedNotes: string;
-  availabilityNotes: string;
-  emergencyContact: string;
-  description: string;
-  zohoDealId: string;
-  zohoDealUrl: string;
-  academicYear: string;
-  preferredScheduleIds: string[];
-  hoursRatePackage: string;
-  advancedHoursRatePackage: string;
-  paymentPlan: string;
-  depositDollars: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  subjectIds: string[];
-  lifecycle: string;
-};
-
-const LIFECYCLE_OPTIONS = ["prospect", "active", "paused", "completed", "archived"];
 const LEARNING_CHIP_PREVIEW = 8;
 const PREVIEW_LIMIT = 3;
 
@@ -151,19 +107,6 @@ function parseScheduleIds(value: string | null | undefined) {
 function optionLabel(list: { options: Array<{ id: string; label: string }> }, id: string | null | undefined) {
   if (!id) return "—";
   return list.options.find((option) => option.id === id)?.label ?? id;
-}
-
-function centsToDollarsInput(cents: number | null | undefined) {
-  if (cents == null) return "";
-  return (cents / 100).toFixed(2);
-}
-
-function dollarsInputToCents(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const amount = Number(trimmed);
-  if (!Number.isFinite(amount) || amount < 0) return Number.NaN;
-  return Math.round(amount * 100);
 }
 
 function initials(name: string) {
@@ -206,41 +149,6 @@ function formatMailingAddressLines(student: {
   if (cityStateZip) lines.push(cityStateZip);
 
   return lines;
-}
-
-function toProfileForm(student: StudentDetail): ProfileForm {
-  const learningEdit = learningNeedsToEditState(student.learningNeeds);
-  return {
-    firstName: student.firstName,
-    lastName: student.lastName,
-    displayName: student.displayName,
-    gender: student.gender ?? "",
-    birthdate: student.birthdate ?? "",
-    gradeLabel: student.gradeLabel ?? "",
-    graduationYear: student.graduationYear != null ? String(student.graduationYear) : "",
-    schoolName: student.schoolName ?? "",
-    cellPhone: student.cellPhone ?? "",
-    learningNeedSubjectIds: learningEdit.subjectIds,
-    learningNeedNotes: learningEdit.notes,
-    availabilityNotes: student.availabilityNotes ?? "",
-    emergencyContact: student.emergencyContact ?? "",
-    description: student.description ?? "",
-    zohoDealId: student.zohoDealId ?? "",
-    zohoDealUrl: student.zohoDealUrl ?? "",
-    academicYear: student.academicYear ?? "",
-    preferredScheduleIds: parseScheduleIds(student.preferredSchedule),
-    hoursRatePackage: student.hoursRatePackage ?? "",
-    advancedHoursRatePackage: student.advancedHoursRatePackage ?? "",
-    paymentPlan: student.paymentPlan ?? "",
-    depositDollars: centsToDollarsInput(student.depositCents),
-    addressLine1: student.addressLine1 ?? "",
-    addressLine2: student.addressLine2 ?? "",
-    city: student.city ?? "",
-    state: student.state ?? "",
-    postalCode: student.postalCode ?? "",
-    subjectIds: student.subjects.map((subject) => subject.id),
-    lifecycle: student.lifecycle,
-  };
 }
 
 function ConfirmActionModal({
@@ -365,12 +273,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
   const deepLinkEdit = searchParams.get("edit") === "1";
   const editDeepLinkHandled = useRef(false);
   const [student, setStudent] = useState<StudentDetail | null>(null);
-  const [catalogSubjects, setCatalogSubjects] = useState<CatalogSubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [profileForm, setProfileForm] = useState<ProfileForm | null>(null);
-  const [savingProfile, setSavingProfile] = useState(false);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [lifecycleConfirm, setLifecycleConfirm] = useState<StudentLifecycleConfirm | null>(null);
   const [listModal, setListModal] = useState<"enrollments" | "bookings" | null>(null);
@@ -380,20 +284,13 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     setLoading(true);
     setError(null);
     try {
-      const [studentRes, subjectsRes] = await Promise.all([
-        fetch(`/api/staff/students/${studentId}`),
-        fetch("/api/staff/subjects"),
-      ]);
+      const studentRes = await fetch(`/api/staff/students/${studentId}`);
       const data = await studentRes.json();
-      const subjectsData = await subjectsRes.json();
       if (!studentRes.ok || !data.ok) {
         setError(data.error || "Unable to load student.");
         return;
       }
       setStudent(data.student as StudentDetail);
-      if (subjectsRes.ok && subjectsData.ok) {
-        setCatalogSubjects(subjectsData.subjects ?? []);
-      }
     } catch {
       setError("Unable to load student.");
     } finally {
@@ -405,11 +302,11 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     void reload();
   }, [reload]);
 
-  const availableSubjects = useMemo(() => {
-    if (!profileForm) return catalogSubjects;
-    const selected = new Set(profileForm.subjectIds);
-    return catalogSubjects.filter((subject) => !selected.has(subject.id));
-  }, [catalogSubjects, profileForm]);
+  useEffect(() => {
+    if (!deepLinkEdit || editDeepLinkHandled.current) return;
+    editDeepLinkHandled.current = true;
+    router.replace(`/staff/students/${studentId}/edit`);
+  }, [deepLinkEdit, studentId, router]);
 
   async function setLifecycleStatus(nextLifecycle: "active" | "archived") {
     if (lifecycleBusy) return;
@@ -456,89 +353,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
       toast.error("Unable to delete student.");
     } finally {
       setLifecycleBusy(false);
-    }
-  }
-
-  function openEdit() {
-    if (!student) return;
-    setProfileForm(toProfileForm(student));
-    setEditing(true);
-    setError(null);
-  }
-
-  useEffect(() => {
-    if (!student || !deepLinkEdit || editDeepLinkHandled.current) return;
-    editDeepLinkHandled.current = true;
-    setProfileForm(toProfileForm(student));
-    setEditing(true);
-    setError(null);
-    router.replace(`/staff/students/${studentId}`, { scroll: false });
-  }, [student, deepLinkEdit, studentId, router]);
-
-  async function saveProfile(event: FormEvent) {
-    event.preventDefault();
-    if (!profileForm || savingProfile) return;
-    const depositCents = dollarsInputToCents(profileForm.depositDollars);
-    if (Number.isNaN(depositCents)) {
-      setError("Enter a valid deposit amount in dollars.");
-      toast.error("Enter a valid deposit amount in dollars.");
-      return;
-    }
-    setSavingProfile(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/staff/students/${studentId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: profileForm.firstName,
-          lastName: profileForm.lastName,
-          displayName: profileForm.displayName,
-          gender: profileForm.gender || null,
-          birthdate: profileForm.birthdate || null,
-          gradeLabel: profileForm.gradeLabel || null,
-          graduationYear: profileForm.graduationYear ? Number(profileForm.graduationYear) : null,
-          schoolName: profileForm.schoolName || null,
-          cellPhone: profileForm.cellPhone || null,
-          learningNeeds:
-            composeLearningNeeds(profileForm.learningNeedSubjectIds, profileForm.learningNeedNotes) || null,
-          availabilityNotes: profileForm.availabilityNotes || null,
-          emergencyContact: profileForm.emergencyContact || null,
-          description: profileForm.description || null,
-          zohoDealId: profileForm.zohoDealId || null,
-          zohoDealUrl: profileForm.zohoDealUrl || null,
-          academicYear: profileForm.academicYear || null,
-          preferredSchedule: profileForm.preferredScheduleIds.join(",") || null,
-          hoursRatePackage: profileForm.hoursRatePackage || null,
-          advancedHoursRatePackage: profileForm.advancedHoursRatePackage || null,
-          paymentPlan: profileForm.paymentPlan || null,
-          depositCents,
-          addressLine1: profileForm.addressLine1 || null,
-          addressLine2: profileForm.addressLine2 || null,
-          city: profileForm.city || null,
-          state: profileForm.state || null,
-          postalCode: profileForm.postalCode || null,
-          country: "United States",
-          subjectIds: profileForm.subjectIds,
-          lifecycle: profileForm.lifecycle,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to save student.");
-        toast.error(data.error || "Unable to save student.");
-        return;
-      }
-      const next = data.student as StudentDetail;
-      setStudent(next);
-      setProfileForm(toProfileForm(next));
-      setEditing(false);
-      toast.success("Student saved.");
-    } catch {
-      setError("Unable to save student.");
-      toast.error("Unable to save student.");
-    } finally {
-      setSavingProfile(false);
     }
   }
 
@@ -714,19 +528,14 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           ← Students
         </Link>
         <div className="family-detail-topbar-actions">
-          {student.household ? (
-            <Link
-              href={`/staff/families/${student.household.id}`}
-              className="staff-icon-btn staff-icon-btn-muted"
-              aria-label="Family"
-              title="Family"
-            >
-              <IconLink size={15} />
-            </Link>
-          ) : null}
-          <StaffIconButton label="Edit" title="Edit" tone="edit" disabled={lifecycleBusy} onClick={openEdit}>
+          <Link
+            href={`/staff/students/${studentId}/edit`}
+            className="staff-icon-btn staff-icon-btn-edit"
+            aria-label="Edit"
+            title="Edit"
+          >
             <IconPencil size={15} />
-          </StaffIconButton>
+          </Link>
           {lifecycleButtons.map((action) => (
             <StaffIconButton
               key={action.id}
@@ -759,377 +568,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
       </section>
 
       {error ? <p className="form-error">{error}</p> : null}
-
-      {editing && profileForm ? (
-        <Panel title="Edit student" className="family-equal-panel">
-          <form onSubmit={(e) => void saveProfile(e)} className="input-grid family-household-edit-grid">
-            <p className="guardian-edit-section-label">Legal name · Gender · Birthdate · Phone</p>
-            <label>
-              First name
-              <input
-                value={profileForm.firstName}
-                onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Last name
-              <input
-                value={profileForm.lastName}
-                onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Gender
-              <select
-                value={profileForm.gender}
-                onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
-              >
-                <option value="">—</option>
-                {GENDER.options.map((option) => (
-                  <option key={option.id} value={option.label}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Birthdate
-              <input
-                value={profileForm.birthdate}
-                onChange={(e) => setProfileForm({ ...profileForm, birthdate: e.target.value })}
-                placeholder="YYYY-MM-DD"
-              />
-            </label>
-            <label>
-              Phone
-              <input
-                type="tel"
-                value={profileForm.cellPhone}
-                onChange={(e) => setProfileForm({ ...profileForm, cellPhone: e.target.value })}
-              />
-            </label>
-            <label>
-              Lifecycle
-              <select
-                value={profileForm.lifecycle}
-                onChange={(e) => setProfileForm({ ...profileForm, lifecycle: e.target.value })}
-              >
-                {LIFECYCLE_OPTIONS.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <p className="guardian-edit-section-label">Grade · Grade Year · School · Availability</p>
-            <label>
-              Grade
-              <select
-                value={profileForm.gradeLabel}
-                onChange={(e) => setProfileForm({ ...profileForm, gradeLabel: e.target.value })}
-              >
-                <option value="">—</option>
-                {GRADE_LABELS.options.map((option) => (
-                  <option key={option.id} value={option.label}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Grade Year
-              <select
-                value={profileForm.graduationYear}
-                onChange={(e) => setProfileForm({ ...profileForm, graduationYear: e.target.value })}
-              >
-                <option value="">—</option>
-                {GRADUATION_YEARS.options.map((option) => (
-                  <option key={option.id} value={option.label}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              School
-              <input
-                value={profileForm.schoolName}
-                onChange={(e) => setProfileForm({ ...profileForm, schoolName: e.target.value })}
-              />
-            </label>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Availability
-              <textarea
-                value={profileForm.availabilityNotes}
-                onChange={(e) => setProfileForm({ ...profileForm, availabilityNotes: e.target.value })}
-                rows={3}
-              />
-            </label>
-
-            <p className="guardian-edit-section-label">Mailing address · Zoho CRM ID · Zoho CRM URL</p>
-            <label>
-              Street
-              <AddressAutocompleteInput
-                value={profileForm.addressLine1}
-                onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
-                onSelect={(suggestion) =>
-                  setProfileForm({
-                    ...profileForm,
-                    addressLine1: suggestion.addressLine1,
-                    city: suggestion.city || profileForm.city,
-                    state: suggestion.state || profileForm.state,
-                    postalCode: suggestion.postalCode || profileForm.postalCode,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Address line 2
-              <input
-                value={profileForm.addressLine2}
-                onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
-              />
-            </label>
-            <label>
-              City
-              <input
-                value={profileForm.city}
-                onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
-              />
-            </label>
-            <label>
-              State
-              <input
-                value={profileForm.state}
-                onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
-              />
-            </label>
-            <label>
-              ZIP
-              <input
-                value={profileForm.postalCode}
-                onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
-              />
-            </label>
-            <label>
-              Country
-              <input value="United States" readOnly />
-            </label>
-            <label>
-              Zoho CRM ID
-              <input
-                value={profileForm.zohoDealId}
-                onChange={(e) => setProfileForm({ ...profileForm, zohoDealId: e.target.value })}
-              />
-            </label>
-            <label>
-              Zoho CRM URL
-              <input
-                value={profileForm.zohoDealUrl}
-                onChange={(e) => setProfileForm({ ...profileForm, zohoDealUrl: e.target.value })}
-              />
-            </label>
-
-            <p className="guardian-edit-section-label">Description</p>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Description
-              <textarea
-                value={profileForm.description}
-                onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
-                rows={3}
-              />
-            </label>
-
-            <p className="guardian-edit-section-label">Tutoring</p>
-            <label>
-              Academic year
-              <input
-                value={profileForm.academicYear}
-                onChange={(e) => setProfileForm({ ...profileForm, academicYear: e.target.value })}
-                placeholder="2025-2026"
-              />
-            </label>
-            <label>
-              Hours/Rates
-              <select
-                value={profileForm.hoursRatePackage}
-                onChange={(e) => setProfileForm({ ...profileForm, hoursRatePackage: e.target.value })}
-              >
-                <option value="">—</option>
-                {ACADEMIC_RATE_PACKAGES.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Advanced Subjects Hours/Rates
-              <select
-                value={profileForm.advancedHoursRatePackage}
-                onChange={(e) => setProfileForm({ ...profileForm, advancedHoursRatePackage: e.target.value })}
-              >
-                <option value="">—</option>
-                {ACADEMIC_ADVANCED_RATE_PACKAGES.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Preferred schedule
-              <select
-                multiple
-                value={profileForm.preferredScheduleIds}
-                onChange={(e) =>
-                  setProfileForm({
-                    ...profileForm,
-                    preferredScheduleIds: Array.from(e.target.selectedOptions).map((option) => option.value),
-                  })
-                }
-                style={{ minHeight: 120 }}
-              >
-                {ACADEMIC_SCHEDULE_WINDOWS.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Subjects
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
-                <select
-                  id="student-subject-add"
-                  defaultValue=""
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (!value) return;
-                    if (!profileForm.subjectIds.includes(value)) {
-                      setProfileForm({ ...profileForm, subjectIds: [...profileForm.subjectIds, value] });
-                    }
-                    e.target.value = "";
-                  }}
-                >
-                  <option value="">Add subject…</option>
-                  {availableSubjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field-cloud" style={{ marginTop: 8 }}>
-                {profileForm.subjectIds.map((subjectId) => {
-                  const subject =
-                    catalogSubjects.find((row) => row.id === subjectId) ||
-                    student.subjects.find((row) => row.id === subjectId);
-                  return (
-                    <button
-                      key={subjectId}
-                      type="button"
-                      onClick={() =>
-                        setProfileForm({
-                          ...profileForm,
-                          subjectIds: profileForm.subjectIds.filter((id) => id !== subjectId),
-                        })
-                      }
-                    >
-                      {subject?.name ?? subjectId} ×
-                    </button>
-                  );
-                })}
-                {profileForm.subjectIds.length === 0 ? (
-                  <span style={{ color: "var(--muted)", fontSize: 14 }}>No subjects selected.</span>
-                ) : null}
-              </div>
-            </label>
-
-            <p className="guardian-edit-section-label">Payment (student)</p>
-            <label>
-              Payment plan
-              <select
-                value={profileForm.paymentPlan}
-                onChange={(e) => setProfileForm({ ...profileForm, paymentPlan: e.target.value })}
-              >
-                <option value="">—</option>
-                {ACADEMIC_PAYMENT_PLANS.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Deposit ($)
-              <input
-                value={profileForm.depositDollars}
-                onChange={(e) => setProfileForm({ ...profileForm, depositDollars: e.target.value })}
-                inputMode="decimal"
-                placeholder="0.00"
-              />
-            </label>
-
-            <p className="guardian-edit-section-label">Learning needs</p>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <strong style={{ display: "block", marginBottom: 8, fontSize: 13 }}>Subjects or learning goals</strong>
-              <div className="subject-multi-select" role="group" aria-label="Learning needs">
-                {ACADEMIC_SUBJECTS.options.map((option) => {
-                  const selected = profileForm.learningNeedSubjectIds.includes(option.id);
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      className={selected ? "selected" : undefined}
-                      aria-pressed={selected}
-                      onClick={() =>
-                        setProfileForm({
-                          ...profileForm,
-                          learningNeedSubjectIds: selected
-                            ? profileForm.learningNeedSubjectIds.filter((id) => id !== option.id)
-                            : [...profileForm.learningNeedSubjectIds, option.id],
-                        })
-                      }
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <label className="full-input" style={{ marginTop: 12, display: "block" }}>
-                Additional notes (optional)
-                <textarea
-                  value={profileForm.learningNeedNotes}
-                  onChange={(e) => setProfileForm({ ...profileForm, learningNeedNotes: e.target.value })}
-                  rows={2}
-                  placeholder="Optional context beyond the chips…"
-                />
-              </label>
-            </div>
-
-            <div className="family-household-edit-actions">
-              <button type="submit" className="primary-button" disabled={savingProfile}>
-                {savingProfile ? "Saving…" : "Save student"}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={savingProfile}
-                onClick={() => {
-                  setEditing(false);
-                  setProfileForm(null);
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Panel>
-      ) : null}
 
       <div className="family-detail-layout family-detail-stack">
         <Panel className="family-equal-panel">
@@ -1204,7 +642,17 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   )}
                 </span>
               </div>
-              <div className="family-household-lower student-profile-description-row">
+              <div className="family-household-lower student-profile-family-description-row">
+                <span>
+                  <small>Family</small>
+                  {student.household ? (
+                    <Link href={`/staff/families/${student.household.id}`} className="family-household-payer-link">
+                      {student.household.displayName}
+                    </Link>
+                  ) : (
+                    <strong>—</strong>
+                  )}
+                </span>
                 <span>
                   <small>Description</small>
                   <strong style={{ whiteSpace: "pre-wrap" }}>{student.description || "—"}</strong>
