@@ -54,6 +54,9 @@
   --nav-icon: #c4922e;
   --nav-icon-active: #d8a840;
   --nav-accent: #d8a840;
+  /* Search/Alerts utility icons — never reuse --nav-icon gold. */
+  --chrome-icon: #8ea3b9;
+  --chrome-icon-hover: #d5dee8;
   --violet: #7566a8;
   --violet-soft: #f2effb;
   --rose: #b85a72;
@@ -331,8 +334,8 @@ button { color: inherit; }
   background: transparent;
   border-radius: 4px;
   cursor: pointer;
-  /* Non-nav chrome: muted slate — gold is reserved for sidebar nav icons / active bar. */
-  color: #8ea3b9;
+  /* Labels: muted slate. Gold (--nav-icon) is reserved for sidebar nav icons / active bar. */
+  color: var(--chrome-icon);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -341,9 +344,19 @@ button { color: inherit; }
   font-size: 14px;
   font-weight: 600;
 }
+/* Explicit icon tint — SVG stroke uses currentColor; do not inherit --nav-icon. */
+.sidebar-chrome-actions .chrome-icon,
+.sidebar-chrome-actions .app-icon {
+  color: var(--chrome-icon);
+  stroke: currentColor;
+}
 .sidebar-chrome-actions button:hover {
   background: rgba(255,255,255,.08);
-  color: #d5dee8;
+  color: var(--chrome-icon-hover);
+}
+.sidebar-chrome-actions button:hover .chrome-icon,
+.sidebar-chrome-actions button:hover .app-icon {
+  color: var(--chrome-icon-hover);
 }
 .app-shell.is-nav-collapsed .sidebar-chrome-actions {
   flex-direction: column;

@@ -17,8 +17,7 @@ export const NAV_PNG_ICON_NAMES = new Set<string>([
   "course",
   "receipt",
   "profile",
-  "search",
-  "bell",
+  /* search/bell stay stroke SVG so chrome can tint via currentColor (not gold PNGs). */
 ]);
 
 export function navPngSrc(name: string): string {

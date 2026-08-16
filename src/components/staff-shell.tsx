@@ -57,11 +57,15 @@ export function StaffShell({
         <div className="sidebar-footer">
           <div className="sidebar-chrome-actions">
             <button type="button" aria-label="Search" title="Search">
-              <AppIcon name="search" size={16} preferPng={false} />
+              <span className="chrome-icon">
+                <AppIcon name="search" size={16} preferPng={false} />
+              </span>
               <span className="chrome-label">Search</span>
             </button>
             <button type="button" aria-label="Notifications" title="Notifications">
-              <AppIcon name="bell" size={16} preferPng={false} />
+              <span className="chrome-icon">
+                <AppIcon name="bell" size={16} preferPng={false} />
+              </span>
               <span className="chrome-label">Alerts</span>
             </button>
           </div>
