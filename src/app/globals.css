@@ -27,7 +27,6 @@
   --ink: #172133;
   --muted: #697486;
   --canvas: #f5f6f3;
-  --edit-canvas: #FEFBF6;
   --paper: #ffffff;
   --line: #e3e6e2;
   --blue: #4c78a8;
@@ -1753,9 +1752,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .guardian-other-info-field textarea.staff-multiline-input {
   margin-top: 0;
 }
-/* Edit pages only: warm canvas behind StaffRecordEditShell; panels/inputs stay --paper. */
+/* Edit pages: dashboard canvas behind StaffRecordEditShell; fields match canvas fill. */
 .workspace:has(.staff-record-edit-shell) {
-  background: var(--edit-canvas);
+  background: var(--canvas);
 }
 .staff-record-edit-shell {
   width: 100%;
@@ -1776,19 +1775,21 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-edit-field-full {
   grid-column: 1 / -1;
 }
-/* Edit shell fields: white fill + visible border on warm #FEFBF6 canvas */
+/* Shared edit-shell fields: canvas fill + visible border/focus on matching page canvas */
 .staff-record-edit-shell .input-grid input,
 .staff-record-edit-shell .input-grid select,
 .staff-record-edit-shell .staff-multiline-input,
-.staff-record-edit-shell .input-grid textarea.staff-multiline-input {
-  background: #ffffff;
+.staff-record-edit-shell .input-grid textarea.staff-multiline-input,
+.staff-record-edit-shell .staff-edit-select-wrap-face {
+  background: var(--canvas);
   border: 1px solid #c9cec6;
   color: var(--ink);
 }
 .staff-record-edit-shell .input-grid input:focus,
 .staff-record-edit-shell .input-grid select:focus,
 .staff-record-edit-shell .staff-multiline-input:focus,
-.staff-record-edit-shell .input-grid textarea.staff-multiline-input:focus {
+.staff-record-edit-shell .input-grid textarea.staff-multiline-input:focus,
+.staff-record-edit-shell .staff-edit-select-wrap-face:focus-within {
   border-color: var(--blue);
   box-shadow: 0 0 0 2px var(--blue-soft);
 }
@@ -1856,7 +1857,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   width: 100%;
   box-sizing: border-box;
   border: 1px solid #c9cec6;
-  background: #ffffff;
+  background: var(--canvas);
   color: var(--ink);
   padding: 8px 28px 8px 11px;
   min-height: 42px;
