@@ -167,7 +167,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [lifecycleConfirm, setLifecycleConfirm] = useState<TutorLifecycleConfirm | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [selectedSubjectId, setSelectedSubjectId] = useState("");
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -217,13 +216,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     const assigned = new Set(tutor.subjects.map((s) => s.id));
     return catalog.filter((s) => !assigned.has(s.id));
   }, [catalog, tutor]);
-
-  useEffect(() => {
-    if (!selectedSubjectId) return;
-    if (!availableSubjects.some((s) => s.id === selectedSubjectId)) {
-      setSelectedSubjectId("");
-    }
-  }, [availableSubjects, selectedSubjectId]);
 
   async function saveSeats() {
     const seats = Number.parseInt(maxSeatsPerSlot, 10);
@@ -324,19 +316,15 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     );
   }
 
-  async function assignSubject() {
-    if (!selectedSubjectId) {
-      setError("Select a subject to assign.");
-      toast.error("Select a subject to assign.");
-      return;
-    }
+  async function assignSubject(subjectId: string) {
+    if (!subjectId || assigning) return;
     setError(null);
     setAssigning(true);
     try {
       const response = await fetch(`/api/staff/tutors/${tutorId}/subjects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subjectId: selectedSubjectId }),
+        body: JSON.stringify({ subjectId }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
@@ -345,7 +333,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         toast.error(msg);
         return;
       }
-      setSelectedSubjectId("");
       toast.success("Subject assigned.");
       await reload();
     } catch {
@@ -554,10 +541,8 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
                   <strong>{tutor.phone || "—"}</strong>
                 </span>
                 <span>
-                  <small>Workload</small>
-                  <strong>
-                    {tutor.workloadCount} open booking{tutor.workloadCount === 1 ? "" : "s"}
-                  </strong>
+                  <small>Open bookings</small>
+                  <strong>{tutor.workloadCount}</strong>
                 </span>
               </div>
               <div className="family-household-lower">
@@ -588,25 +573,25 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             <label className="tutor-capacity-label" htmlFor="tutor-max-seats">
               Max seats per slot
             </label>
-            <input
-              id="tutor-max-seats"
-              type="number"
-              min={1}
-              className="tutor-capacity-input"
-              value={maxSeatsPerSlot}
-              onChange={(e) => setMaxSeatsPerSlot(e.target.value)}
-            />
-            <p className="tutor-capacity-helper">
-              How many students can book this tutor in one time slot.
-            </p>
-            <button
-              type="button"
-              className="primary-button"
-              disabled={savingSeats}
-              onClick={() => void saveSeats()}
-            >
-              {savingSeats ? "Saving…" : "Save seats"}
-            </button>
+            <div className="tutor-capacity-row">
+              <input
+                id="tutor-max-seats"
+                type="number"
+                min={1}
+                className="tutor-capacity-input"
+                value={maxSeatsPerSlot}
+                onChange={(e) => setMaxSeatsPerSlot(e.target.value)}
+              />
+              <button
+                type="button"
+                className="primary-button tutor-capacity-save"
+                disabled={savingSeats}
+                onClick={() => void saveSeats()}
+              >
+                {savingSeats ? "Saving…" : "Save"}
+              </button>
+            </div>
+            <p className="tutor-capacity-helper">How many students can share one time.</p>
           </div>
         </Panel>
 
@@ -615,62 +600,48 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             <h2>Subjects</h2>
           </div>
           <div className="tutor-subjects-body">
-            <div className="tutor-subjects-assign">
-              <label style={{ flex: "1 1 180px", margin: 0 }} htmlFor="tutor-assign-subject">
-                Assign subject
-                <select
-                  id="tutor-assign-subject"
-                  value={selectedSubjectId}
-                  onChange={(e) => setSelectedSubjectId(e.target.value)}
-                  disabled={assigning || availableSubjects.length === 0}
+            <div className="tutor-subjects-control" role="group" aria-label="Assigned subjects">
+              {tutor.subjects.map((subject) => (
+                <button
+                  key={subject.id}
+                  type="button"
+                  className="tutor-subjects-chip"
+                  disabled={removingId === subject.id || assigning}
+                  aria-label={`Remove ${subject.name}`}
+                  title={`Remove ${subject.name}`}
+                  onClick={() => void removeSubject(subject.id)}
                 >
-                  <option value="">
-                    {availableSubjects.length === 0 ? "No subjects available" : "Select subject…"}
-                  </option>
-                  {availableSubjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name}
-                      {subject.code ? ` (${subject.code})` : ""}
-                      {subject.category ? ` · ${subject.category}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="primary-button"
-                disabled={assigning || !selectedSubjectId}
-                onClick={() => void assignSubject()}
+                  {removingId === subject.id ? "…" : `${subject.name} ×`}
+                </button>
+              ))}
+              <select
+                id="tutor-add-subject"
+                className="tutor-subjects-add"
+                defaultValue=""
+                aria-label="Add subject"
+                disabled={assigning || availableSubjects.length === 0}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (!value) return;
+                  e.target.value = "";
+                  void assignSubject(value);
+                }}
               >
-                {assigning ? "Adding…" : "Add"}
-              </button>
+                <option value="">
+                  {availableSubjects.length === 0 ? "All subjects assigned" : "Add subject…"}
+                </option>
+                {availableSubjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                    {subject.code ? ` (${subject.code})` : ""}
+                    {subject.category ? ` · ${subject.category}` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
-
             {tutor.subjects.length === 0 ? (
               <p className="tutor-subjects-empty">No subjects linked yet.</p>
-            ) : (
-              <div className="tutor-subjects-list">
-                {tutor.subjects.map((subject) => (
-                  <div key={subject.id} className="tutor-subject-row">
-                    <div>
-                      <strong>{subject.name}</strong>
-                      <small>
-                        {subject.code}
-                        {subject.priority ? ` · priority ${subject.priority}` : ""}
-                      </small>
-                    </div>
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      disabled={removingId === subject.id}
-                      onClick={() => void removeSubject(subject.id)}
-                    >
-                      {removingId === subject.id ? "Removing…" : "Remove"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            ) : null}
           </div>
         </Panel>
       </div>
