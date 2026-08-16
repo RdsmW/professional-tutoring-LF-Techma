@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, ilike, inArray, ne, SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, ne, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { bookings, courseEnrollments, guardians, households, students } from "@/lib/db/schema";
+import { bookings, courseEnrollments, guardians, households, students, studentSubjects, subjects } from "@/lib/db/schema";
 import { buildStudentListLabel } from "@/lib/staff/students";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
@@ -105,6 +105,27 @@ export async function GET(request: Request) {
       }
     }
 
+    const studentIds = rows.map((row) => row.id);
+    const subjectsByStudent = new Map<string, Array<{ id: string; name: string; code: string }>>();
+    if (studentIds.length > 0) {
+      const subjectRows = await database
+        .select({
+          studentId: studentSubjects.studentId,
+          id: subjects.id,
+          name: subjects.name,
+          code: subjects.code,
+        })
+        .from(studentSubjects)
+        .innerJoin(subjects, eq(studentSubjects.subjectId, subjects.id))
+        .where(inArray(studentSubjects.studentId, studentIds))
+        .orderBy(asc(subjects.name));
+      for (const row of subjectRows) {
+        const list = subjectsByStudent.get(row.studentId) ?? [];
+        list.push({ id: row.id, name: row.name, code: row.code });
+        subjectsByStudent.set(row.studentId, list);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       students: rows.map((row) => {
@@ -130,6 +151,7 @@ export async function GET(request: Request) {
           lifecycle: row.lifecycle,
           householdId: row.householdId,
           householdDisplayName: row.householdDisplayName || "Unassigned",
+          subjects: subjectsByStudent.get(row.id) ?? [],
           canDelete: bookingCount === 0 && enrollmentCount === 0,
           updatedAt: row.updatedAt.toISOString(),
         };

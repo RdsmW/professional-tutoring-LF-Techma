@@ -18,8 +18,17 @@ type StudentRow = {
   graduationYear: number | null;
   lifecycle: string;
   householdDisplayName: string;
+  subjects?: Array<{ id: string; name: string; code: string }>;
   canDelete: boolean;
 };
+
+function formatSubjectsPreview(subjects: Array<{ name: string }> | undefined) {
+  if (!subjects || subjects.length === 0) return "—";
+  const visible = subjects.slice(0, 2).map((subject) => subject.name);
+  const remaining = subjects.length - visible.length;
+  if (remaining > 0) return `${visible.join(", ")} +${remaining}`;
+  return visible.join(", ");
+}
 
 type HouseholdOption = {
   id: string;
@@ -358,6 +367,7 @@ export function StaffStudentsClient() {
                     </span>
                   }
                   fields={[
+                    { label: "Subjects", value: formatSubjectsPreview(row.subjects) },
                     { label: "Grade", value: row.gradeLabel ?? "—" },
                     { label: "School", value: row.schoolName ?? "—" },
                   ]}
@@ -372,6 +382,7 @@ export function StaffStudentsClient() {
             <div className="table-head staff-dir-cols-students">
               <span>Name</span>
               <span>Household</span>
+              <span>Subjects</span>
               <span>Grade</span>
               <span>School</span>
               <span className="staff-dir-col-status">Status</span>
@@ -393,6 +404,7 @@ export function StaffStudentsClient() {
               >
                 <strong>{row.listLabel || row.displayName}</strong>
                 <span>{row.householdDisplayName}</span>
+                <span>{formatSubjectsPreview(row.subjects)}</span>
                 <span>{row.gradeLabel ?? "—"}</span>
                 <span>{row.schoolName ?? "—"}</span>
                 <span className="staff-dir-col-status">
