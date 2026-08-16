@@ -1686,6 +1686,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .student-profile-dense .student-profile-description-row {
   grid-template-columns: minmax(0, 1fr);
 }
+.student-profile-dense .student-profile-family-description-row {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+}
 /* Guardian Identity: Row1 First|Last|Email|Phone 25% each; Row2 address|other 50%|50% */
 .guardian-identity-dense .family-household-upper {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1701,7 +1704,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
-.guardian-edit-section-label {
+.guardian-edit-section-label,
+.staff-edit-section-label {
   grid-column: 1 / -1;
   margin: 4px 0 0;
   padding-top: 10px;
@@ -1712,29 +1716,59 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-.guardian-edit-section-label:first-child {
+.guardian-edit-section-label:first-child,
+.staff-edit-section-label:first-child {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
 }
-.guardian-other-info-field textarea {
+/* Multiline fields: same chrome as single-line inputs, compact height */
+.input-grid textarea.staff-multiline-input,
+.staff-multiline-input {
   display: block;
   width: 100%;
-  min-height: 96px;
-  resize: vertical;
+  box-sizing: border-box;
   border: 1px solid var(--line);
   background: #fbfcfa;
   color: var(--ink);
   padding: 11px;
-  margin-top: 0;
-  font-size: var(--text-content);
+  margin-top: 6px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
   outline: none;
+  resize: vertical;
+  min-height: 0;
+  field-sizing: content;
 }
-.guardian-other-info-field textarea:focus {
+.input-grid textarea.staff-multiline-input:focus,
+.staff-multiline-input:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 2px var(--blue-soft);
+}
+.guardian-other-info-field .staff-multiline-input,
+.guardian-other-info-field textarea.staff-multiline-input {
+  margin-top: 0;
+}
+.staff-record-edit-shell {
+  width: 100%;
+  min-width: 0;
+}
+.staff-record-edit-header {
+  margin: 0 0 14px;
+}
+.staff-record-edit-header h1 {
+  margin: 0;
+  font: 700 22px Georgia, serif;
+  color: var(--ink);
+}
+.staff-record-edit-panel {
+  margin-bottom: 24px;
+}
+.staff-edit-field-full {
+  grid-column: 1 / -1;
 }
 /* Guardian Household: Family 40% | Parent role 30% | Payment 30% */
 .guardian-household-dense .family-household-upper {
@@ -1887,6 +1921,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   }
   .student-profile-dense .family-household-upper,
   .student-profile-dense .student-profile-description-row,
+  .student-profile-dense .student-profile-family-description-row,
   .guardian-identity-dense .family-household-upper,
   .guardian-identity-dense .guardian-identity-address-row,
   .guardian-household-dense .family-household-upper {
