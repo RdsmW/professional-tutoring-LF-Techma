@@ -1650,33 +1650,36 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   width: 100%;
   min-width: 0;
 }
-/* Guardian Identity: Row1 First|Last|Email|Phone; Row2 mailing address full; Row3 other info full */
+/* Guardian Identity: Row1 First|Last|Email|Phone 25% each; Row2 address|other 50%|50% */
 .guardian-identity-dense .family-household-upper {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .guardian-identity-dense .guardian-identity-address-row {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
-.guardian-household-other-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  width: 100%;
+.guardian-identity-other-field {
   min-width: 0;
-}
-.guardian-household-other-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  width: 100%;
+  max-width: 100%;
 }
 .guardian-other-info-text {
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
-.guardian-other-info-empty {
+.guardian-edit-section-label {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
   color: var(--muted);
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.guardian-edit-section-label:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 .guardian-other-info-field textarea {
   display: block;
@@ -1687,7 +1690,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   background: #fbfcfa;
   color: var(--ink);
   padding: 11px;
-  margin-top: 6px;
+  margin-top: 0;
   font-size: var(--text-content);
   font-weight: 600;
   line-height: 1.45;
