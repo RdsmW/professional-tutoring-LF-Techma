@@ -319,9 +319,20 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
           <label>
             Birthdate
             <input
+              type="date"
+              className="staff-edit-date-input"
               value={profileForm.birthdate}
               onChange={(e) => setProfileForm({ ...profileForm, birthdate: e.target.value })}
-              placeholder="YYYY-MM-DD"
+              onClick={(e) => {
+                const input = e.currentTarget;
+                if (typeof input.showPicker === "function") {
+                  try {
+                    input.showPicker();
+                  } catch {
+                    /* browser may block if not user-activated; native control still works */
+                  }
+                }
+              }}
             />
           </label>
           <label>
@@ -473,23 +484,21 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
         <div className="staff-edit-payment-tutoring-band">
           <div className="staff-edit-payment-pane">
             <StaffEditSectionLabel>Payment</StaffEditSectionLabel>
-            <div className="staff-edit-field-row staff-edit-field-row--2">
-              <StaffWrapSelect
-                label="Payment plan"
-                value={profileForm.paymentPlan}
-                onChange={(paymentPlan) => setProfileForm({ ...profileForm, paymentPlan })}
-                options={ACADEMIC_PAYMENT_PLANS.options}
+            <StaffWrapSelect
+              label="Payment plan"
+              value={profileForm.paymentPlan}
+              onChange={(paymentPlan) => setProfileForm({ ...profileForm, paymentPlan })}
+              options={ACADEMIC_PAYMENT_PLANS.options}
+            />
+            <label>
+              Deposit ($)
+              <input
+                value={profileForm.depositDollars}
+                onChange={(e) => setProfileForm({ ...profileForm, depositDollars: e.target.value })}
+                inputMode="decimal"
+                placeholder="0.00"
               />
-              <label>
-                Deposit ($)
-                <input
-                  value={profileForm.depositDollars}
-                  onChange={(e) => setProfileForm({ ...profileForm, depositDollars: e.target.value })}
-                  inputMode="decimal"
-                  placeholder="0.00"
-                />
-              </label>
-            </div>
+            </label>
           </div>
           <div className="staff-edit-tutoring-pane">
             <StaffEditSectionLabel>Tutoring</StaffEditSectionLabel>
@@ -568,56 +577,66 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
           </div>
         </div>
 
-        <div className="staff-edit-field-full staff-edit-chip-block">
-          <span className="staff-edit-inline-label">Preferred schedule</span>
-          <div className="subject-multi-select" role="group" aria-label="Preferred schedule">
-            {ACADEMIC_SCHEDULE_WINDOWS.options.map((option) => {
-              const selected = profileForm.preferredScheduleIds.includes(option.id);
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={selected ? "selected" : undefined}
-                  aria-pressed={selected}
-                  onClick={() =>
-                    setProfileForm({
-                      ...profileForm,
-                      preferredScheduleIds: selected
-                        ? profileForm.preferredScheduleIds.filter((id) => id !== option.id)
-                        : [...profileForm.preferredScheduleIds, option.id],
-                    })
-                  }
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+        <div className="staff-edit-schedule-needs-band">
+          <div className="staff-edit-schedule-pane staff-edit-chip-block">
+            <span className="staff-edit-inline-label">Preferred schedule</span>
+            <div
+              className="subject-multi-select staff-edit-chip-control"
+              role="group"
+              aria-label="Preferred schedule"
+            >
+              {ACADEMIC_SCHEDULE_WINDOWS.options.map((option) => {
+                const selected = profileForm.preferredScheduleIds.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={selected ? "selected" : undefined}
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setProfileForm({
+                        ...profileForm,
+                        preferredScheduleIds: selected
+                          ? profileForm.preferredScheduleIds.filter((id) => id !== option.id)
+                          : [...profileForm.preferredScheduleIds, option.id],
+                      })
+                    }
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <div className="staff-edit-field-full staff-edit-chip-block">
-          <span className="staff-edit-inline-label">Learning needs</span>
-          <div className="subject-multi-select" role="group" aria-label="Learning needs">
-            {ACADEMIC_SUBJECTS.options.map((option) => {
-              const selected = profileForm.learningNeedSubjectIds.includes(option.id);
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={selected ? "selected" : undefined}
-                  aria-pressed={selected}
-                  onClick={() =>
-                    setProfileForm({
-                      ...profileForm,
-                      learningNeedSubjectIds: selected
-                        ? profileForm.learningNeedSubjectIds.filter((id) => id !== option.id)
-                        : [...profileForm.learningNeedSubjectIds, option.id],
-                    })
-                  }
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+          <div className="staff-edit-needs-pane staff-edit-chip-block">
+            <span className="staff-edit-inline-label">Learning needs</span>
+            <div
+              className="subject-multi-select staff-edit-chip-control"
+              role="group"
+              aria-label="Learning needs"
+            >
+              {ACADEMIC_SUBJECTS.options.map((option) => {
+                const selected = profileForm.learningNeedSubjectIds.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={selected ? "selected" : undefined}
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setProfileForm({
+                        ...profileForm,
+                        learningNeedSubjectIds: selected
+                          ? profileForm.learningNeedSubjectIds.filter((id) => id !== option.id)
+                          : [...profileForm.learningNeedSubjectIds, option.id],
+                      })
+                    }
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </StaffRecordEditShell>

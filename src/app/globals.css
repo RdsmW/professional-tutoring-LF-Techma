@@ -1819,7 +1819,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-edit-subjects-field {
   min-width: 0;
 }
-.staff-edit-payment-tutoring-band {
+.staff-edit-payment-tutoring-band,
+.staff-edit-schedule-needs-band {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1831,7 +1832,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   border-top: 1px solid var(--line);
 }
 .staff-edit-payment-pane,
-.staff-edit-tutoring-pane {
+.staff-edit-tutoring-pane,
+.staff-edit-schedule-pane,
+.staff-edit-needs-pane {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1848,15 +1851,40 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-edit-tutoring-pane .staff-edit-field-row {
   grid-column: auto;
 }
+.staff-record-edit-shell .input-grid input.staff-edit-date-input {
+  min-height: 42px;
+  cursor: pointer;
+  color-scheme: light;
+}
+.staff-record-edit-shell .input-grid input.staff-edit-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+}
+.staff-edit-chip-control.subject-multi-select {
+  height: 120px;
+  max-height: 120px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  margin-top: 0;
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px solid #c9cec6;
+  background: var(--canvas);
+}
 .staff-edit-subjects-control {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
   margin-top: 6px;
-  min-height: 42px;
+  height: 42px;
+  max-height: 42px;
   padding: 5px 8px;
   box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid #c9cec6;
   background: var(--canvas);
 }
@@ -1873,6 +1901,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
   text-transform: none;
   letter-spacing: 0;
@@ -1886,6 +1915,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-record-edit-shell .input-grid select.staff-edit-subjects-add,
 .staff-edit-subjects-add {
   flex: 1 1 7.5rem;
+  flex-shrink: 0;
   min-width: 7rem;
   width: auto;
   margin-top: 0;
@@ -1987,7 +2017,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .staff-edit-field-row--5 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .staff-edit-payment-tutoring-band {
+  .staff-edit-payment-tutoring-band,
+  .staff-edit-schedule-needs-band {
     grid-template-columns: 1fr;
   }
 }
