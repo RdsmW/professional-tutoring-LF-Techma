@@ -1404,6 +1404,138 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   color: var(--muted);
   font-size: var(--text-content);
 }
+.tutor-open-hours-panel {
+  margin-bottom: 14px;
+}
+.tutor-open-hours-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.tutor-open-hours-helper {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-content);
+  line-height: 1.35;
+}
+.tutor-open-hours-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #c9cec6;
+  background: var(--canvas);
+}
+.tutor-open-hours-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+}
+.tutor-open-hours-field > span {
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.tutor-open-hours-field select,
+.tutor-open-hours-field input[type="time"] {
+  margin: 0;
+  min-width: 7.5rem;
+  height: 36px;
+}
+.tutor-open-hours-add-btn {
+  height: 36px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+.tutor-open-hours-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-content);
+}
+.tutor-open-hours-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.tutor-open-hours-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.tutor-open-hours-row:last-child {
+  border-bottom: 0;
+}
+.tutor-open-hours-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.tutor-open-hours-day {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--navy);
+  min-width: 5.5rem;
+}
+.tutor-open-hours-range {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.tutor-open-hours-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+}
+.tutor-open-hours-row-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.tutor-open-hours-seats {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.tutor-open-hours-remove {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--navy);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.tutor-open-hours-remove:hover:not(:disabled),
+.tutor-open-hours-remove:focus-visible:not(:disabled) {
+  border-color: var(--navy);
+  background: var(--blue-soft);
+  outline: none;
+}
+.tutor-open-hours-remove:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
 .student-payment-learning-band .family-household-summary,
 .student-payment-learning-band .student-learning-needs-body {
   flex: 1 1 auto;
@@ -3169,6 +3301,11 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .student-payment-learning-band > .panel:last-child{grid-column:1 / -1}
   .tutor-capacity-subjects-band{grid-template-columns:minmax(0,1fr)}
   .tutor-profile-dense .family-household-upper{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tutor-open-hours-add{flex-direction:column;align-items:stretch}
+  .tutor-open-hours-field select,
+  .tutor-open-hours-field input[type="time"],
+  .tutor-open-hours-add-btn{width:100%;min-width:0}
+  .tutor-open-hours-row{align-items:flex-start}
   .match-directory{grid-template-columns:1fr}.report-filter-panel{grid-template-columns:1fr 1fr}.report-controls{grid-column:1/3}.report-metrics{grid-template-columns:1fr 1fr}
   .integration-strip{grid-template-columns:1fr 1fr}
   .integration-status-grid{grid-template-columns:1fr}

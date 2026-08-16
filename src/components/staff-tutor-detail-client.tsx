@@ -46,7 +46,41 @@ type CatalogSubject = {
   category: string | null;
 };
 
+type OpenHourSlot = {
+  id: string;
+  dayOfWeek: number;
+  startTimeLocal: string;
+  endTimeLocal: string;
+  capacitySeats: number;
+  heldSeats: number;
+  bookedSeats: number;
+  label: string | null;
+};
+
 type TutorLifecycleConfirm = "archive" | "restore" | "delete";
+
+const WEEKDAY_OPTIONS = [
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+  { value: 0, label: "Sunday" },
+] as const;
+
+const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function formatTimeLabel(value: string) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return value;
+  const hour = Number.parseInt(match[1]!, 10);
+  const minute = match[2]!;
+  if (!Number.isFinite(hour)) return value;
+  const suffix = hour >= 12 ? "pm" : "am";
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}:${minute}${suffix}`;
+}
 
 function initials(name: string) {
   return (
@@ -167,17 +201,25 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [lifecycleConfirm, setLifecycleConfirm] = useState<TutorLifecycleConfirm | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [openHours, setOpenHours] = useState<OpenHourSlot[]>([]);
+  const [openDay, setOpenDay] = useState("1");
+  const [openStart, setOpenStart] = useState("15:15");
+  const [openEnd, setOpenEnd] = useState("17:15");
+  const [addingHour, setAddingHour] = useState(false);
+  const [removingHourId, setRemovingHourId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [tutorRes, subjectsRes] = await Promise.all([
+      const [tutorRes, subjectsRes, hoursRes] = await Promise.all([
         fetch(`/api/staff/tutors/${tutorId}`),
         fetch("/api/staff/subjects"),
+        fetch(`/api/staff/tutors/${tutorId}/availability`),
       ]);
       const tutorData = await tutorRes.json();
       const subjectsData = await subjectsRes.json();
+      const hoursData = await hoursRes.json();
 
       if (!tutorRes.ok || !tutorData.ok) {
         setError(tutorData.error || "Unable to load tutor.");
@@ -193,6 +235,12 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
 
       if (subjectsRes.ok && subjectsData.ok) {
         setCatalog(subjectsData.subjects ?? []);
+      }
+
+      if (hoursRes.ok && hoursData.ok) {
+        setOpenHours((hoursData.slots as OpenHourSlot[]) ?? []);
+      } else {
+        setOpenHours([]);
       }
     } catch {
       setError("Unable to load tutor.");
@@ -364,6 +412,64 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
       toast.error("Unable to remove subject.");
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function addOpenHour() {
+    if (addingHour) return;
+    const dayOfWeek = Number.parseInt(openDay, 10);
+    setError(null);
+    setAddingHour(true);
+    try {
+      const response = await fetch(`/api/staff/tutors/${tutorId}/availability`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dayOfWeek,
+          startTimeLocal: openStart,
+          endTimeLocal: openEnd,
+          capacitySeats: Number.parseInt(maxSeatsPerSlot, 10) || undefined,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        const msg = data.error || "Unable to add open hour.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      toast.success("Open hour added.");
+      await reload();
+    } catch {
+      setError("Unable to add open hour.");
+      toast.error("Unable to add open hour.");
+    } finally {
+      setAddingHour(false);
+    }
+  }
+
+  async function removeOpenHour(slotId: string) {
+    if (removingHourId) return;
+    setError(null);
+    setRemovingHourId(slotId);
+    try {
+      const response = await fetch(`/api/staff/tutors/${tutorId}/availability/${slotId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        const msg = data.error || "Unable to remove open hour.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      toast.success("Open hour removed.");
+      setOpenHours((prev) => prev.filter((slot) => slot.id !== slotId));
+    } catch {
+      setError("Unable to remove open hour.");
+      toast.error("Unable to remove open hour.");
+    } finally {
+      setRemovingHourId(null);
     }
   }
 
@@ -645,6 +751,99 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           </div>
         </Panel>
       </div>
+
+      <Panel className="family-equal-panel tutor-open-hours-panel">
+        <div className="family-panel-heading">
+          <h2>Open hours</h2>
+        </div>
+        <div className="tutor-open-hours-body">
+          <p className="tutor-open-hours-helper">
+            Weekly times this tutor can be booked. Capacity above sets seats per slot for new hours.
+          </p>
+
+          <div className="tutor-open-hours-add" role="group" aria-label="Add open hour">
+            <label className="tutor-open-hours-field">
+              <span>Day</span>
+              <select
+                value={openDay}
+                aria-label="Day of week"
+                disabled={addingHour}
+                onChange={(e) => setOpenDay(e.target.value)}
+              >
+                {WEEKDAY_OPTIONS.map((day) => (
+                  <option key={day.value} value={day.value}>
+                    {day.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="tutor-open-hours-field">
+              <span>Start</span>
+              <input
+                type="time"
+                value={openStart}
+                aria-label="Start time"
+                disabled={addingHour}
+                onChange={(e) => setOpenStart(e.target.value)}
+              />
+            </label>
+            <label className="tutor-open-hours-field">
+              <span>End</span>
+              <input
+                type="time"
+                value={openEnd}
+                aria-label="End time"
+                disabled={addingHour}
+                onChange={(e) => setOpenEnd(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="primary-button tutor-open-hours-add-btn"
+              disabled={addingHour || !openStart || !openEnd}
+              onClick={() => void addOpenHour()}
+            >
+              {addingHour ? "Adding…" : "Add"}
+            </button>
+          </div>
+
+          {openHours.length === 0 ? (
+            <p className="tutor-open-hours-empty">No open hours yet. Add a weekly time above.</p>
+          ) : (
+            <ul className="tutor-open-hours-list">
+              {openHours.map((slot) => {
+                const day = DAY_LABELS[slot.dayOfWeek] ?? `Day ${slot.dayOfWeek}`;
+                const range = `${formatTimeLabel(slot.startTimeLocal)}–${formatTimeLabel(slot.endTimeLocal)}`;
+                const seatsUsed = slot.heldSeats + slot.bookedSeats;
+                return (
+                  <li key={slot.id} className="tutor-open-hours-row">
+                    <div className="tutor-open-hours-row-main">
+                      <strong className="tutor-open-hours-day">{day}</strong>
+                      <span className="tutor-open-hours-range">{range}</span>
+                      {slot.label ? <span className="tutor-open-hours-label">{slot.label}</span> : null}
+                    </div>
+                    <div className="tutor-open-hours-row-meta">
+                      <span className="tutor-open-hours-seats">
+                        {seatsUsed}/{slot.capacitySeats} seats
+                      </span>
+                      <button
+                        type="button"
+                        className="tutor-open-hours-remove"
+                        disabled={removingHourId === slot.id || addingHour}
+                        aria-label={`Remove ${day} ${range}`}
+                        title="Remove"
+                        onClick={() => void removeOpenHour(slot.id)}
+                      >
+                        {removingHourId === slot.id ? "…" : "Remove"}
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </Panel>
 
       <StaffNotesSection
         notes={tutor.notesList}
