@@ -7,6 +7,7 @@ import { DirectoryViewToggle } from "@/components/directory-view-toggle";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
 import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 
@@ -177,6 +178,12 @@ export function StaffStudentsClient() {
     }
   }
 
+  function exitCreate() {
+    setCreating(false);
+    const path = staffCreateCancelPath(searchParams, "/staff/students");
+    if (path) router.replace(path);
+  }
+
   async function createStudent(event: React.FormEvent) {
     event.preventDefault();
     if (saving) return;
@@ -193,7 +200,12 @@ export function StaffStudentsClient() {
         setError(data.error || "Unable to create student.");
         return;
       }
-      router.push(`/staff/students/${data.studentId}`);
+      if (data.studentId) {
+        router.push(`/staff/students/${data.studentId}`);
+      } else {
+        const path = staffCreateCancelPath(searchParams, "/staff/students");
+        router.push(path ?? "/staff/students");
+      }
     } catch {
       setError("Unable to create student.");
     } finally {
@@ -204,14 +216,7 @@ export function StaffStudentsClient() {
   if (creating) {
     return (
       <section className="wizard-shell panel">
-        <button
-          type="button"
-          className="page-back"
-          onClick={() => {
-            setCreating(false);
-            router.replace("/staff/students");
-          }}
-        >
+        <button type="button" className="page-back" onClick={exitCreate}>
           ← Students
         </button>
         <h2>New student</h2>
@@ -250,14 +255,7 @@ export function StaffStudentsClient() {
           </div>
           {error ? <div className="validation-hint">{error}</div> : null}
           <div className="wizard-footer">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => {
-                setCreating(false);
-                router.replace("/staff/students");
-              }}
-            >
+            <button type="button" className="secondary-button" onClick={exitCreate}>
               Cancel
             </button>
             <button type="submit" className="primary-button" disabled={saving}>

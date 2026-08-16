@@ -11,6 +11,7 @@ import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/comp
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 import { useDirectoryView } from "@/lib/ui/directory-view";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
+import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 const STATUS_OPTIONS = [
@@ -158,6 +159,18 @@ export function StaffFamiliesClient({
     }
   }
 
+  function exitFamilyCreate() {
+    setCreating(false);
+    const path = staffCreateCancelPath(searchParams, "/staff/families");
+    if (path) router.replace(path);
+  }
+
+  function exitGuardianCreate() {
+    setAddingGuardian(false);
+    const path = staffCreateCancelPath(searchParams, "/staff/families");
+    if (path) router.replace(path);
+  }
+
   async function createGuardian(event: React.FormEvent) {
     event.preventDefault();
     if (savingGuardian) return;
@@ -182,7 +195,14 @@ export function StaffFamiliesClient({
         setError(data.error || "Unable to create guardian.");
         return;
       }
-      router.push(`/staff/families/${guardianForm.householdId}`);
+      if (data.guardianId) {
+        router.push(`/staff/guardians/${data.guardianId}`);
+      } else if (guardianForm.householdId) {
+        router.push(`/staff/families/${guardianForm.householdId}`);
+      } else {
+        const path = staffCreateCancelPath(searchParams, "/staff/families");
+        router.push(path ?? "/staff/families");
+      }
     } catch {
       setError("Unable to create guardian.");
     } finally {
@@ -191,27 +211,13 @@ export function StaffFamiliesClient({
   }
 
   if (creating) {
-    return (
-      <StaffNewFamilyWizard
-        onCancel={() => {
-          setCreating(false);
-          router.replace("/staff/families");
-        }}
-      />
-    );
+    return <StaffNewFamilyWizard onCancel={exitFamilyCreate} />;
   }
 
   if (addingGuardian) {
     return (
       <section className="wizard-shell panel">
-        <button
-          type="button"
-          className="page-back"
-          onClick={() => {
-            setAddingGuardian(false);
-            router.replace("/staff/families");
-          }}
-        >
+        <button type="button" className="page-back" onClick={exitGuardianCreate}>
           ← Families
         </button>
         <h2>New guardian</h2>
@@ -282,14 +288,7 @@ export function StaffFamiliesClient({
           </div>
           {error ? <div className="validation-hint">{error}</div> : null}
           <div className="wizard-footer">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => {
-                setAddingGuardian(false);
-                router.replace("/staff/families");
-              }}
-            >
+            <button type="button" className="secondary-button" onClick={exitGuardianCreate}>
               Cancel
             </button>
             <button type="submit" className="primary-button" disabled={savingGuardian}>

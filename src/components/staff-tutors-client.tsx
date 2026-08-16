@@ -7,6 +7,7 @@ import { DirectoryViewToggle } from "@/components/directory-view-toggle";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
 import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type TutorRow = {
@@ -135,6 +136,12 @@ export function StaffTutorsClient() {
     }
   }
 
+  function exitCreate() {
+    setCreating(false);
+    const path = staffCreateCancelPath(searchParams, "/staff/tutors");
+    if (path) router.replace(path);
+  }
+
   async function createTutor(event: React.FormEvent) {
     event.preventDefault();
     if (saving) return;
@@ -159,7 +166,12 @@ export function StaffTutorsClient() {
         setError(data.error || "Unable to create tutor.");
         return;
       }
-      router.push(`/staff/tutors/${data.tutorId}`);
+      if (data.tutorId) {
+        router.push(`/staff/tutors/${data.tutorId}`);
+      } else {
+        const path = staffCreateCancelPath(searchParams, "/staff/tutors");
+        router.push(path ?? "/staff/tutors");
+      }
     } catch {
       setError("Unable to create tutor.");
     } finally {
@@ -170,14 +182,7 @@ export function StaffTutorsClient() {
   if (creating) {
     return (
       <section className="wizard-shell panel">
-        <button
-          type="button"
-          className="page-back"
-          onClick={() => {
-            setCreating(false);
-            router.replace("/staff/tutors");
-          }}
-        >
+        <button type="button" className="page-back" onClick={exitCreate}>
           ← Tutors
         </button>
         <h2>Add tutor</h2>
@@ -227,7 +232,7 @@ export function StaffTutorsClient() {
           </div>
           {error ? <div className="validation-hint">{error}</div> : null}
           <div className="wizard-footer">
-            <button type="button" className="secondary-button" onClick={() => setCreating(false)}>
+            <button type="button" className="secondary-button" onClick={exitCreate}>
               Cancel
             </button>
             <button type="submit" className="primary-button" disabled={saving}>

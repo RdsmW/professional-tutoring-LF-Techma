@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
+import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 const STEPS = ["Match", "Household", "Guardians", "Students", "Review"] as const;
@@ -69,6 +70,7 @@ const emptyDraft: Draft = {
 
 export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [candidates, setCandidates] = useState<MatchCandidate[]>([]);
@@ -226,7 +228,12 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
         setError(data.error || "Unable to create family.");
         return;
       }
-      router.push(`/staff/families/${data.familyId}`);
+      if (data.familyId) {
+        router.push(`/staff/families/${data.familyId}`);
+      } else {
+        const path = staffCreateCancelPath(searchParams, "/staff/families");
+        router.push(path ?? "/staff/families");
+      }
     } catch {
       setError("Unable to create family.");
     } finally {

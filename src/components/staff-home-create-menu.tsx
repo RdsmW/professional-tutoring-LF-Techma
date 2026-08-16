@@ -41,10 +41,10 @@ function IconTutor() {
 }
 
 const ACTIONS: Array<{ href: string; label: string; icon: ReactNode }> = [
-  { href: "/staff/students?new=1", label: "New Student", icon: <IconStudent /> },
-  { href: "/staff/families?newGuardian=1", label: "New Guardian", icon: <IconGuardian /> },
-  { href: "/staff/families?new=1", label: "New Family", icon: <IconFamily /> },
-  { href: "/staff/tutors?new=1", label: "New Tutor", icon: <IconTutor /> },
+  { href: "/staff/students?new=1&from=dashboard", label: "New Student", icon: <IconStudent /> },
+  { href: "/staff/families?newGuardian=1&from=dashboard", label: "New Guardian", icon: <IconGuardian /> },
+  { href: "/staff/families?new=1&from=dashboard", label: "New Family", icon: <IconFamily /> },
+  { href: "/staff/tutors?new=1&from=dashboard", label: "New Tutor", icon: <IconTutor /> },
 ];
 
 export function StaffHomeCreateMenu() {
