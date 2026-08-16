@@ -1584,23 +1584,23 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                   <small>Zoho CRM ID</small>
                   <strong>{family.zohoCrmId || "—"}</strong>
                 </span>
+                <span className="family-household-field-zoho-url">
+                  <small>Zoho CRM URL</small>
+                  {zohoLink ? (
+                    <a
+                      href={zohoLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="family-zoho-url-link"
+                      title={zohoLink}
+                    >
+                      {zohoLink}
+                    </a>
+                  ) : (
+                    <strong>—</strong>
+                  )}
+                </span>
               </div>
-              <span className="family-household-field-zoho-url">
-                <small>Zoho CRM URL</small>
-                {zohoLink ? (
-                  <a
-                    href={zohoLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="family-zoho-url-link"
-                    title={zohoLink}
-                  >
-                    {zohoLink}
-                  </a>
-                ) : (
-                  <strong>—</strong>
-                )}
-              </span>
             </div>
           </div>
         </Panel>
