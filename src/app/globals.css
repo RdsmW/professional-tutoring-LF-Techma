@@ -1679,6 +1679,13 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   width: 100%;
   min-width: 0;
 }
+/* Student Profile: 4 equal columns on identity/school bands; description full width */
+.student-profile-dense .family-household-upper {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.student-profile-dense .student-profile-description-row {
+  grid-template-columns: minmax(0, 1fr);
+}
 /* Guardian Identity: Row1 First|Last|Email|Phone 25% each; Row2 address|other 50%|50% */
 .guardian-identity-dense .family-household-upper {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1855,6 +1862,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .family-household-upper {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
+  .student-profile-dense .family-household-upper {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
   .guardian-identity-dense .family-household-upper {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -1875,6 +1885,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .family-household-lower {
     grid-template-columns: 1fr;
   }
+  .student-profile-dense .family-household-upper,
+  .student-profile-dense .student-profile-description-row,
   .guardian-identity-dense .family-household-upper,
   .guardian-identity-dense .guardian-identity-address-row,
   .guardian-household-dense .family-household-upper {

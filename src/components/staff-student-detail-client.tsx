@@ -763,7 +763,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
       {editing && profileForm ? (
         <Panel title="Edit student" className="family-equal-panel">
           <form onSubmit={(e) => void saveProfile(e)} className="input-grid family-household-edit-grid">
-            <p className="guardian-edit-section-label">Identity</p>
+            <p className="guardian-edit-section-label">Legal name · Gender · Birthdate · Phone</p>
             <label>
               First name
               <input
@@ -779,27 +779,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
                 required
               />
-            </label>
-            <label>
-              Preferred name
-              <input
-                value={profileForm.displayName}
-                onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Lifecycle
-              <select
-                value={profileForm.lifecycle}
-                onChange={(e) => setProfileForm({ ...profileForm, lifecycle: e.target.value })}
-              >
-                {LIFECYCLE_OPTIONS.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
             </label>
             <label>
               Gender
@@ -823,6 +802,29 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 placeholder="YYYY-MM-DD"
               />
             </label>
+            <label>
+              Phone
+              <input
+                type="tel"
+                value={profileForm.cellPhone}
+                onChange={(e) => setProfileForm({ ...profileForm, cellPhone: e.target.value })}
+              />
+            </label>
+            <label>
+              Lifecycle
+              <select
+                value={profileForm.lifecycle}
+                onChange={(e) => setProfileForm({ ...profileForm, lifecycle: e.target.value })}
+              >
+                {LIFECYCLE_OPTIONS.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <p className="guardian-edit-section-label">Grade · Grade Year · School · Availability</p>
             <label>
               Grade
               <select
@@ -858,16 +860,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 onChange={(e) => setProfileForm({ ...profileForm, schoolName: e.target.value })}
               />
             </label>
-            <label>
-              Phone
-              <input
-                type="tel"
-                value={profileForm.cellPhone}
-                onChange={(e) => setProfileForm({ ...profileForm, cellPhone: e.target.value })}
-              />
-            </label>
-
-            <p className="guardian-edit-section-label">Availability</p>
             <label style={{ gridColumn: "1 / -1" }}>
               Availability
               <textarea
@@ -877,17 +869,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               />
             </label>
 
-            <p className="guardian-edit-section-label">Description</p>
-            <label style={{ gridColumn: "1 / -1" }}>
-              Description
-              <textarea
-                value={profileForm.description}
-                onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
-                rows={3}
-              />
-            </label>
-
-            <p className="guardian-edit-section-label">Mailing address</p>
+            <p className="guardian-edit-section-label">Mailing address · Zoho CRM ID · Zoho CRM URL</p>
             <label>
               Street
               <AddressAutocompleteInput
@@ -936,8 +918,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               Country
               <input value="United States" readOnly />
             </label>
-
-            <p className="guardian-edit-section-label">CRM</p>
             <label>
               Zoho CRM ID
               <input
@@ -953,13 +933,13 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               />
             </label>
 
-            <p className="guardian-edit-section-label">Emergency contact</p>
+            <p className="guardian-edit-section-label">Description</p>
             <label style={{ gridColumn: "1 / -1" }}>
-              Emergency contact
+              Description
               <textarea
-                value={profileForm.emergencyContact}
-                onChange={(e) => setProfileForm({ ...profileForm, emergencyContact: e.target.value })}
-                rows={2}
+                value={profileForm.description}
+                onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
+                rows={3}
               />
             </label>
 
@@ -1157,17 +1137,13 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
             <h2>Profile</h2>
           </div>
           <div className="family-household-summary">
-            <div className="family-household-dense">
-              <div className="family-household-upper" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+            <div className="family-household-dense student-profile-dense">
+              <div className="family-household-upper">
                 <span>
                   <small>Legal name</small>
                   <strong>
-                    {student.firstName} {student.lastName}
+                    {[student.firstName, student.lastName].filter(Boolean).join(" ") || "—"}
                   </strong>
-                </span>
-                <span>
-                  <small>Preferred name</small>
-                  <strong>{student.displayName}</strong>
                 </span>
                 <span>
                   <small>Gender</small>
@@ -1177,6 +1153,12 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   <small>Birthdate</small>
                   <strong>{student.birthdate || "—"}</strong>
                 </span>
+                <span>
+                  <small>Phone</small>
+                  <strong>{student.cellPhone || "—"}</strong>
+                </span>
+              </div>
+              <div className="family-household-upper">
                 <span>
                   <small>Grade</small>
                   <strong>{student.gradeLabel || "—"}</strong>
@@ -1190,18 +1172,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   <strong>{student.schoolName || "—"}</strong>
                 </span>
                 <span>
-                  <small>Phone</small>
-                  <strong>{student.cellPhone || "—"}</strong>
-                </span>
-                <span>
                   <small>Availability</small>
                   <strong style={{ whiteSpace: "pre-wrap" }}>{student.availabilityNotes || "—"}</strong>
-                </span>
-              </div>
-              <div className="family-household-lower" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
-                <span style={{ gridColumn: "1 / -1" }}>
-                  <small>Description</small>
-                  <strong style={{ whiteSpace: "pre-wrap" }}>{student.description || "—"}</strong>
                 </span>
               </div>
               <div className="family-household-lower">
@@ -1232,10 +1204,10 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   )}
                 </span>
               </div>
-              <div className="family-household-lower" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
+              <div className="family-household-lower student-profile-description-row">
                 <span>
-                  <small>Emergency contact</small>
-                  <strong style={{ whiteSpace: "pre-wrap" }}>{student.emergencyContact || "—"}</strong>
+                  <small>Description</small>
+                  <strong style={{ whiteSpace: "pre-wrap" }}>{student.description || "—"}</strong>
                 </span>
               </div>
             </div>
