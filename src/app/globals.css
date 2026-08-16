@@ -1279,15 +1279,107 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   /* Tutoring | Payment | Learning needs ~48% / 20% / 32% */
   grid-template-columns: minmax(0, 48fr) minmax(0, 20fr) minmax(0, 32fr);
 }
+.tutor-capacity-subjects-band {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+  margin-top: 0;
+  margin-bottom: 14px;
+  align-items: stretch;
+}
 .family-activity-band > .panel,
 .family-notes-layout > .panel,
-.student-payment-learning-band > .panel {
+.student-payment-learning-band > .panel,
+.tutor-capacity-subjects-band > .panel {
   margin-bottom: 0;
   min-width: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+.tutor-capacity-body,
+.tutor-subjects-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.tutor-capacity-label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.tutor-capacity-input {
+  width: 100%;
+  max-width: 140px;
+  margin: 0;
+}
+.tutor-capacity-helper {
+  margin: 10px 0 16px;
+  color: var(--muted);
+  font-size: var(--text-content);
+  line-height: 1.4;
+}
+.tutor-capacity-body .primary-button {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.tutor-profile-dense .family-household-upper {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.tutor-subjects-assign {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.tutor-subjects-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-content);
+}
+.tutor-subjects-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tutor-subject-row {
+  border-top: 1px solid var(--line);
+  padding: 8px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.tutor-subject-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.tutor-subject-row strong,
+.tutor-subject-row small {
+  display: block;
+}
+.tutor-subject-row strong {
+  font-size: var(--text-content);
+  line-height: 1.3;
+}
+.tutor-subject-row small {
+  margin-top: 2px;
+  font-size: var(--text-content);
+  color: var(--muted);
+}
+.tutor-subject-row .secondary-button {
+  height: 30px;
+  flex-shrink: 0;
+  padding: 0 10px;
 }
 .student-payment-learning-band .family-household-summary,
 .student-payment-learning-band .student-learning-needs-body {
@@ -2195,6 +2287,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .guardian-household-dense .family-household-upper {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
+  .tutor-profile-dense .family-household-upper {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
   .family-household-field-payer {
     grid-column: 1 / -1;
   }
@@ -2217,7 +2312,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .student-tutoring-dense .student-tutoring-rates-row,
   .guardian-identity-dense .family-household-upper,
   .guardian-identity-dense .guardian-identity-address-row,
-  .guardian-household-dense .family-household-upper {
+  .guardian-household-dense .family-household-upper,
+  .tutor-profile-dense .family-household-upper {
     grid-template-columns: 1fr;
   }
   .family-household-field-payer {
@@ -3028,6 +3124,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   /* Tablet: Tutoring | Payment on row 1; Learning needs full width below */
   .student-payment-learning-band{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .student-payment-learning-band > .panel:last-child{grid-column:1 / -1}
+  .tutor-capacity-subjects-band{grid-template-columns:minmax(0,1fr)}
+  .tutor-profile-dense .family-household-upper{grid-template-columns:repeat(2,minmax(0,1fr))}
   .match-directory{grid-template-columns:1fr}.report-filter-panel{grid-template-columns:1fr 1fr}.report-controls{grid-column:1/3}.report-metrics{grid-template-columns:1fr 1fr}
   .integration-strip{grid-template-columns:1fr 1fr}
   .integration-status-grid{grid-template-columns:1fr}

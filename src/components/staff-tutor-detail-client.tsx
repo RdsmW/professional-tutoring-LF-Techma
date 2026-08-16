@@ -3,9 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { IconPencil } from "@/components/staff-action-icons";
+import { AppToastHost, useAppToast } from "@/components/app-toast";
+import {
+  IconArchive,
+  IconPencil,
+  IconRestore,
+  IconTrash,
+  StaffIconButton,
+} from "@/components/staff-action-icons";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
-import { PageIntro, Panel } from "@/components/ui";
+import { Panel } from "@/components/ui";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type TutorDetail = {
@@ -39,9 +46,115 @@ type CatalogSubject = {
   category: string | null;
 };
 
+type TutorLifecycleConfirm = "archive" | "restore" | "delete";
+
+function initials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("") || "TU"
+  );
+}
+
+function formatMailingAddressLines(tutor: {
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+}): string[] {
+  const hasLocalAddress = Boolean(
+    tutor.addressLine1 || tutor.addressLine2 || tutor.city || tutor.state || tutor.postalCode,
+  );
+  if (!hasLocalAddress) return [];
+
+  const lines: string[] = [];
+  const line1 = (tutor.addressLine1 || "").trim();
+  const line2 = (tutor.addressLine2 || "").trim();
+  if (line1 && line2) lines.push(`${line1}, ${line2}`);
+  else if (line1 || line2) lines.push(line1 || line2);
+
+  const city = (tutor.city || "").trim();
+  const state = (tutor.state || "").trim();
+  const postal = (tutor.postalCode || "").trim();
+  const cityStateZip = [city, [state, postal].filter(Boolean).join(" ").trim()].filter(Boolean).join(", ");
+  if (cityStateZip) lines.push(cityStateZip);
+
+  const country = (tutor.country || "").trim();
+  if (country && country !== "United States" && country !== "US") lines.push(country);
+
+  return lines;
+}
+
+function ConfirmActionModal({
+  title,
+  body,
+  confirmLabel,
+  destructive,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onCancel();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [busy, onCancel]);
+
+  return (
+    <div
+      className="staff-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onCancel();
+      }}
+    >
+      <div
+        className="staff-modal staff-confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="staff-tutor-confirm-modal-title"
+      >
+        <h3 id="staff-tutor-confirm-modal-title">{title}</h3>
+        <div className="staff-confirm-modal-body">
+          <p>{body}</p>
+        </div>
+        <div className="staff-modal-actions">
+          <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={destructive ? "danger-button" : "primary-button"}
+            disabled={busy}
+            onClick={onConfirm}
+          >
+            {busy ? "Working…" : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useAppToast();
   const deepLinkEdit = searchParams.get("edit") === "1";
   const editDeepLinkHandled = useRef(false);
   const [tutor, setTutor] = useState<TutorDetail | null>(null);
@@ -50,11 +163,11 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [maxSeatsPerSlot, setMaxSeatsPerSlot] = useState("1");
   const [savingSeats, setSavingSeats] = useState(false);
-  const [togglingActive, setTogglingActive] = useState(false);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  const [lifecycleConfirm, setLifecycleConfirm] = useState<TutorLifecycleConfirm | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -112,29 +225,58 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
     }
   }, [availableSubjects, selectedSubjectId]);
 
-  async function patchTutor(body: Record<string, unknown>, mode: "seats" | "active") {
+  async function saveSeats() {
+    const seats = Number.parseInt(maxSeatsPerSlot, 10);
     setError(null);
-    setMessage(null);
-    if (mode === "seats") setSavingSeats(true);
-    if (mode === "active") setTogglingActive(true);
+    setSavingSeats(true);
     try {
       const response = await fetch(`/api/staff/tutors/${tutorId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ maxSeatsPerSlot: seats }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to update tutor.");
+        const msg = data.error || "Unable to update capacity.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
-      setMessage("Saved.");
+      toast.success("Capacity saved.");
       await reload();
     } catch {
-      setError("Unable to update tutor.");
+      setError("Unable to update capacity.");
+      toast.error("Unable to update capacity.");
     } finally {
       setSavingSeats(false);
-      setTogglingActive(false);
+    }
+  }
+
+  async function setActiveStatus(active: boolean) {
+    if (lifecycleBusy) return;
+    setLifecycleBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/staff/tutors/${tutorId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        const msg = data.error || "Unable to update status.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      setLifecycleConfirm(null);
+      toast.success(active ? "Tutor restored." : "Tutor archived.");
+      await reload();
+    } catch {
+      setError("Unable to update status.");
+      toast.error("Unable to update status.");
+    } finally {
+      setLifecycleBusy(false);
     }
   }
 
@@ -185,10 +327,10 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   async function assignSubject() {
     if (!selectedSubjectId) {
       setError("Select a subject to assign.");
+      toast.error("Select a subject to assign.");
       return;
     }
     setError(null);
-    setMessage(null);
     setAssigning(true);
     try {
       const response = await fetch(`/api/staff/tutors/${tutorId}/subjects`, {
@@ -198,14 +340,17 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to assign subject.");
+        const msg = data.error || "Unable to assign subject.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
       setSelectedSubjectId("");
-      setMessage("Subject assigned.");
+      toast.success("Subject assigned.");
       await reload();
     } catch {
       setError("Unable to assign subject.");
+      toast.error("Unable to assign subject.");
     } finally {
       setAssigning(false);
     }
@@ -213,7 +358,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
 
   async function removeSubject(subjectId: string) {
     setError(null);
-    setMessage(null);
     setRemovingId(subjectId);
     try {
       const response = await fetch(`/api/staff/tutors/${tutorId}/subjects/${subjectId}`, {
@@ -221,36 +365,40 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to remove subject.");
+        const msg = data.error || "Unable to remove subject.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
-      setMessage("Subject removed.");
+      toast.success("Subject removed.");
       await reload();
     } catch {
       setError("Unable to remove subject.");
+      toast.error("Unable to remove subject.");
     } finally {
       setRemovingId(null);
     }
   }
 
   async function deleteTutor() {
-    if (!tutor?.canDelete || togglingActive) return;
-    if (!window.confirm("Permanently delete this tutor? This cannot be undone.")) return;
+    if (!tutor?.canDelete || lifecycleBusy) return;
+    setLifecycleBusy(true);
     setError(null);
-    setMessage(null);
-    setTogglingActive(true);
     try {
       const response = await fetch(`/api/staff/tutors/${tutorId}`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setError(data.error || "Unable to delete tutor.");
+        const msg = data.error || "Unable to delete tutor.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
       router.push("/staff/tutors");
     } catch {
       setError("Unable to delete tutor.");
+      toast.error("Unable to delete tutor.");
     } finally {
-      setTogglingActive(false);
+      setLifecycleBusy(false);
     }
   }
 
@@ -258,22 +406,92 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   if (error && !tutor) return <p className="form-error">{error}</p>;
   if (!tutor) return null;
 
+  const statusKey = tutor.active ? "active" : "archived";
+  const addressLines = formatMailingAddressLines(tutor);
+
+  const lifecycleButtons: Array<{
+    id: string;
+    label: string;
+    tone: "archive" | "restore" | "danger";
+    onClick: () => void;
+    icon: "archive" | "restore" | "delete";
+  }> = [];
+  if (!tutor.active) {
+    lifecycleButtons.push({
+      id: "restore",
+      label: "Restore",
+      tone: "restore",
+      onClick: () => setLifecycleConfirm("restore"),
+      icon: "restore",
+    });
+  } else {
+    lifecycleButtons.push({
+      id: "archive",
+      label: "Archive",
+      tone: "archive",
+      onClick: () => setLifecycleConfirm("archive"),
+      icon: "archive",
+    });
+  }
+  if (tutor.canDelete) {
+    lifecycleButtons.push({
+      id: "delete",
+      label: "Delete",
+      tone: "danger",
+      onClick: () => setLifecycleConfirm("delete"),
+      icon: "delete",
+    });
+  }
+
+  const lifecycleConfirmCopy: Record<
+    TutorLifecycleConfirm,
+    { title: string; body: string; confirmLabel: string; destructive?: boolean }
+  > = {
+    archive: {
+      title: "Archive this tutor?",
+      body: "Archived tutors are hidden from the default Tutors list. You can restore them later.",
+      confirmLabel: "Archive",
+    },
+    restore: {
+      title: "Restore this tutor?",
+      body: "This tutor will appear in the active Tutors list again.",
+      confirmLabel: "Restore",
+    },
+    delete: {
+      title: "Permanently delete this tutor?",
+      body: "This cannot be undone. Only tutors with no open bookings can be deleted.",
+      confirmLabel: "Delete",
+      destructive: true,
+    },
+  };
+
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-          marginBottom: 12,
-        }}
-      >
+      <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
+
+      {lifecycleConfirm ? (
+        <ConfirmActionModal
+          title={lifecycleConfirmCopy[lifecycleConfirm].title}
+          body={lifecycleConfirmCopy[lifecycleConfirm].body}
+          confirmLabel={lifecycleConfirmCopy[lifecycleConfirm].confirmLabel}
+          destructive={lifecycleConfirmCopy[lifecycleConfirm].destructive}
+          busy={lifecycleBusy}
+          onCancel={() => {
+            if (!lifecycleBusy) setLifecycleConfirm(null);
+          }}
+          onConfirm={() => {
+            if (lifecycleConfirm === "archive") void setActiveStatus(false);
+            else if (lifecycleConfirm === "restore") void setActiveStatus(true);
+            else void deleteTutor();
+          }}
+        />
+      ) : null}
+
+      <div className="family-detail-topbar">
         <Link href="/staff/tutors" className="page-back">
           ← Tutors
         </Link>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="family-detail-topbar-actions">
           <Link
             href={`/staff/tutors/${tutorId}/edit`}
             className="staff-icon-btn staff-icon-btn-edit"
@@ -282,124 +500,178 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           >
             <IconPencil size={15} />
           </Link>
-          {!tutor.active ? (
-            <button
-              type="button"
-              className="action-btn action-btn-restore"
-              disabled={togglingActive}
-              onClick={() => void patchTutor({ active: true }, "active")}
+          {lifecycleButtons.map((action) => (
+            <StaffIconButton
+              key={action.id}
+              label={action.label}
+              title={action.label}
+              tone={action.tone}
+              disabled={lifecycleBusy}
+              onClick={action.onClick}
             >
-              {togglingActive ? "Updating…" : "Restore"}
-            </button>
-          ) : tutor.canDelete ? (
-            <button
-              type="button"
-              className="action-btn action-btn-delete"
-              disabled={togglingActive}
-              onClick={() => void deleteTutor()}
-            >
-              Delete
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="action-btn action-btn-archive"
-              disabled={togglingActive}
-              onClick={() => void patchTutor({ active: false }, "active")}
-            >
-              {togglingActive ? "Updating…" : "Archive"}
-            </button>
-          )}
+              {action.icon === "archive" ? (
+                <IconArchive size={15} />
+              ) : action.icon === "restore" ? (
+                <IconRestore size={15} />
+              ) : (
+                <IconTrash size={15} />
+              )}
+            </StaffIconButton>
+          ))}
         </div>
       </div>
-      <PageIntro
-        title={tutor.displayName}
-        action={
-          <span className={`pill ${statusTone(tutor.active ? "active" : "archived")}`}>
-            {formatStatusLabel(tutor.active ? "active" : "archived")}
-          </span>
-        }
-      />
+
+      <section className="family-record-hero">
+        <span className="avatar navy">{initials(tutor.displayName)}</span>
+        <div className="family-record-hero-copy">
+          <h2>{tutor.displayName}</h2>
+        </div>
+        <span className={`pill family-record-hero-status-pill ${statusTone(statusKey)}`}>
+          {formatStatusLabel(statusKey)}
+        </span>
+      </section>
+
       {error ? <p className="form-error">{error}</p> : null}
-      {message ? <p style={{ fontSize: 14, marginBottom: 12 }}>{message}</p> : null}
 
-      <div className="profile-layout">
-        <Panel title="Profile" eyebrow="Tutor">
-          <div className="family-detail-grid profile-detail-grid">
-            <span>
-              <small>Email</small>
-              <strong>{tutor.email || "—"}</strong>
-            </span>
-            <span>
-              <small>Phone</small>
-              <strong>{tutor.phone || "—"}</strong>
-            </span>
-            <span>
-              <small>Status</small>
-              <strong>{tutor.active ? "Active" : "Archived"}</strong>
-            </span>
-            <span>
-              <small>Workload</small>
-              <strong>
-                {tutor.workloadCount} open booking{tutor.workloadCount === 1 ? "" : "s"}
-              </strong>
-            </span>
+      <div className="family-detail-layout family-detail-stack">
+        <Panel className="family-equal-panel">
+          <div className="family-panel-heading">
+            <h2>Profile</h2>
           </div>
-        </Panel>
-
-        <Panel title="Mailing address">
-          <div className="family-detail-grid profile-detail-grid">
-            <span>
-              <small>Street</small>
-              <strong>{tutor.addressLine1 || "—"}</strong>
-            </span>
-            <span>
-              <small>Line 2</small>
-              <strong>{tutor.addressLine2 || "—"}</strong>
-            </span>
-            <span>
-              <small>City</small>
-              <strong>{tutor.city || "—"}</strong>
-            </span>
-            <span>
-              <small>State</small>
-              <strong>{tutor.state || "—"}</strong>
-            </span>
-            <span>
-              <small>ZIP</small>
-              <strong>{tutor.postalCode || "—"}</strong>
-            </span>
-            <span>
-              <small>Country</small>
-              <strong>{tutor.country || "United States"}</strong>
-            </span>
+          <div className="family-household-summary">
+            <div className="family-household-dense tutor-profile-dense">
+              <div className="family-household-upper">
+                <span>
+                  <small>Name</small>
+                  <strong>{tutor.displayName || "—"}</strong>
+                </span>
+                <span>
+                  <small>Email</small>
+                  <strong>{tutor.email || "—"}</strong>
+                </span>
+                <span>
+                  <small>Phone</small>
+                  <strong>{tutor.phone || "—"}</strong>
+                </span>
+                <span>
+                  <small>Workload</small>
+                  <strong>
+                    {tutor.workloadCount} open booking{tutor.workloadCount === 1 ? "" : "s"}
+                  </strong>
+                </span>
+              </div>
+              <div className="family-household-lower">
+                <span className="family-household-field-address">
+                  <small>Mailing address</small>
+                  {addressLines.length ? (
+                    <div className="family-household-address-lines">
+                      {addressLines.map((line, index) => (
+                        <span key={`${index}-${line}`}>{line}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <strong>—</strong>
+                  )}
+                </span>
+              </div>
+            </div>
           </div>
         </Panel>
       </div>
 
-      <div className="profile-layout">
-        <Panel title="Capacity">
-          <label>
-            Max seats per slot
+      <div className="tutor-capacity-subjects-band">
+        <Panel className="family-equal-panel tutor-capacity-panel">
+          <div className="family-panel-heading">
+            <h2>Capacity</h2>
+          </div>
+          <div className="tutor-capacity-body">
+            <label className="tutor-capacity-label" htmlFor="tutor-max-seats">
+              Max seats per slot
+            </label>
             <input
+              id="tutor-max-seats"
               type="number"
               min={1}
+              className="tutor-capacity-input"
               value={maxSeatsPerSlot}
               onChange={(e) => setMaxSeatsPerSlot(e.target.value)}
             />
-          </label>
-          <button
-            type="button"
-            className="primary-button"
-            style={{ marginTop: 12 }}
-            disabled={savingSeats}
-            onClick={() => {
-              const seats = Number.parseInt(maxSeatsPerSlot, 10);
-              void patchTutor({ maxSeatsPerSlot: seats }, "seats");
-            }}
-          >
-            {savingSeats ? "Saving…" : "Save seats"}
-          </button>
+            <p className="tutor-capacity-helper">
+              How many students can book this tutor in one time slot.
+            </p>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={savingSeats}
+              onClick={() => void saveSeats()}
+            >
+              {savingSeats ? "Saving…" : "Save seats"}
+            </button>
+          </div>
+        </Panel>
+
+        <Panel className="family-equal-panel tutor-subjects-panel">
+          <div className="family-panel-heading">
+            <h2>Subjects</h2>
+          </div>
+          <div className="tutor-subjects-body">
+            <div className="tutor-subjects-assign">
+              <label style={{ flex: "1 1 180px", margin: 0 }} htmlFor="tutor-assign-subject">
+                Assign subject
+                <select
+                  id="tutor-assign-subject"
+                  value={selectedSubjectId}
+                  onChange={(e) => setSelectedSubjectId(e.target.value)}
+                  disabled={assigning || availableSubjects.length === 0}
+                >
+                  <option value="">
+                    {availableSubjects.length === 0 ? "No subjects available" : "Select subject…"}
+                  </option>
+                  {availableSubjects.map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name}
+                      {subject.code ? ` (${subject.code})` : ""}
+                      {subject.category ? ` · ${subject.category}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={assigning || !selectedSubjectId}
+                onClick={() => void assignSubject()}
+              >
+                {assigning ? "Adding…" : "Add"}
+              </button>
+            </div>
+
+            {tutor.subjects.length === 0 ? (
+              <p className="tutor-subjects-empty">No subjects linked yet.</p>
+            ) : (
+              <div className="tutor-subjects-list">
+                {tutor.subjects.map((subject) => (
+                  <div key={subject.id} className="tutor-subject-row">
+                    <div>
+                      <strong>{subject.name}</strong>
+                      <small>
+                        {subject.code}
+                        {subject.priority ? ` · priority ${subject.priority}` : ""}
+                      </small>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={removingId === subject.id}
+                      onClick={() => void removeSubject(subject.id)}
+                    >
+                      {removingId === subject.id ? "Removing…" : "Remove"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </Panel>
       </div>
 
@@ -408,76 +680,12 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         onCreate={createNote}
         onUpdate={updateNote}
         onDelete={deleteNote}
-        onSuccess={(text) => setMessage(text)}
-        onError={(text) => setError(text)}
+        onSuccess={(text) => toast.success(text)}
+        onError={(text) => {
+          setError(text);
+          toast.error(text);
+        }}
       />
-
-      <Panel title="Subjects">
-        <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap", marginBottom: 12 }}>
-          <label style={{ flex: "1 1 220px", margin: 0 }}>
-            Assign subject
-            <select
-              value={selectedSubjectId}
-              onChange={(e) => setSelectedSubjectId(e.target.value)}
-              disabled={assigning || availableSubjects.length === 0}
-            >
-              <option value="">
-                {availableSubjects.length === 0 ? "No subjects available" : "Select subject…"}
-              </option>
-              {availableSubjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                  {subject.code ? ` (${subject.code})` : ""}
-                  {subject.category ? ` · ${subject.category}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="primary-button"
-            disabled={assigning || !selectedSubjectId}
-            onClick={() => void assignSubject()}
-          >
-            {assigning ? "Adding…" : "Add"}
-          </button>
-        </div>
-
-        {tutor.subjects.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 14 }}>No subjects linked yet.</p>
-        ) : (
-          tutor.subjects.map((subject) => (
-            <div
-              key={subject.id}
-              style={{
-                borderTop: "1px solid var(--line)",
-                padding: "10px 0",
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <strong>{subject.name}</strong>
-                <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--muted)" }}>
-                  {subject.code}
-                  {subject.priority ? ` · priority ${subject.priority}` : ""}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="secondary-button"
-                style={{ height: 32, flexShrink: 0 }}
-                disabled={removingId === subject.id}
-                onClick={() => void removeSubject(subject.id)}
-              >
-                {removingId === subject.id ? "Removing…" : "Remove"}
-              </button>
-            </div>
-          ))
-        )}
-      </Panel>
     </>
   );
 }
