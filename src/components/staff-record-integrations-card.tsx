@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Panel } from "@/components/ui";
 
 export type StaffRecordIntegrationsInput = {
@@ -17,7 +18,7 @@ export type StaffRecordIntegrationsInput = {
   quickbooksUrl?: string | null;
   /**
    * Which extra integrations this entity type stores.
-   * Zoho CRM ID / URL always show (empty = em dash).
+   * Only filled values render; empty card is omitted.
    */
   supports?: {
     stripe?: boolean;
@@ -29,11 +30,9 @@ export type StaffRecordIntegrationsInput = {
 type IntegrationField = {
   id: string;
   label: string;
-  value: string | null;
+  value: string;
   href?: string | null;
 };
-
-const EMPTY = "—";
 
 function trimmed(value: string | null | undefined) {
   const next = (value ?? "").trim();
@@ -46,15 +45,7 @@ function externalHref(value: string | null) {
   return null;
 }
 
-function display(value: string | null) {
-  return value || EMPTY;
-}
-
-/**
- * Field-value Integrations card for Family / Guardian / Student / Tutor detail.
- * No live API calls — uses IDs/URLs already stored on the record.
- */
-export function StaffRecordIntegrationsCard({
+function buildIntegrationFields({
   zohoId = null,
   zohoUrl = null,
   stripeCustomerId = null,
@@ -64,7 +55,7 @@ export function StaffRecordIntegrationsCard({
   quickbooksId = null,
   quickbooksUrl = null,
   supports: supportsProp,
-}: StaffRecordIntegrationsInput) {
+}: StaffRecordIntegrationsInput): IntegrationField[] {
   const supports = {
     stripe: false,
     acuity: false,
@@ -75,68 +66,100 @@ export function StaffRecordIntegrationsCard({
   const zohoUrlValue = trimmed(zohoUrl);
   const acuityUrlValue = trimmed(acuityUrl);
   const quickbooksUrlValue = trimmed(quickbooksUrl);
+  const fields: IntegrationField[] = [];
 
-  const fields: IntegrationField[] = [
-    { id: "zoho-id", label: "Zoho CRM ID", value: trimmed(zohoId) },
-    {
+  const zohoIdValue = trimmed(zohoId);
+  if (zohoIdValue) fields.push({ id: "zoho-id", label: "Zoho CRM ID", value: zohoIdValue });
+  if (zohoUrlValue) {
+    fields.push({
       id: "zoho-url",
       label: "Zoho CRM URL",
       value: zohoUrlValue,
       href: externalHref(zohoUrlValue),
-    },
-  ];
+    });
+  }
 
   if (supports.stripe) {
-    fields.push({ id: "stripe-customer", label: "Stripe customer ID", value: trimmed(stripeCustomerId) });
-    fields.push({
-      id: "stripe-payment-method",
-      label: "Stripe payment method ID",
-      value: trimmed(stripePaymentMethodId),
-    });
+    const stripeUser = trimmed(stripeCustomerId);
+    const stripePm = trimmed(stripePaymentMethodId);
+    if (stripeUser) fields.push({ id: "stripe-user", label: "Stripe User ID", value: stripeUser });
+    if (stripePm) {
+      fields.push({ id: "stripe-payment-method", label: "Stripe payment method ID", value: stripePm });
+    }
   }
   if (supports.acuity) {
-    fields.push({ id: "acuity-id", label: "Acuity ID", value: trimmed(acuityId) });
-    fields.push({
-      id: "acuity-url",
-      label: "Acuity URL",
-      value: acuityUrlValue,
-      href: externalHref(acuityUrlValue),
-    });
+    const acuityIdValue = trimmed(acuityId);
+    if (acuityIdValue) fields.push({ id: "acuity-id", label: "Acuity ID", value: acuityIdValue });
+    if (acuityUrlValue) {
+      fields.push({
+        id: "acuity-url",
+        label: "Acuity URL",
+        value: acuityUrlValue,
+        href: externalHref(acuityUrlValue),
+      });
+    }
   }
   if (supports.quickbooks) {
-    fields.push({ id: "quickbooks-id", label: "QuickBooks ID", value: trimmed(quickbooksId) });
-    fields.push({
-      id: "quickbooks-url",
-      label: "QuickBooks URL",
-      value: quickbooksUrlValue,
-      href: externalHref(quickbooksUrlValue),
-    });
+    const quickbooksIdValue = trimmed(quickbooksId);
+    if (quickbooksIdValue) {
+      fields.push({ id: "quickbooks-id", label: "QuickBooks ID", value: quickbooksIdValue });
+    }
+    if (quickbooksUrlValue) {
+      fields.push({
+        id: "quickbooks-url",
+        label: "QuickBooks URL",
+        value: quickbooksUrlValue,
+        href: externalHref(quickbooksUrlValue),
+      });
+    }
   }
 
+  return fields;
+}
+
+export const STAFF_RECORD_INFO_CARD_CLASS = "family-equal-panel staff-record-info-card";
+
+/** Side-by-side Profile / Household / Integrations row (height follows content). */
+export function StaffRecordPrimaryRow({ children }: { children: ReactNode }) {
+  return <div className="staff-record-primary-row">{children}</div>;
+}
+
+/**
+ * Field-value Integrations card for Family / Guardian / Student / Tutor detail.
+ * Hidden entirely when no IDs/URLs are filled. No live API calls.
+ */
+export function StaffRecordIntegrationsCard(props: StaffRecordIntegrationsInput) {
+  const fields = buildIntegrationFields(props);
+  if (fields.length === 0) return null;
+
   return (
-    <Panel className="family-equal-panel staff-record-integrations-card">
+    <Panel className={`${STAFF_RECORD_INFO_CARD_CLASS} staff-record-integrations-card`}>
       <div className="family-panel-heading">
         <h2>Integrations</h2>
       </div>
-      <div className="staff-record-integrations-grid" role="list">
-        {fields.map((field) => (
-          <article key={field.id} className="staff-record-integrations-field" role="listitem">
-            <small>{field.label}</small>
-            {field.href ? (
-              <a
-                href={field.href}
-                target="_blank"
-                rel="noreferrer"
-                className="family-zoho-url-link"
-                title={field.href}
-              >
-                {field.value}
-              </a>
-            ) : (
-              <strong>{display(field.value)}</strong>
-            )}
-          </article>
-        ))}
+      <div className="family-household-summary">
+        <div className="family-household-dense">
+          <div className="family-household-upper staff-record-integrations-fields">
+            {fields.map((field) => (
+              <span key={field.id}>
+                <small>{field.label}</small>
+                {field.href ? (
+                  <a
+                    href={field.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="family-zoho-url-link"
+                    title={field.href}
+                  >
+                    {field.value}
+                  </a>
+                ) : (
+                  <strong>{field.value}</strong>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </Panel>
   );

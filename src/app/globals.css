@@ -721,17 +721,17 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr);
   gap: var(--space-4);
   margin-bottom: 18px;
-  align-items: stretch;
+  align-items: start;
 }
 .dashboard-main-row > .panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: 100%;
+  height: auto;
 }
 .dashboard-main-row .attention-list,
 .dashboard-main-row .capacity-bars {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
 }
 .staff-create-menu { position: relative; z-index: 30; }
 .staff-create-menu-trigger {
@@ -2109,14 +2109,14 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .guardian-edit-section-label,
 .staff-edit-section-label {
   grid-column: 1 / -1;
-  margin: 4px 0 0;
-  padding-top: 10px;
+  margin: 20px 0 4px;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--nav-accent);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.13em;
 }
 .guardian-edit-section-label:first-child,
 .staff-edit-section-label:first-child {
@@ -2198,7 +2198,19 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   box-shadow: 0 0 0 2px var(--blue-soft);
 }
 .staff-record-edit-shell .input-grid {
-  gap: 14px 12px;
+  gap: 16px 12px;
+}
+.staff-record-edit-shell .input-grid label,
+.staff-record-edit-shell .staff-edit-inline-label {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
+  color: var(--navy);
+}
+.staff-record-edit-shell .input-grid input[readonly] {
+  color: var(--muted);
+  cursor: default;
+  background: #eef0eb;
 }
 .staff-edit-field-row {
   grid-column: 1 / -1;
@@ -2248,12 +2260,12 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px 20px;
-  align-items: stretch;
+  gap: 24px 20px;
+  align-items: start;
   min-width: 0;
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 0;
 }
 .staff-edit-payment-pane,
 .staff-edit-tutoring-pane,
@@ -2266,7 +2278,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   min-height: 100%;
 }
 .staff-edit-payment-pane .staff-edit-section-label,
-.staff-edit-tutoring-pane .staff-edit-section-label {
+.staff-edit-tutoring-pane .staff-edit-section-label,
+.staff-edit-schedule-pane .staff-edit-section-label,
+.staff-edit-needs-pane .staff-edit-section-label {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
@@ -3085,6 +3099,43 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-record-integrations-card {
   margin-top: 0;
 }
+.staff-record-primary-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+  align-items: start;
+}
+.staff-record-primary-row:has(> :nth-child(3)) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.staff-record-primary-row:has(> :only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.staff-record-primary-row > .panel {
+  margin-bottom: 0 !important;
+  min-width: 0;
+  height: auto;
+}
+.staff-record-info-card > .family-panel-heading h2 {
+  color: var(--nav-accent);
+  font: 800 12px Arial, Helvetica, sans-serif;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.staff-record-info-card .family-household-dense small {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
+  color: var(--muted);
+}
+.staff-record-info-card .family-household-dense strong,
+.staff-record-info-card .family-household-dense .family-zoho-url-link {
+  color: var(--navy);
+}
+.staff-record-integrations-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .staff-record-integrations-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3115,7 +3166,12 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   overflow-wrap: anywhere;
 }
 @media (max-width: 720px) {
-  .staff-record-integrations-grid {
+  .staff-record-integrations-grid,
+  .staff-record-integrations-fields {
+    grid-template-columns: 1fr;
+  }
+  .staff-record-primary-row,
+  .staff-record-primary-row:has(> :nth-child(3)) {
     grid-template-columns: 1fr;
   }
   .capacity-week-summary {

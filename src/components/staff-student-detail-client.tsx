@@ -12,7 +12,11 @@ import {
   StaffIconButton,
 } from "@/components/staff-action-icons";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
-import { StaffRecordIntegrationsCard } from "@/components/staff-record-integrations-card";
+import {
+  STAFF_RECORD_INFO_CARD_CLASS,
+  StaffRecordIntegrationsCard,
+  StaffRecordPrimaryRow,
+} from "@/components/staff-record-integrations-card";
 import { Panel } from "@/components/ui";
 import { learningNeedNotes, parseLearningNeeds } from "@/lib/family/learning-needs";
 import {
@@ -573,8 +577,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <div className="family-detail-layout family-detail-stack">
-        <Panel className="family-equal-panel">
+      <StaffRecordPrimaryRow>
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Profile</h2>
           </div>
@@ -606,7 +610,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   <strong>{student.gradeLabel || "—"}</strong>
                 </span>
                 <span>
-                  <small>Grade Year</small>
+                  <small>Grade year</small>
                   <strong>{student.graduationYear ?? "—"}</strong>
                 </span>
                 <span>
@@ -651,7 +655,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
             </div>
           </div>
         </Panel>
-      </div>
+        <StaffRecordIntegrationsCard zohoId={student.zohoDealId} zohoUrl={student.zohoDealUrl} />
+      </StaffRecordPrimaryRow>
 
       <div className="student-payment-learning-band">
         <Panel className="family-equal-panel">
@@ -694,11 +699,11 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
               </div>
               <div className="family-household-upper student-tutoring-rates-row">
                 <span>
-                  <small>Hours/Rates</small>
+                  <small>Hours/rates</small>
                   <strong>{optionLabel(ACADEMIC_RATE_PACKAGES, student.hoursRatePackage)}</strong>
                 </span>
                 <span>
-                  <small>Advanced Subjects Hours/Rates</small>
+                  <small>Advanced subjects hours/rates</small>
                   <strong>{optionLabel(ACADEMIC_ADVANCED_RATE_PACKAGES, student.advancedHoursRatePackage)}</strong>
                 </span>
               </div>
@@ -724,7 +729,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   )}
                 </span>
                 <span>
-                  <small>Auto-charge (Family)</small>
+                  <small>Auto-charge (family)</small>
                   <strong>{student.household ? yesNo(student.household.autoCharge) : "—"}</strong>
                 </span>
                 <span>
@@ -812,11 +817,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           </ListPreview>
         </Panel>
       </div>
-
-      <StaffRecordIntegrationsCard
-        zohoId={student.zohoDealId}
-        zohoUrl={student.zohoDealUrl}
-      />
 
       {SHOW_STAFF_NOTES ? (
         <StaffNotesSection

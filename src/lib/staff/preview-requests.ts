@@ -1,6 +1,6 @@
 import type { StaffChangeRequestDto } from "@/lib/staff/change-request-types";
 
-/** UI-only Priority Queue when the DB has no open change requests (not persisted). */
+/** UI-only Priority Queue when the DB has no payment issues (not persisted). */
 export const PREVIEW_REQUEST_TOTAL = 12;
 export const PRIORITY_QUEUE_RECENT_LIMIT = 3;
 
@@ -16,18 +16,19 @@ export type PreviewQueueRow = {
 
 const PREVIEW_CREATED = "2026-08-14T14:30:00.000Z";
 
+/** Payment-issue samples — schedule/booking changes are automatic and not staff-approval work. */
 export const PREVIEW_CHANGE_REQUESTS: StaffChangeRequestDto[] = [
   {
     id: "preview-req-1",
     status: "submitted",
-    changeType: "Cancel",
-    reason: "Illness",
-    requestedOutcome: "Refund review",
+    changeType: "Payment failed",
+    reason: "Card declined",
+    requestedOutcome: "Retry charge",
     preferredAlternatives: null,
     policyRecommendation:
-      "Eligible for banked-credit review. Provisional notice assumption: ≥24 hours. Reason: Illness. Requested outcome: Refund review.",
-    relatedEntityType: "booking",
-    relatedEntityId: "preview-session-1",
+      "Card on file was declined. Staff can retry from Billing or ask the family to update the card. This is not a schedule-change approval.",
+    relatedEntityType: "payment",
+    relatedEntityId: "preview-payment-1",
     staffNotes: null,
     studentId: "",
     studentName: "Emerson Chen",
@@ -39,15 +40,15 @@ export const PREVIEW_CHANGE_REQUESTS: StaffChangeRequestDto[] = [
   },
   {
     id: "preview-req-2",
-    status: "under_review",
-    changeType: "Reschedule",
-    reason: "School conflict",
-    requestedOutcome: "Schedule change only",
-    preferredAlternatives: "Tuesday 4:00 PM or Thursday 5:00 PM",
+    status: "submitted",
+    changeType: "Unpaid balance",
+    reason: "Invoice overdue",
+    requestedOutcome: "Collect payment",
+    preferredAlternatives: null,
     policyRecommendation:
-      "Eligible for reschedule only. Provisional notice assumption: ≥24 hours. Reason: School conflict. Requested outcome: Schedule change only.",
-    relatedEntityType: "booking",
-    relatedEntityId: "preview-session-2",
+      "Open balance on the household ledger. Open Billing to record a payment or follow up with the payer.",
+    relatedEntityType: "payment",
+    relatedEntityId: "preview-payment-2",
     staffNotes: null,
     studentId: "",
     studentName: "Maya Ruiz",
@@ -60,14 +61,14 @@ export const PREVIEW_CHANGE_REQUESTS: StaffChangeRequestDto[] = [
   {
     id: "preview-req-3",
     status: "submitted",
-    changeType: "Update booking details",
-    reason: "Other",
-    requestedOutcome: "Make-up / banked session",
-    preferredAlternatives: "Prefer a different tutor if available",
+    changeType: "Partial payment",
+    reason: "Short payment",
+    requestedOutcome: "Balance due",
+    preferredAlternatives: null,
     policyRecommendation:
-      "Staff exception review required. Reason: Other. Requested outcome: Make-up / banked session.",
-    relatedEntityType: "booking",
-    relatedEntityId: "preview-session-3",
+      "A partial payment posted. Remaining balance still needs attention on Billing — not a booking or time-change review.",
+    relatedEntityType: "payment",
+    relatedEntityId: "preview-payment-3",
     staffNotes: null,
     studentId: "",
     studentName: "Jordan Lee",
@@ -86,9 +87,11 @@ function initialsFromName(name: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-function queueTone(status: string) {
-  if (status === "under_review") return "blue";
-  return "rose";
+function queueTone(changeType: string) {
+  const value = changeType.toLowerCase();
+  if (value.includes("failed") || value.includes("declined")) return "rose";
+  if (value.includes("partial") || value.includes("unpaid")) return "gold";
+  return "blue";
 }
 
 export function isPreviewChangeRequestId(id: string) {
@@ -99,14 +102,23 @@ export function getPreviewChangeRequest(id: string): StaffChangeRequestDto | nul
   return PREVIEW_CHANGE_REQUESTS.find((row) => row.id === id) ?? null;
 }
 
+export function isPaymentIssueRequest(request: {
+  changeType: string;
+  requestedOutcome?: string | null;
+  relatedEntityType?: string | null;
+}) {
+  const blob = `${request.changeType} ${request.requestedOutcome ?? ""} ${request.relatedEntityType ?? ""}`.toLowerCase();
+  return /payment|unpaid|invoice|card declined|balance|partial|failed|charge/.test(blob);
+}
+
 export function previewQueueRows(): PreviewQueueRow[] {
   return PREVIEW_CHANGE_REQUESTS.map((row) => ({
     id: row.id,
     initials: initialsFromName(row.studentName),
-    title: `${row.changeType} · ${row.studentName}`,
-    copy: `${row.householdName} · ${row.requestedOutcome}`,
-    meta: row.status === "under_review" ? "Under review" : "Submitted",
-    tone: queueTone(row.status),
+    title: `${row.changeType} · ${row.householdName}`,
+    copy: `${row.studentName} · ${row.reason}`,
+    meta: "Needs attention",
+    tone: queueTone(row.changeType),
     href: `/staff/requests/${row.id}`,
   }));
 }

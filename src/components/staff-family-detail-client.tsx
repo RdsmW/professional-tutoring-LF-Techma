@@ -17,7 +17,11 @@ import {
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { StaffNotesSection } from "@/components/staff-notes-section";
-import { StaffRecordIntegrationsCard } from "@/components/staff-record-integrations-card";
+import {
+  STAFF_RECORD_INFO_CARD_CLASS,
+  StaffRecordIntegrationsCard,
+  StaffRecordPrimaryRow,
+} from "@/components/staff-record-integrations-card";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -1205,8 +1209,8 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </span>
       </section>
 
-      <div className="family-detail-layout family-detail-stack">
-        <Panel className="family-equal-panel">
+      <StaffRecordPrimaryRow>
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Household</h2>
           </div>
@@ -1244,7 +1248,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               </div>
               <div className="family-household-lower">
                 <span className="family-household-field-address">
-                  <small>Billing Address</small>
+                  <small>Billing address</small>
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (
@@ -1260,6 +1264,16 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </div>
         </Panel>
 
+        <StaffRecordIntegrationsCard
+          zohoId={family.zohoCrmId}
+          zohoUrl={family.zohoCrmUrl}
+          stripeCustomerId={family.stripeCustomerId ?? null}
+          stripePaymentMethodId={family.stripeDefaultPaymentMethodId ?? null}
+          supports={{ stripe: true }}
+        />
+      </StaffRecordPrimaryRow>
+
+      <div className="family-detail-layout family-detail-stack">
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Guardians</h2>
@@ -1355,14 +1369,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </FamilyListPreview>
         </Panel>
       </div>
-
-      <StaffRecordIntegrationsCard
-        zohoId={family.zohoCrmId}
-        zohoUrl={family.zohoCrmUrl}
-        stripeCustomerId={family.stripeCustomerId ?? null}
-        stripePaymentMethodId={family.stripeDefaultPaymentMethodId ?? null}
-        supports={{ stripe: true }}
-      />
 
       {SHOW_STAFF_NOTES ? (
         <StaffNotesSection

@@ -244,8 +244,6 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             composeLearningNeeds(profileForm.learningNeedSubjectIds, profileForm.learningNeedNotes) || null,
           availabilityNotes: profileForm.availabilityNotes || null,
           description: profileForm.description || null,
-          zohoDealId: profileForm.zohoDealId || null,
-          zohoDealUrl: profileForm.zohoDealUrl || null,
           academicYear: profileForm.academicYear || null,
           preferredSchedule: profileForm.preferredScheduleIds.join(",") || null,
           hoursRatePackage: profileForm.hoursRatePackage || null,
@@ -371,7 +369,7 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             </select>
           </label>
           <label>
-            Grade Year
+            Grade year
             <select
               value={profileForm.graduationYear}
               onChange={(e) => setProfileForm({ ...profileForm, graduationYear: e.target.value })}
@@ -467,13 +465,6 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
           </label>
         </div>
 
-        <StaffZohoCrmFields
-          crmId={profileForm.zohoDealId}
-          crmUrl={profileForm.zohoDealUrl}
-          onCrmIdChange={(zohoDealId) => setProfileForm({ ...profileForm, zohoDealId })}
-          onCrmUrlChange={(zohoDealUrl) => setProfileForm({ ...profileForm, zohoDealUrl })}
-        />
-
         <StaffEditSectionLabel>Description</StaffEditSectionLabel>
         <StaffMultilineField
           label="Description"
@@ -568,13 +559,13 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             </div>
             <div className="staff-edit-field-row staff-edit-field-row--2">
               <StaffWrapSelect
-                label="Hours/Rates"
+                label="Hours/rates"
                 value={profileForm.hoursRatePackage}
                 onChange={(hoursRatePackage) => setProfileForm({ ...profileForm, hoursRatePackage })}
                 options={ACADEMIC_RATE_PACKAGES.options}
               />
               <StaffWrapSelect
-                label="Advanced Subjects Hours/Rates"
+                label="Advanced subjects hours/rates"
                 value={profileForm.advancedHoursRatePackage}
                 onChange={(advancedHoursRatePackage) =>
                   setProfileForm({ ...profileForm, advancedHoursRatePackage })
@@ -587,7 +578,7 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
 
         <div className="staff-edit-schedule-needs-band">
           <div className="staff-edit-schedule-pane staff-edit-chip-block">
-            <span className="staff-edit-inline-label">Preferred schedule</span>
+            <StaffEditSectionLabel>Preferred schedule</StaffEditSectionLabel>
             <div
               className="subject-multi-select staff-edit-chip-control"
               role="group"
@@ -617,7 +608,7 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             </div>
           </div>
           <div className="staff-edit-needs-pane staff-edit-chip-block">
-            <span className="staff-edit-inline-label">Learning needs</span>
+            <StaffEditSectionLabel>Learning needs</StaffEditSectionLabel>
             <div
               className="subject-multi-select staff-edit-chip-control"
               role="group"
@@ -647,6 +638,8 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             </div>
           </div>
         </div>
+
+        <StaffZohoCrmFields crmId={profileForm.zohoDealId} crmUrl={profileForm.zohoDealUrl} />
       </StaffRecordEditShell>
     </>
   );

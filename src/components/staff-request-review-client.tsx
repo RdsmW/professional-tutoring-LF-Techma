@@ -10,6 +10,7 @@ import type {
 } from "@/lib/staff/change-request-types";
 import {
   getPreviewChangeRequest,
+  isPaymentIssueRequest,
   isPreviewChangeRequestId,
 } from "@/lib/staff/preview-requests";
 import { formatStatusLabel } from "@/lib/ui/status";
@@ -78,12 +79,12 @@ export function StaffRequestReviewClient({ requestId }: { requestId: string }) {
   return (
     <>
       <PageIntro
-        eyebrow="Family request"
+        eyebrow={request && isPaymentIssueRequest(request) ? "Payment issue" : "Family request"}
         title={request ? formatStatusLabel(request.changeType) : "Request review"}
         description={
           request
             ? `${request.studentName} · ${request.householdName}`
-            : "Review who asked, what changed, and the session involved."
+            : "Review the household and what still needs follow-up."
         }
         action={
           <Link href="/staff" className="text-button">

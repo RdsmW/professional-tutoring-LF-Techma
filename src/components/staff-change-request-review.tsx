@@ -10,12 +10,13 @@ import type {
   ChangeRequestStatusAction,
   StaffChangeRequestDto,
 } from "@/lib/staff/change-request-types";
-import { isPreviewChangeRequestId } from "@/lib/staff/preview-requests";
+import { isPaymentIssueRequest, isPreviewChangeRequestId } from "@/lib/staff/preview-requests";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 export function relatedEntityLabel(type: string) {
   if (type === "booking") return "Session";
   if (type === "course_enrollment") return "Course enrollment";
+  if (type === "payment") return "Payment";
   return formatStatusLabel(type);
 }
 
@@ -35,6 +36,7 @@ export function formatRequestWhen(iso: string | null) {
 }
 
 function relatedEntityHref(type: string, id: string, sample: boolean) {
+  if (type === "payment") return "/staff/billing";
   if (sample) return "/staff/sessions";
   if (type === "booking" && id) return `/staff/sessions/${id}`;
   return null;
@@ -72,7 +74,8 @@ export function StaffChangeRequestReview({
   onSampleAction?: (action: string) => void;
 }) {
   const sample = isPreviewChangeRequestId(request.id);
-  const policyHeadline = policyTraceHeadline(request.reason);
+  const paymentIssue = isPaymentIssueRequest(request);
+  const policyHeadline = paymentIssue ? null : policyTraceHeadline(request.reason);
   const relatedHref = relatedEntityHref(
     request.relatedEntityType,
     request.relatedEntityId,
@@ -81,7 +84,7 @@ export function StaffChangeRequestReview({
   const studentHref = sample || !request.studentId ? "/staff/students" : `/staff/students/${request.studentId}`;
   const familyHref =
     sample || !request.householdId ? "/staff/families" : `/staff/families/${request.householdId}`;
-  const rescheduleHref = relatedHref ?? "/staff/scheduling";
+  const billingHref = "/staff/billing";
 
   function runStatus(status: ChangeRequestStatusAction, label: string) {
     if (sample) {
@@ -100,7 +103,7 @@ export function StaffChangeRequestReview({
       <section className="student-detail-hero" style={{ marginBottom: 14 }}>
         <span className="student-detail-avatar">{initialsFromName(request.studentName)}</span>
         <div>
-          <span className="eyebrow">Request review</span>
+          <span className="eyebrow">{paymentIssue ? "Payment issue" : "Request review"}</span>
           <h2 style={{ margin: "4px 0" }}>{formatStatusLabel(request.changeType)}</h2>
           <p style={{ margin: 0 }}>
             <Link href={studentHref}>{request.studentName}</Link>
@@ -108,7 +111,9 @@ export function StaffChangeRequestReview({
             <Link href={familyHref}>{request.householdName}</Link>
           </p>
         </div>
-        <span className={`pill ${statusTone(request.status)}`}>{formatStatusLabel(request.status)}</span>
+        <span className={`pill ${paymentIssue ? "gold" : statusTone(request.status)}`}>
+          {paymentIssue ? "Needs attention" : formatStatusLabel(request.status)}
+        </span>
       </section>
 
       <div className="record-detail-grid" style={{ marginBottom: 14 }}>
@@ -201,47 +206,55 @@ export function StaffChangeRequestReview({
         {saving ? "Saving…" : "Save staff notes"}
       </button>
 
-      <h3 style={{ margin: "18px 0 10px", fontSize: 14 }}>Staff outcome</h3>
-      <div className="exception-actions">
-        <div>
-          <button
-            type="button"
-            disabled={saving || request.status === "approved"}
-            onClick={() => runStatus("approved", "Approve")}
-          >
-            <span>Approve</span>
-            <span>→</span>
-          </button>
-          <button
-            type="button"
-            disabled={saving || request.status === "declined"}
-            onClick={() => runStatus("declined", "Decline")}
-          >
-            <span>Decline</span>
-            <span>→</span>
-          </button>
-          <Link href={rescheduleHref} className="staff-request-reschedule">
-            <span>Reschedule</span>
-            <span>→</span>
-          </Link>
-          <button
-            type="button"
-            disabled={saving || request.status === "under_review"}
-            onClick={() => runStatus("under_review", "Under review")}
-          >
-            <span>Under review</span>
-            <span>→</span>
-          </button>
-          <button
-            type="button"
-            disabled={saving || request.status === "applied"}
-            onClick={() => runStatus("applied", "Applied")}
-          >
-            <span>Applied</span>
-            <span>→</span>
-          </button>
-        </div>
-      </div>
+      {paymentIssue ? (
+        <>
+          <h3 style={{ margin: "18px 0 10px", fontSize: 14 }}>Next step</h3>
+          <div className="exception-actions">
+            <div>
+              <Link href={billingHref} className="staff-request-reschedule">
+                <span>Open billing</span>
+                <span>→</span>
+              </Link>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <h3 style={{ margin: "18px 0 10px", fontSize: 14 }}>Staff outcome</h3>
+          <div className="exception-actions">
+            <div>
+              <button
+                type="button"
+                disabled={saving || request.status === "approved"}
+                onClick={() => runStatus("approved", "Approve")}
+              >
+                <span>Approve</span>
+                <span>→</span>
+              </button>
+              <button
+                type="button"
+                disabled={saving || request.status === "declined"}
+                onClick={() => runStatus("declined", "Decline")}
+              >
+                <span>Decline</span>
+                <span>→</span>
+              </button>
+              <Link href={relatedHref ?? "/staff/scheduling"} className="staff-request-reschedule">
+                <span>Open schedule</span>
+                <span>→</span>
+              </Link>
+              <button
+                type="button"
+                disabled={saving || request.status === "applied"}
+                onClick={() => runStatus("applied", "Applied")}
+              >
+                <span>Applied</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

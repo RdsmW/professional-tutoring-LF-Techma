@@ -139,8 +139,6 @@ export function StaffGuardianEditClient({ guardianId }: { guardianId: string }) 
           city: profileForm.city,
           state: profileForm.state,
           postalCode: profileForm.postalCode,
-          zohoCrmId: profileForm.zohoCrmId,
-          zohoCrmUrl: profileForm.zohoCrmUrl,
           relationshipRole: profileForm.relationshipRole || null,
           isBillingOwner: profileForm.isBillingOwner,
         }),
@@ -271,13 +269,6 @@ export function StaffGuardianEditClient({ guardianId }: { guardianId: string }) 
           </label>
         </div>
 
-        <StaffZohoCrmFields
-          crmId={profileForm.zohoCrmId}
-          crmUrl={profileForm.zohoCrmUrl}
-          onCrmIdChange={(zohoCrmId) => setProfileForm({ ...profileForm, zohoCrmId })}
-          onCrmUrlChange={(zohoCrmUrl) => setProfileForm({ ...profileForm, zohoCrmUrl })}
-        />
-
         <StaffEditSectionLabel>Household role</StaffEditSectionLabel>
         <div className="staff-edit-field-row staff-edit-field-row--2">
           <label>
@@ -332,6 +323,8 @@ export function StaffGuardianEditClient({ guardianId }: { guardianId: string }) 
           placeholder="Optional context about this guardian…"
           hideLabel
         />
+
+        <StaffZohoCrmFields crmId={profileForm.zohoCrmId} crmUrl={profileForm.zohoCrmUrl} />
       </StaffRecordEditShell>
     </>
   );

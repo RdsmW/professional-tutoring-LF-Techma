@@ -12,7 +12,11 @@ import {
   StaffIconButton,
 } from "@/components/staff-action-icons";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
-import { StaffRecordIntegrationsCard } from "@/components/staff-record-integrations-card";
+import {
+  STAFF_RECORD_INFO_CARD_CLASS,
+  StaffRecordIntegrationsCard,
+  StaffRecordPrimaryRow,
+} from "@/components/staff-record-integrations-card";
 import { Panel } from "@/components/ui";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -627,8 +631,8 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <div className="family-detail-layout family-detail-stack">
-        <Panel className="family-equal-panel">
+      <StaffRecordPrimaryRow>
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Profile</h2>
           </div>
@@ -669,7 +673,8 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             </div>
           </div>
         </Panel>
-      </div>
+        <StaffRecordIntegrationsCard />
+      </StaffRecordPrimaryRow>
 
       <div className="tutor-capacity-subjects-band">
         <Panel className="family-equal-panel tutor-capacity-panel">
@@ -845,8 +850,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           )}
         </div>
       </Panel>
-
-      <StaffRecordIntegrationsCard />
 
       <StaffNotesSection
         notes={tutor.notesList}

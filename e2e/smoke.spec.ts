@@ -84,7 +84,7 @@ test.describe("staff families smoke", () => {
     await expect(page.getByRole("link", { name: /New tutor/i })).toBeVisible();
     await expect(page.getByText("Families still setting up")).toBeVisible();
     await expect(page.getByText("Sessions this week")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Family requests" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payment issues" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "This week" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Recently added" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Open students/i })).toBeVisible();

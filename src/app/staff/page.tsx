@@ -1,16 +1,16 @@
 import Link from "next/link";
-import { and, asc, count, desc, eq, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
 import { StaffHomeHeroActions } from "@/components/staff-home-create-menu";
 import {
   StaffStudentsDirectoryTable,
   type StaffStudentDirectoryTableRow,
 } from "@/components/staff-students-directory-table";
+import { amountLabel, paymentStatusLabel } from "@/lib/billing";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { db } from "@/lib/db";
 import {
   availabilitySlots,
   bookings,
-  changeRequests,
   guardians,
   households,
   paymentRecords,
@@ -29,6 +29,7 @@ import {
 } from "@/lib/staff/preview-requests";
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+/** Masdouk / Forward sheets do not operate Friday–Saturday. */
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
 const OPEN_BOOKING_STATUSES = ["confirmed", "held", "pending_payment", "pending_staff_review"] as const;
 
@@ -58,15 +59,15 @@ function startOfWeekNy(now = new Date()) {
   const day = Number(nyParts.find((p) => p.type === "day")?.value);
   const weekday = nyParts.find((p) => p.type === "weekday")?.value ?? "Sun";
   const weekdayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
-  const localMidnight = new Date(year, month - 1, day);
-  localMidnight.setDate(localMidnight.getDate() - Math.max(0, weekdayIndex));
-  return localMidnight;
+  const sundayDay = day - Math.max(0, weekdayIndex);
+  // UTC noon of that NY calendar Sunday — rolling current week, not a frozen date.
+  return new Date(Date.UTC(year, month - 1, sundayDay, 12));
 }
 
 function formatCapacityDay(weekStart: Date, dayOfWeek: number) {
-  const date = new Date(weekStart);
-  date.setDate(weekStart.getDate() + dayOfWeek);
+  const date = new Date(weekStart.getTime() + dayOfWeek * 24 * 60 * 60 * 1000);
   const monthDay = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
     month: "short",
     day: "numeric",
   }).format(date);
@@ -103,9 +104,6 @@ async function loadDashboardData() {
       capacity: 0,
       count: "0 / 0",
     })),
-    weekBooked: 0,
-    weekOpen: 0,
-    weekCapacity: 0,
     weekBarsLive: false,
   };
 
@@ -133,8 +131,7 @@ async function loadDashboardData() {
       weekBookingRows,
       slotRows,
       exceptionRows,
-      openRequestCountRows,
-      openRequests,
+      paymentAttentionRows,
       recentStudentRows,
     ] = await Promise.all([
       db
@@ -158,23 +155,17 @@ async function loadDashboardData() {
         .from(paymentRecords)
         .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"])),
       db
-        .select({ total: count() })
-        .from(changeRequests)
-        .where(inArray(changeRequests.status, ["submitted", "under_review"])),
-      db
         .select({
-          id: changeRequests.id,
-          changeType: changeRequests.changeType,
-          requestedOutcome: changeRequests.requestedOutcome,
-          status: changeRequests.status,
-          studentName: students.displayName,
+          id: paymentRecords.id,
+          status: paymentRecords.status,
+          amountCents: paymentRecords.amountCents,
+          currency: paymentRecords.currency,
           householdName: households.displayName,
         })
-        .from(changeRequests)
-        .innerJoin(students, eq(changeRequests.studentId, students.id))
-        .innerJoin(households, eq(changeRequests.householdId, households.id))
-        .where(inArray(changeRequests.status, ["submitted", "under_review"]))
-        .orderBy(desc(changeRequests.createdAt))
+        .from(paymentRecords)
+        .innerJoin(households, eq(paymentRecords.householdId, households.id))
+        .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"]))
+        .orderBy(desc(paymentRecords.createdAt))
         .limit(PRIORITY_QUEUE_RECENT_LIMIT),
       db
         .select({
@@ -222,18 +213,15 @@ async function loadDashboardData() {
         count: `${booked} / ${bucket.capacity}`,
       };
     });
-    const weekCapacity = weekBars.reduce((sum, row) => sum + row.capacity, 0);
-    const weekOpen = weekBars.reduce((sum, row) => sum + row.open, 0);
-    const weekBooked = weekBars.reduce((sum, row) => sum + row.booked, 0);
 
-    const familyRequests = openRequests.map((row) => ({
+    const familyRequests = paymentAttentionRows.map((row) => ({
       id: row.id,
-      initials: initialsFromName(row.studentName || row.householdName),
-      title: `${formatStatusLabel(row.changeType)} · ${row.studentName}`,
-      copy: `${row.householdName} · ${formatStatusLabel(row.requestedOutcome)}`,
-      meta: formatStatusLabel(row.status),
-      tone: statusTone(row.status) || (row.status === "under_review" ? "blue" : "rose"),
-      href: `/staff/requests/${row.id}`,
+      initials: initialsFromName(row.householdName),
+      title: `${paymentStatusLabel(row.status)} · ${row.householdName}`,
+      copy: amountLabel(row.amountCents, row.currency),
+      meta: "Needs attention",
+      tone: row.status === "failed" ? "rose" : row.status === "pending" ? "blue" : "gold",
+      href: "/staff/billing",
     }));
 
     const studentIds = recentStudentRows.map((row) => row.id);
@@ -283,12 +271,9 @@ async function loadDashboardData() {
       billingExceptions: exceptionRows.length,
       billingExceptionsLive: true,
       familyRequests,
-      familyRequestsTotal: Number(openRequestCountRows[0]?.total ?? 0),
+      familyRequestsTotal: exceptionRows.length,
       recentStudents,
       weekBars,
-      weekBooked,
-      weekOpen,
-      weekCapacity,
       weekBarsLive: slotRows.length > 0,
     };
   } catch (error) {
@@ -318,8 +303,6 @@ export default async function StaffDashboardPage() {
   const usingPreviewRequests = data.familyRequests.length === 0 && !data.loadError;
   const priorityRequests = usingPreviewRequests ? previewQueueRows() : data.familyRequests;
   const priorityRequestTotal = usingPreviewRequests ? PREVIEW_REQUEST_TOTAL : data.familyRequestsTotal;
-  const weekFill =
-    data.weekCapacity > 0 ? Math.round((data.weekBooked / data.weekCapacity) * 100) : 0;
 
   return (
     <>
@@ -377,7 +360,7 @@ export default async function StaffDashboardPage() {
           <div className="panel-heading">
             <div>
               <span className="eyebrow">Priority queue</span>
-              <h3>Family requests</h3>
+              <h3>Payment issues</h3>
             </div>
             <div className="dashboard-heading-side">
               <div className="dashboard-kpi-strip" aria-label="Priority summary">
@@ -442,20 +425,6 @@ export default async function StaffDashboardPage() {
                 <small>{row.count}</small>
               </Link>
             ))}
-          </div>
-          <div className="capacity-week-summary" aria-label="Week seat totals">
-            <article>
-              <small>Booked</small>
-              <strong>{data.weekBooked}</strong>
-            </article>
-            <article>
-              <small>Open</small>
-              <strong>{data.weekOpen}</strong>
-            </article>
-            <article>
-              <small>Fill</small>
-              <strong>{weekFill}%</strong>
-            </article>
           </div>
           {!data.weekBarsLive ? (
             <div className="capacity-note">

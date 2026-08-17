@@ -135,80 +135,86 @@ export function StaffTutorEditClient({ tutorId }: { tutorId: string }) {
         onSubmit={(event) => void saveProfile(event)}
       >
         <StaffEditSectionLabel>Profile</StaffEditSectionLabel>
-        <label>
-          Display name
-          <input
-            value={profileForm.displayName}
-            onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          Email
-          <input
-            type="email"
-            value={profileForm.email}
-            onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-          />
-        </label>
-        <label>
-          Phone
-          <input
-            type="tel"
-            value={profileForm.phone}
-            onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-          />
-        </label>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            Display name
+            <input
+              value={profileForm.displayName}
+              onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            Email
+            <input
+              type="email"
+              value={profileForm.email}
+              onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+            />
+          </label>
+          <label>
+            Phone
+            <input
+              type="tel"
+              value={profileForm.phone}
+              onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+            />
+          </label>
+        </div>
 
         <StaffEditSectionLabel>Mailing address</StaffEditSectionLabel>
-        <label>
-          Street
-          <AddressAutocompleteInput
-            value={profileForm.addressLine1}
-            onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
-            onSelect={(suggestion) =>
-              setProfileForm({
-                ...profileForm,
-                addressLine1: suggestion.addressLine1,
-                city: suggestion.city || profileForm.city,
-                state: suggestion.state || profileForm.state,
-                postalCode: suggestion.postalCode || profileForm.postalCode,
-              })
-            }
-          />
-        </label>
-        <label>
-          Address line 2
-          <input
-            value={profileForm.addressLine2}
-            onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
-          />
-        </label>
-        <label>
-          City
-          <input
-            value={profileForm.city}
-            onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
-          />
-        </label>
-        <label>
-          State
-          <input
-            value={profileForm.state}
-            onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
-          />
-        </label>
-        <label>
-          ZIP
-          <input
-            value={profileForm.postalCode}
-            onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
-          />
-        </label>
-        <label>
-          Country
-          <input value="United States" readOnly />
-        </label>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            Street
+            <AddressAutocompleteInput
+              value={profileForm.addressLine1}
+              onChange={(addressLine1) => setProfileForm({ ...profileForm, addressLine1 })}
+              onSelect={(suggestion) =>
+                setProfileForm({
+                  ...profileForm,
+                  addressLine1: suggestion.addressLine1,
+                  city: suggestion.city || profileForm.city,
+                  state: suggestion.state || profileForm.state,
+                  postalCode: suggestion.postalCode || profileForm.postalCode,
+                })
+              }
+            />
+          </label>
+          <label>
+            Address line 2
+            <input
+              value={profileForm.addressLine2}
+              onChange={(e) => setProfileForm({ ...profileForm, addressLine2: e.target.value })}
+            />
+          </label>
+          <label>
+            City
+            <input
+              value={profileForm.city}
+              onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
+            />
+          </label>
+        </div>
+        <div className="staff-edit-field-row staff-edit-field-row--3">
+          <label>
+            State
+            <input
+              value={profileForm.state}
+              onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
+            />
+          </label>
+          <label>
+            ZIP
+            <input
+              value={profileForm.postalCode}
+              onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
+            />
+          </label>
+          <label>
+            Country
+            <input value="United States" readOnly />
+          </label>
+        </div>
       </StaffRecordEditShell>
     </>
   );

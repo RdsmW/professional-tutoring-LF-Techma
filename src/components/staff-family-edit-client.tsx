@@ -136,8 +136,6 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
           state: householdForm.state,
           postalCode: householdForm.postalCode,
           country: "United States",
-          zohoCrmId: householdForm.zohoCrmId,
-          zohoCrmUrl: householdForm.zohoCrmUrl,
           billingOwnerGuardianId: householdForm.billingOwnerGuardianId || null,
           cardOnFile: householdForm.cardOnFile,
           autoCharge: householdForm.autoCharge,
@@ -250,14 +248,7 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
           </label>
         </div>
 
-        <StaffZohoCrmFields
-          crmId={householdForm.zohoCrmId}
-          crmUrl={householdForm.zohoCrmUrl}
-          onCrmIdChange={(zohoCrmId) => setHouseholdForm({ ...householdForm, zohoCrmId })}
-          onCrmUrlChange={(zohoCrmUrl) => setHouseholdForm({ ...householdForm, zohoCrmUrl })}
-        />
-
-        <StaffEditSectionLabel>Billing</StaffEditSectionLabel>
+        <StaffEditSectionLabel>Payment</StaffEditSectionLabel>
         <div className="staff-edit-field-row staff-edit-field-row--3">
           <label>
             Responsible for payment
@@ -295,6 +286,8 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
             </select>
           </label>
         </div>
+
+        <StaffZohoCrmFields crmId={householdForm.zohoCrmId} crmUrl={householdForm.zohoCrmUrl} />
       </StaffRecordEditShell>
     </>
   );

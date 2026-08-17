@@ -22,7 +22,11 @@ import {
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { StaffNotesSection } from "@/components/staff-notes-section";
-import { StaffRecordIntegrationsCard } from "@/components/staff-record-integrations-card";
+import {
+  STAFF_RECORD_INFO_CARD_CLASS,
+  StaffRecordIntegrationsCard,
+  StaffRecordPrimaryRow,
+} from "@/components/staff-record-integrations-card";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import {
@@ -801,8 +805,8 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <div className="family-detail-layout family-detail-stack">
-        <Panel className="family-equal-panel">
+      <StaffRecordPrimaryRow>
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Identity</h2>
           </div>
@@ -852,7 +856,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           </div>
         </Panel>
 
-        <Panel className="family-equal-panel">
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Household</h2>
           </div>
@@ -896,7 +900,11 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           </div>
         </Panel>
 
-        {showStudents ? (
+        <StaffRecordIntegrationsCard zohoId={guardian.zohoCrmId} zohoUrl={guardian.zohoCrmUrl} />
+      </StaffRecordPrimaryRow>
+
+      {showStudents ? (
+        <div className="family-detail-layout family-detail-stack">
           <Panel className="family-equal-panel family-students-band">
             <div className="family-panel-heading">
               <h2>Students</h2>
@@ -933,13 +941,8 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
               {renderStudentsTable(previewStudents)}
             </NotesListPreview>
           </Panel>
-        ) : null}
-      </div>
-
-      <StaffRecordIntegrationsCard
-        zohoId={guardian.zohoCrmId}
-        zohoUrl={guardian.zohoCrmUrl}
-      />
+        </div>
+      ) : null}
 
       {SHOW_STAFF_NOTES ? (
         <StaffNotesSection
