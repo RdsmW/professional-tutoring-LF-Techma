@@ -901,20 +901,27 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .staff-dir-cols-students {
   width: 100%;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(96px, 0.6fr) minmax(0, 1.25fr) minmax(120px, 0.85fr) minmax(112px, max-content) 64px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.25fr) minmax(0, 1.15fr) minmax(8rem, 0.85fr) minmax(0, 1.4fr) minmax(9rem, 0.9fr) minmax(8rem, max-content) 64px;
 }
 .staff-dir-cols-students.staff-dir-cols-no-actions {
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(96px, 0.6fr) minmax(0, 1.25fr) minmax(120px, 0.85fr) minmax(112px, max-content);
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.25fr) minmax(0, 1.15fr) minmax(8rem, 0.85fr) minmax(0, 1.4fr) minmax(9rem, 0.9fr) minmax(8rem, max-content);
 }
 .staff-dir-cols-students > * {
   min-width: 0;
-  padding-inline: var(--space-2);
+  padding-inline: var(--space-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .staff-dir-cols-students > :first-child {
   padding-left: 0;
 }
 .staff-dir-cols-students > :last-child {
   padding-right: 0;
+}
+.staff-dir-cols-students .staff-dir-col-actions {
+  overflow: visible;
+  white-space: normal;
 }
 .staff-dir-cols-tutors {
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) 0.85fr 0.9fr 64px;
