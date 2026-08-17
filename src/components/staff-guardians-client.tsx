@@ -240,7 +240,7 @@ export function StaffGuardiansClient() {
               ]}
               footerField={{
                 id: "created",
-                label: "Created",
+                label: "Created At",
                 value: formatDirectoryCreatedAt(row.createdAt),
               }}
               actions={rowActions(row)}
@@ -256,7 +256,7 @@ export function StaffGuardiansClient() {
               <span>Email</span>
               <span>Family</span>
               <span className="staff-dir-col-status">Status</span>
-              <span>Created</span>
+              <span>Created At</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {guardians.map((row) => {

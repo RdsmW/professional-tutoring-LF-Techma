@@ -12,6 +12,7 @@ import {
   StaffIconButton,
 } from "@/components/staff-action-icons";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
+import { StaffRecordIntegrationsCard } from "@/components/staff-record-integrations-card";
 import { Panel } from "@/components/ui";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -844,6 +845,10 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           )}
         </div>
       </Panel>
+
+      <StaffRecordIntegrationsCard
+        supports={{ zoho: false, stripe: false, acuity: false, quickbooks: false }}
+      />
 
       <StaffNotesSection
         notes={tutor.notesList}

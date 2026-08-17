@@ -27,6 +27,37 @@ const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Fri
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
 const OPEN_BOOKING_STATUSES = ["confirmed", "held", "pending_payment", "pending_staff_review"] as const;
 
+/** UI-only Priority Queue preview when the DB has no open change requests (not persisted). */
+const PREVIEW_FAMILY_REQUESTS = [
+  {
+    id: "preview-req-1",
+    initials: "EC",
+    title: "Cancel session · Emerson Chen",
+    copy: "Chen Family · Cancel upcoming booking",
+    meta: "Preview",
+    tone: "rose",
+    href: "/staff/sessions",
+  },
+  {
+    id: "preview-req-2",
+    initials: "MR",
+    title: "Reschedule · Maya Ruiz",
+    copy: "Ruiz Family · Move to another day",
+    meta: "Preview",
+    tone: "blue",
+    href: "/staff/sessions",
+  },
+  {
+    id: "preview-req-3",
+    initials: "JL",
+    title: "Tutor change · Jordan Lee",
+    copy: "Lee Family · Request different tutor",
+    meta: "Preview",
+    tone: "amber",
+    href: "/staff/sessions",
+  },
+] as const;
+
 function greetingForHour(hour: number) {
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
@@ -288,6 +319,10 @@ export default async function StaffDashboardPage() {
     day: "numeric",
   }).format(new Date());
   const greeting = greetingForHour(nowNy.getHours());
+  const usingPreviewRequests = data.familyRequests.length === 0 && !data.loadError;
+  const priorityRequests = usingPreviewRequests
+    ? PREVIEW_FAMILY_REQUESTS.map((row) => ({ ...row }))
+    : data.familyRequests;
 
   return (
     <>
@@ -351,11 +386,7 @@ export default async function StaffDashboardPage() {
               <div className="dashboard-kpi-strip" aria-label="Priority summary">
                 <span className="dashboard-kpi-chip">
                   Requests
-                  <strong>{data.familyRequests.length}</strong>
-                </span>
-                <span className="dashboard-kpi-chip">
-                  Open seats
-                  <strong>{data.tutorOpenings}</strong>
+                  <strong>{priorityRequests.length}</strong>
                 </span>
               </div>
               <Link href="/staff/sessions" className="text-button">
@@ -363,26 +394,25 @@ export default async function StaffDashboardPage() {
               </Link>
             </div>
           </div>
+          {usingPreviewRequests ? (
+            <p className="dashboard-preview-note">Sample preview — not live requests.</p>
+          ) : null}
           <div className="attention-list">
-            {data.familyRequests.length === 0 ? (
-              <p className="dashboard-empty">No open cancellation or change requests right now.</p>
-            ) : (
-              data.familyRequests.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className="attention-row"
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <span className={`avatar ${item.tone}`}>{item.initials}</span>
-                  <span>
-                    <strong>{item.title}</strong>
-                    <small>{item.copy}</small>
-                  </span>
-                  <span className={`pill ${item.tone}`}>{item.meta}</span>
-                </Link>
-              ))
-            )}
+            {priorityRequests.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="attention-row"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <span className={`avatar ${item.tone}`}>{item.initials}</span>
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.copy}</small>
+                </span>
+                <span className={`pill ${item.tone}`}>{item.meta}</span>
+              </Link>
+            ))}
           </div>
         </section>
 
@@ -412,12 +442,12 @@ export default async function StaffDashboardPage() {
               </Link>
             ))}
           </div>
-          <div className="capacity-note">
-            <span className="signal-dot" />
-            {data.weekBarsLive
-              ? "Bars reflect open vs booked seats on active availability slots."
-              : "Bars fill when availability slots exist in the database."}
-          </div>
+          {!data.weekBarsLive ? (
+            <div className="capacity-note">
+              <span className="signal-dot" />
+              Bars fill when availability slots exist in the database.
+            </div>
+          ) : null}
         </section>
       </div>
 

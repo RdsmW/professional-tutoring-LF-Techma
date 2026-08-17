@@ -123,8 +123,8 @@ export async function GET(
       guardianRows.find((g) => g.isBillingOwner) ||
       null;
 
-    // Soft-heal: when guardians exist, ensure exactly one billing owner.
-    // When none exist, clear a stale household billing pointer.
+    // Soft-heal: keep at most one payer flag and sync the household pointer.
+    // Do NOT invent a payer when staff left everyone unchecked (false/No).
     let healedBillingOwner = false;
     if (guardianRows.length === 0) {
       if (household.billingOwnerGuardianId) {
@@ -135,14 +135,24 @@ export async function GET(
         household.billingOwnerGuardianId = null;
       }
     } else {
-      if (!billingOwner) {
-        billingOwner = guardianRows[0] ?? null;
-      }
-      if (billingOwner) {
-        const extras = guardianRows.filter((g) => g.isBillingOwner && g.id !== billingOwner!.id);
-        const pointerMismatch = household.billingOwnerGuardianId !== billingOwner.id;
-        const missingFlag = !billingOwner.isBillingOwner;
-        if (extras.length > 0 || pointerMismatch || missingFlag || !household.billingOwnerGuardianId) {
+      const flaggedOwners = guardianRows.filter((g) => g.isBillingOwner);
+      if (flaggedOwners.length === 0) {
+        billingOwner = null;
+        if (household.billingOwnerGuardianId) {
+          await database
+            .update(households)
+            .set({ billingOwnerGuardianId: null, updatedAt: new Date() })
+            .where(eq(households.id, id));
+          household.billingOwnerGuardianId = null;
+          healedBillingOwner = true;
+        }
+      } else {
+        const preferred =
+          flaggedOwners.find((g) => g.id === household.billingOwnerGuardianId) || flaggedOwners[0]!;
+        billingOwner = preferred;
+        const extras = flaggedOwners.filter((g) => g.id !== preferred.id);
+        const pointerMismatch = household.billingOwnerGuardianId !== preferred.id;
+        if (extras.length > 0 || pointerMismatch || !household.billingOwnerGuardianId) {
           await database
             .update(guardians)
             .set({ isBillingOwner: false, updatedAt: new Date() })
@@ -150,15 +160,15 @@ export async function GET(
           await database
             .update(guardians)
             .set({ isBillingOwner: true, updatedAt: new Date() })
-            .where(eq(guardians.id, billingOwner.id));
+            .where(eq(guardians.id, preferred.id));
           await database
             .update(households)
-            .set({ billingOwnerGuardianId: billingOwner.id, updatedAt: new Date() })
+            .set({ billingOwnerGuardianId: preferred.id, updatedAt: new Date() })
             .where(eq(households.id, id));
           healedBillingOwner = true;
-          billingOwner = { ...billingOwner, isBillingOwner: true };
+          billingOwner = { ...preferred, isBillingOwner: true };
           for (const g of guardianRows) {
-            g.isBillingOwner = g.id === billingOwner.id;
+            g.isBillingOwner = g.id === preferred.id;
           }
         }
       }
@@ -250,6 +260,7 @@ export async function GET(
         country: household.country || HOUSEHOLD_COUNTRY_US,
         zohoCrmId: household.zohoCrmId,
         zohoCrmUrl: household.zohoCrmUrl,
+        stripeCustomerId: household.stripeCustomerId,
         billingOwnerGuardianId: billingOwner?.id ?? household.billingOwnerGuardianId,
         billingOwnerName: billingOwner
           ? `${billingOwner.firstName} ${billingOwner.lastName}`.trim()
@@ -513,6 +524,7 @@ export async function PATCH(
         country: fresh.country || HOUSEHOLD_COUNTRY_US,
         zohoCrmId: fresh.zohoCrmId,
         zohoCrmUrl: fresh.zohoCrmUrl,
+        stripeCustomerId: fresh.stripeCustomerId,
         billingOwnerGuardianId: fresh.billingOwnerGuardianId,
         billingOwnerName: billingOwner
           ? `${billingOwner.firstName} ${billingOwner.lastName}`.trim()

@@ -79,15 +79,9 @@ export async function POST(
       );
     }
 
-    const makeBillingOwner = Boolean(body.isBillingOwner);
-    const [householdBilling] = await database
-      .select({ billingOwnerGuardianId: households.billingOwnerGuardianId })
-      .from(households)
-      .where(eq(households.id, id))
-      .limit(1);
-    const existingCount = Number(guardianCount?.value ?? 0);
-    const shouldBeBillingOwner =
-      makeBillingOwner || existingCount === 0 || !householdBilling?.billingOwnerGuardianId;
+    const makeBillingOwner = body.isBillingOwner === true;
+    // Respect explicit checkbox: unchecked must stay false/No (do not auto-promote).
+    const shouldBeBillingOwner = makeBillingOwner;
 
     let relationshipRole: GuardianRelationshipRole | null = null;
     if (body.relationshipRole !== undefined && body.relationshipRole !== null) {

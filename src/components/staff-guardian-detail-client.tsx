@@ -22,6 +22,7 @@ import {
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { StaffNotesSection } from "@/components/staff-notes-section";
+import { StaffRecordIntegrationsCard } from "@/components/staff-record-integrations-card";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import {
@@ -53,6 +54,9 @@ function initials(firstName: string, lastName: string) {
 function yesNo(value: boolean) {
   return value ? "Yes" : "No";
 }
+
+/** Soft-hide Notes UI on Family / Guardian / Student detail (backend + recycle-bin kept). */
+const SHOW_STAFF_NOTES = false;
 
 function formatMailingAddressLines(guardian: {
   addressLine1: string | null;
@@ -932,14 +936,21 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
         ) : null}
       </div>
 
-      <StaffNotesSection
-        notes={guardian.notes}
-        onCreate={createGuardianNote}
-        onUpdate={updateGuardianNote}
-        onDelete={deleteGuardianNote}
-        onSuccess={toast.success}
-        onError={toast.error}
+      <StaffRecordIntegrationsCard
+        zohoId={guardian.zohoCrmId}
+        supports={{ zoho: true, stripe: false, acuity: false, quickbooks: false }}
       />
+
+      {SHOW_STAFF_NOTES ? (
+        <StaffNotesSection
+          notes={guardian.notes}
+          onCreate={createGuardianNote}
+          onUpdate={updateGuardianNote}
+          onDelete={deleteGuardianNote}
+          onSuccess={toast.success}
+          onError={toast.error}
+        />
+      ) : null}
 
       {studentsModalOpen ? (
         <NotesListModal title="Students" onClose={() => setStudentsModalOpen(false)}>

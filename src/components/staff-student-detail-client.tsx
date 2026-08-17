@@ -12,6 +12,7 @@ import {
   StaffIconButton,
 } from "@/components/staff-action-icons";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
+import { StaffRecordIntegrationsCard } from "@/components/staff-record-integrations-card";
 import { Panel } from "@/components/ui";
 import { learningNeedNotes, parseLearningNeeds } from "@/lib/family/learning-needs";
 import {
@@ -93,6 +94,9 @@ type StudentDetail = {
 
 const LEARNING_CHIP_PREVIEW = 8;
 const PREVIEW_LIMIT = 3;
+
+/** Soft-hide Notes UI on Family / Guardian / Student detail (backend + recycle-bin kept). */
+const SHOW_STAFF_NOTES = false;
 
 type StudentLifecycleConfirm = "archive" | "restore" | "delete";
 
@@ -824,14 +828,21 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         </Panel>
       </div>
 
-      <StaffNotesSection
-        notes={student.notes}
-        onCreate={createNote}
-        onUpdate={updateNote}
-        onDelete={deleteNote}
-        onSuccess={toast.success}
-        onError={toast.error}
+      <StaffRecordIntegrationsCard
+        zohoId={student.zohoDealId}
+        supports={{ zoho: true, stripe: false, acuity: false, quickbooks: false }}
       />
+
+      {SHOW_STAFF_NOTES ? (
+        <StaffNotesSection
+          notes={student.notes}
+          onCreate={createNote}
+          onUpdate={updateNote}
+          onDelete={deleteNote}
+          onSuccess={toast.success}
+          onError={toast.error}
+        />
+      ) : null}
 
       {listModal === "enrollments" ? (
         <ListModal title="Enrollments" onClose={() => setListModal(null)}>

@@ -380,7 +380,7 @@ export function StaffStudentsClient() {
               ]}
               footerField={{
                 id: "created",
-                label: "Created",
+                label: "Created At",
                 value: formatDirectoryCreatedAt(row.createdAt),
               }}
               actions={actions}

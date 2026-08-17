@@ -18,16 +18,18 @@ export function parseDirectorySort(raw: string | null | undefined): DirectorySor
   return DEFAULT_DIRECTORY_SORT;
 }
 
-/** Short calendar date for directory tables/cards (e.g. Aug 17, 2026). */
+/** Directory / dashboard Created At — date + time in app timezone (e.g. Aug 10, 2026, 3:45 PM). */
 export function formatDirectoryCreatedAt(value: string | null | undefined): string {
   if (!value) return "—";
   try {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "—";
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
       timeZone: APP_TIMEZONE,
     });
   } catch {

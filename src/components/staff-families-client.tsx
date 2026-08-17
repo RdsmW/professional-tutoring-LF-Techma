@@ -399,7 +399,7 @@ export function StaffFamiliesClient({
               ]}
               footerField={{
                 id: "created",
-                label: "Created",
+                label: "Created At",
                 value: formatDirectoryCreatedAt(row.createdAt),
               }}
               actions={actions}
@@ -416,7 +416,7 @@ export function StaffFamiliesClient({
               <span>Card on file</span>
               <span>Auto-charge</span>
               <span className="staff-dir-col-status">Status</span>
-              <span>Created</span>
+              <span>Created At</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {families.map((row) => (

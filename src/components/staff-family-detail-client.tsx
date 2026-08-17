@@ -17,6 +17,7 @@ import {
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
 import { StaffNotesSection } from "@/components/staff-notes-section";
+import { StaffRecordIntegrationsCard } from "@/components/staff-record-integrations-card";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -70,6 +71,7 @@ type FamilyDetail = {
   country: string;
   zohoCrmId: string | null;
   zohoCrmUrl: string | null;
+  stripeCustomerId?: string | null;
   billingOwnerGuardianId: string | null;
   billingOwnerName: string | null;
   billingOwnerPhone: string | null;
@@ -150,6 +152,9 @@ function zohoHref(family: FamilyDetail) {
   if (url) return url;
   return null;
 }
+
+/** Soft-hide Notes UI on Family / Guardian / Student detail (backend + recycle-bin kept). */
+const SHOW_STAFF_NOTES = false;
 
 const PREVIEW_LIMIT = 3;
 const MAX_GUARDIANS = 2;
@@ -984,8 +989,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           <span>Parent role</span>
           <span>Email</span>
           <span className="family-detail-col-flag">Payer</span>
-          <span className="family-detail-col-flag">Manage students</span>
-          <span className="family-detail-col-flag">Request services</span>
           <span className="staff-dir-col-actions" aria-label="Actions" />
         </div>
         {rows.map((g) => {
@@ -1018,8 +1021,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
             </span>
             <span>{g.email}</span>
             <span className="family-detail-col-flag">{yesNo(g.isBillingOwner)}</span>
-            <span className="family-detail-col-flag">{yesNo(g.canManageStudents)}</span>
-            <span className="family-detail-col-flag">{yesNo(g.canRequestServices)}</span>
             <span className="staff-dir-col-actions">
               <StaffRowActions label="Guardian actions" actions={guardianActions(g)} />
             </span>
@@ -1381,14 +1382,22 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </Panel>
       </div>
 
-      <StaffNotesSection
-        notes={family.notes}
-        onCreate={createFamilyNote}
-        onUpdate={updateFamilyNote}
-        onDelete={deleteFamilyNote}
-        onSuccess={toast.success}
-        onError={toast.error}
+      <StaffRecordIntegrationsCard
+        zohoId={family.zohoCrmId}
+        stripeCustomerId={family.stripeCustomerId ?? null}
+        supports={{ zoho: true, stripe: true, acuity: false, quickbooks: false }}
       />
+
+      {SHOW_STAFF_NOTES ? (
+        <StaffNotesSection
+          notes={family.notes}
+          onCreate={createFamilyNote}
+          onUpdate={updateFamilyNote}
+          onDelete={deleteFamilyNote}
+          onSuccess={toast.success}
+          onError={toast.error}
+        />
+      ) : null}
 
       {listModal === "guardians" ? (
         <FamilyListModal title="Guardians" onClose={() => setListModal(null)}>

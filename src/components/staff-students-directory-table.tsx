@@ -74,7 +74,7 @@ export function StaffStudentsDirectoryTable({
         <span>Grade</span>
         <span>School</span>
         <span className="staff-dir-col-status">Status</span>
-        <span>Created</span>
+        <span>Created At</span>
         {withActions ? <span className="staff-dir-col-actions" aria-label="Actions" /> : null}
       </div>
       {rows.map((row) => {
