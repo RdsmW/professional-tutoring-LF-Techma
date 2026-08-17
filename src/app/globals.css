@@ -113,7 +113,7 @@ button { color: inherit; }
   transition: grid-template-columns 0.18s ease;
 }
 .app-shell.is-nav-collapsed {
-  --shell-inline-pad: 24px;
+  --shell-inline-pad: 28px;
   grid-template-columns: 72px minmax(0, 1fr);
 }
 .sidebar {
@@ -469,7 +469,7 @@ button { color: inherit; }
 .flow-stage button.active span { background: var(--navy); color: #fff; }
 .flow-stage i { color: #b8c0c7; font-style: normal; }
 .content { padding: 24px var(--shell-inline-pad) 44px; max-width: 1560px; margin: 0 auto; }
-/* Collapsed: 24px gutter via --shell-inline-pad; no max-width so content fills remaining width. */
+/* Collapsed: 28px gutter via --shell-inline-pad; no max-width so content fills remaining width. */
 .app-shell.is-nav-collapsed .content {
   max-width: none;
   padding-top: 20px;
