@@ -2056,7 +2056,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .family-panel-heading h2 {
   margin: 0 !important;
-  font: 700 18px Georgia, serif;
+  color: var(--nav-accent);
+  font: 800 12px Arial, Helvetica, sans-serif;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
 .family-panel-heading-actions {
   display: inline-flex;
@@ -3116,12 +3119,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   margin-bottom: 0 !important;
   min-width: 0;
   height: auto;
-}
-.staff-record-info-card > .family-panel-heading h2 {
-  color: var(--nav-accent);
-  font: 800 12px Arial, Helvetica, sans-serif;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
 }
 .staff-record-info-card .family-household-dense small {
   text-transform: none;

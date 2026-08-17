@@ -952,7 +952,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     if (!g.linked) {
       actions.push({
         id: "invite",
-        label: g.invitePath ? "Regenerate invite" : "Create invite",
+        label: g.invitePath ? "Regenerate invite" : "Send invite",
         onSelect: () => void refreshInvite(g.id),
       });
     }
