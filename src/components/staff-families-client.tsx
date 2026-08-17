@@ -393,8 +393,10 @@ export function StaffFamiliesClient({
           <div className="table-panel staff-dir-table">
             <div className="table-head staff-dir-cols-families">
               <span>Name</span>
+              <span>Payer</span>
               <span>Students</span>
-              <span>Guardians</span>
+              <span>Card on file</span>
+              <span>Auto-charge</span>
               <span className="staff-dir-col-status">Status</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
@@ -413,8 +415,10 @@ export function StaffFamiliesClient({
                 }}
               >
                 <strong>{row.displayName}</strong>
+                <span>{row.payerName || "—"}</span>
                 <span>{row.studentCount}</span>
-                <span>{row.guardianCount}</span>
+                <span>{row.cardOnFile ? "Yes" : "No"}</span>
+                <span>{row.autoCharge ? "Yes" : "No"}</span>
                 <span className="staff-dir-col-status">
                   <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
                 </span>

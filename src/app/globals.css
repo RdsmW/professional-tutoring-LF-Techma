@@ -866,7 +866,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   align-items: center;
 }
 .staff-dir-cols-families {
-  grid-template-columns: minmax(0, 1.6fr) 0.7fr 0.7fr 0.9fr 64px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr) 0.65fr 0.85fr 0.85fr 0.85fr 64px;
 }
 .staff-dir-cols-students {
   grid-template-columns: minmax(180px, 1.6fr) minmax(120px, 1.1fr) minmax(110px, 1fr) 80px minmax(110px, 1fr) 100px 72px;
