@@ -40,6 +40,7 @@ export type StaffGuardianListRow = {
     displayName: string;
     status: string;
   };
+  createdAt: string;
   updatedAt: string;
 };
 

@@ -4,9 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
-import { StaffDirectoryChrome, StaffDirectoryResults } from "@/components/staff-directory-chrome";
+import {
+  DirectorySortSelect,
+  StaffDirectoryChrome,
+  StaffDirectoryResults,
+} from "@/components/staff-directory-chrome";
 import { StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import {
+  DEFAULT_DIRECTORY_SORT,
+  formatDirectoryCreatedAt,
+  type DirectorySort,
+} from "@/lib/ui/directory-sort";
 import { useDebouncedValue } from "@/lib/ui/use-debounced-value";
 import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -23,6 +32,7 @@ type StudentRow = {
   householdDisplayName: string;
   subjects?: Array<{ id: string; name: string; code: string }>;
   canDelete: boolean;
+  createdAt: string;
 };
 
 type HouseholdOption = {
@@ -56,6 +66,7 @@ export function StaffStudentsClient() {
   const [lifecycle, setLifecycle] = useState("");
   const [grade, setGrade] = useState("");
   const [school, setSchool] = useState("");
+  const [sort, setSort] = useState<DirectorySort>(DEFAULT_DIRECTORY_SORT);
   const debouncedQ = useDebouncedValue(q.trim(), 300);
   const debouncedGrade = useDebouncedValue(grade.trim(), 300);
   const debouncedSchool = useDebouncedValue(school.trim(), 300);
@@ -66,11 +77,16 @@ export function StaffStudentsClient() {
       lifecycle,
       grade: debouncedGrade,
       school: debouncedSchool,
+      sort,
     }),
-    [debouncedQ, lifecycle, debouncedGrade, debouncedSchool],
+    [debouncedQ, lifecycle, debouncedGrade, debouncedSchool, sort],
   );
   const filtersActive =
-    q.trim() !== "" || lifecycle !== "" || grade.trim() !== "" || school.trim() !== "";
+    q.trim() !== "" ||
+    lifecycle !== "" ||
+    grade.trim() !== "" ||
+    school.trim() !== "" ||
+    sort !== DEFAULT_DIRECTORY_SORT;
 
   useEffect(() => {
     if (searchParams.get("new") === "1") setCreating(true);
@@ -89,6 +105,7 @@ export function StaffStudentsClient() {
       if (applied.lifecycle) params.set("lifecycle", applied.lifecycle);
       if (applied.grade) params.set("grade", applied.grade);
       if (applied.school) params.set("school", applied.school);
+      params.set("sort", applied.sort);
       const query = params.toString();
       const response = await fetch(`/api/staff/students${query ? `?${query}` : ""}`);
       const data = await response.json();
@@ -137,6 +154,7 @@ export function StaffStudentsClient() {
     setLifecycle("");
     setGrade("");
     setSchool("");
+    setSort(DEFAULT_DIRECTORY_SORT);
   }
 
   async function setStudentLifecycle(id: string, nextLifecycle: string) {
@@ -301,7 +319,7 @@ export function StaffStudentsClient() {
         viewLabel="Students layout"
         filtersActive={filtersActive}
         onClearFilters={clearFilters}
-        filterColumns="1.6fr 1fr 1fr 1fr"
+        filterColumns="1.6fr 1fr 1fr 1fr 1fr"
       >
         <label className="student-search">
           Search name
@@ -325,6 +343,7 @@ export function StaffStudentsClient() {
           School
           <input value={school} onChange={(e) => setSchool(e.target.value)} placeholder="School" />
         </label>
+        <DirectorySortSelect value={sort} onChange={setSort} />
       </StaffDirectoryChrome>
 
       <StaffDirectoryResults
@@ -354,9 +373,10 @@ export function StaffStudentsClient() {
                 </span>
               }
               fields={[
-                { label: "Subjects", value: formatSubjectsPreview(row.subjects) },
                 { label: "Grade", value: row.gradeLabel ?? "—" },
                 { label: "School", value: row.schoolName ?? "—" },
+                { label: "Subjects", value: formatSubjectsPreview(row.subjects), wide: true },
+                { label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
               ]}
               actions={actions}
               onOpen={() => router.push(`/staff/students/${row.id}`)}
@@ -371,6 +391,7 @@ export function StaffStudentsClient() {
               <span>Subjects</span>
               <span>Grade</span>
               <span>School</span>
+              <span>Created</span>
               <span className="staff-dir-col-status">Status</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
@@ -393,6 +414,7 @@ export function StaffStudentsClient() {
                 <span>{formatSubjectsPreview(row.subjects)}</span>
                 <span>{row.gradeLabel ?? "—"}</span>
                 <span>{row.schoolName ?? "—"}</span>
+                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-status">
                   <span className={`pill ${statusTone(row.lifecycle)}`}>{formatStatusLabel(row.lifecycle)}</span>
                 </span>

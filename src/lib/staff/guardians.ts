@@ -27,6 +27,7 @@ import {
   STAFF_NOTE_RECYCLE_DAYS,
   type StaffRecycledNote,
 } from "@/lib/staff/staff-notes-recycle";
+import { parseDirectorySort, type DirectorySort } from "@/lib/ui/directory-sort";
 
 /** @deprecated Prefer STAFF_NOTE_RECYCLE_DAYS — kept for existing imports. */
 export const GUARDIAN_NOTE_RECYCLE_DAYS = STAFF_NOTE_RECYCLE_DAYS;
@@ -55,6 +56,8 @@ export type ListStaffGuardiansFilters = {
    * Omit / empty = non-archived default (like Families).
    */
   status?: string;
+  /** `newest` | `oldest` | `name_asc` — defaults to newest by createdAt. */
+  sort?: string;
 };
 
 function normalizeGuardianStatus(value: string | null | undefined): GuardianStatus {
@@ -279,6 +282,16 @@ export async function setHouseholdBillingOwner(householdId: string, guardianId: 
   await syncHouseholdBillingAddressFromGuardian(householdId, guardianId);
 }
 
+function guardianOrderBy(sort: DirectorySort) {
+  if (sort === "oldest") {
+    return [asc(guardians.createdAt), asc(guardians.lastName), asc(guardians.firstName)] as const;
+  }
+  if (sort === "name_asc") {
+    return [asc(guardians.lastName), asc(guardians.firstName), desc(guardians.createdAt)] as const;
+  }
+  return [desc(guardians.createdAt), asc(guardians.lastName), asc(guardians.firstName)] as const;
+}
+
 /** Staff Guardians directory query. */
 export async function listStaffGuardians(
   filters: ListStaffGuardiansFilters = {},
@@ -286,6 +299,7 @@ export async function listStaffGuardians(
   const database = requireDb();
   const q = (filters.q ?? "").trim();
   const status = (filters.status ?? "").trim().toLowerCase();
+  const sort = parseDirectorySort(filters.sort);
 
   const whereParts: SQL[] = [];
 
@@ -335,6 +349,7 @@ export async function listStaffGuardians(
       isBillingOwner: guardians.isBillingOwner,
       canManageStudents: guardians.canManageStudents,
       canRequestServices: guardians.canRequestServices,
+      createdAt: guardians.createdAt,
       updatedAt: guardians.updatedAt,
       householdId: households.id,
       householdDisplayName: households.displayName,
@@ -343,7 +358,7 @@ export async function listStaffGuardians(
     .from(guardians)
     .leftJoin(households, eq(guardians.householdId, households.id))
     .where(whereParts.length > 0 ? and(...whereParts) : undefined)
-    .orderBy(desc(guardians.updatedAt));
+    .orderBy(...guardianOrderBy(sort));
 
   return rows.map((row) => ({
     id: row.id,
@@ -362,6 +377,7 @@ export async function listStaffGuardians(
       displayName: row.householdDisplayName || "Unassigned",
       status: row.householdStatus || "pending",
     },
+    createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }));
 }

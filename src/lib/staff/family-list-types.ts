@@ -11,5 +11,6 @@ export type StaffFamilyListRow = {
   autoCharge: boolean;
   /** True when household has no students, bookings, or enrollments. */
   canDelete: boolean;
+  createdAt: string;
   updatedAt: string;
 };

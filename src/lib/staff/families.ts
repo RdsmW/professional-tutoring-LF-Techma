@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNotNull, isNull, lt, ne, or, SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNotNull, isNull, lt, ne, or, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import {
   bookings,
@@ -14,6 +14,7 @@ import {
   noteRecycleCutoffDate,
   type StaffRecycledNote,
 } from "@/lib/staff/staff-notes-recycle";
+import { parseDirectorySort, type DirectorySort } from "@/lib/ui/directory-sort";
 
 export type { StaffFamilyListRow };
 
@@ -30,6 +31,8 @@ export type ListStaffFamiliesFilters = {
   q?: string;
   /** Exact status, `all` for every status, or omit / empty for non-archived default. */
   status?: string;
+  /** `newest` | `oldest` | `name_asc` — defaults to newest by createdAt. */
+  sort?: string;
 };
 
 const HOUSEHOLD_STATUSES = new Set(["pending", "active", "inactive", "archived"]);
@@ -130,6 +133,12 @@ export async function listDeletedHouseholdNotes(): Promise<StaffRecycledNote[]> 
     });
 }
 
+function familyOrderBy(sort: DirectorySort) {
+  if (sort === "oldest") return [asc(households.createdAt), asc(households.displayName)] as const;
+  if (sort === "name_asc") return [asc(households.displayName), desc(households.createdAt)] as const;
+  return [desc(households.createdAt), asc(households.displayName)] as const;
+}
+
 /** Single aggregated query for the staff Families directory. */
 export async function listStaffFamilies(
   filters: ListStaffFamiliesFilters = {},
@@ -137,6 +146,7 @@ export async function listStaffFamilies(
   const database = requireDb();
   const q = (filters.q ?? "").trim();
   const status = (filters.status ?? "").trim();
+  const sort = parseDirectorySort(filters.sort);
 
   const whereParts: SQL[] = [];
   if (q) {
@@ -159,6 +169,7 @@ export async function listStaffFamilies(
       displayName: households.displayName,
       status: households.status,
       primaryPhone: households.primaryPhone,
+      createdAt: households.createdAt,
       updatedAt: households.updatedAt,
       cardOnFile: households.cardOnFile,
       autoCharge: households.autoCharge,
@@ -186,6 +197,7 @@ export async function listStaffFamilies(
       households.displayName,
       households.status,
       households.primaryPhone,
+      households.createdAt,
       households.updatedAt,
       households.cardOnFile,
       households.autoCharge,
@@ -193,7 +205,7 @@ export async function listStaffFamilies(
       households.cardLast4,
       households.billingOwnerGuardianId,
     )
-    .orderBy(desc(households.updatedAt));
+    .orderBy(...familyOrderBy(sort));
 
   return rows.map((row) => {
     const studentCount = Number(row.studentCount ?? 0);
@@ -212,6 +224,7 @@ export async function listStaffFamilies(
       cardOnFile: Boolean(row.cardOnFile) || hasStripeCard,
       autoCharge: Boolean(row.autoCharge),
       canDelete: studentCount === 0 && bookingCount === 0 && enrollmentCount === 0,
+      createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
   });

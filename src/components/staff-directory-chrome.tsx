@@ -5,6 +5,11 @@ import { DirectoryViewToggle } from "@/components/directory-view-toggle";
 import { StaffDirectoryFilters } from "@/components/staff-row-actions";
 import { Panel } from "@/components/ui";
 import type { DirectoryView } from "@/lib/ui/directory-view";
+import {
+  DIRECTORY_SORT_OPTIONS,
+  parseDirectorySort,
+  type DirectorySort,
+} from "@/lib/ui/directory-sort";
 
 type StaffDirectoryChromeProps = {
   view: DirectoryView;
@@ -48,6 +53,30 @@ export function StaffDirectoryChrome({
       </StaffDirectoryFilters>
       <DirectoryViewToggle view={view} onChange={onViewChange} label={viewLabel} />
     </div>
+  );
+}
+
+type DirectorySortSelectProps = {
+  value: DirectorySort;
+  onChange: (value: DirectorySort) => void;
+};
+
+/** Shared sort control for staff directories (newest / oldest / Name A–Z). */
+export function DirectorySortSelect({ value, onChange }: DirectorySortSelectProps) {
+  return (
+    <label>
+      Sort
+      <select
+        value={value}
+        onChange={(event) => onChange(parseDirectorySort(event.target.value))}
+      >
+        {DIRECTORY_SORT_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

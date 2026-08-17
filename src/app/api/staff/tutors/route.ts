@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, ilike, or, SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, SQL, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { bookings, tutorNotes, tutorSubjects, tutors } from "@/lib/db/schema";
 import { HOUSEHOLD_COUNTRY_US } from "@/lib/staff/household-display-name";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
+import { parseDirectorySort, type DirectorySort } from "@/lib/ui/directory-sort";
+
+function tutorOrderBy(sort: DirectorySort) {
+  if (sort === "oldest") {
+    return [asc(tutors.createdAt), asc(tutors.displayName)] as const;
+  }
+  if (sort === "name_asc") {
+    return [asc(tutors.displayName), desc(tutors.createdAt)] as const;
+  }
+  return [desc(tutors.createdAt), asc(tutors.displayName)] as const;
+}
 
 type NewTutorBody = {
   displayName?: string;
@@ -38,6 +49,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get("q") ?? "").trim();
     const activeParam = (searchParams.get("active") ?? "").trim().toLowerCase();
+    const sort = parseDirectorySort(searchParams.get("sort"));
 
     const database = requireDb();
     const filters: SQL[] = [];
@@ -72,6 +84,7 @@ export async function GET(request: Request) {
         maxSeatsPerSlot: tutors.maxSeatsPerSlot,
         notes: tutors.notes,
         latestNoteBody,
+        createdAt: tutors.createdAt,
         updatedAt: tutors.updatedAt,
         bookingCount: sql<number>`count(distinct ${bookings.id})::int`.mapWith(Number),
         subjectCount: sql<number>`count(distinct ${tutorSubjects.id})::int`.mapWith(Number),
@@ -88,9 +101,10 @@ export async function GET(request: Request) {
         tutors.active,
         tutors.maxSeatsPerSlot,
         tutors.notes,
+        tutors.createdAt,
         tutors.updatedAt,
       )
-      .orderBy(desc(tutors.updatedAt));
+      .orderBy(...tutorOrderBy(sort));
 
     return NextResponse.json({
       ok: true,
@@ -106,6 +120,7 @@ export async function GET(request: Request) {
           maxSeatsPerSlot: row.maxSeatsPerSlot,
           notesPreview: notesPreview(row.latestNoteBody ?? row.notes),
           canDelete: bookingCount === 0 && subjectCount === 0,
+          createdAt: row.createdAt.toISOString(),
         };
       }),
     });

@@ -4,8 +4,19 @@ import { requireDb } from "@/lib/db";
 import { bookings, courseEnrollments, guardians, households, students, studentSubjects, subjects } from "@/lib/db/schema";
 import { buildStudentListLabel } from "@/lib/staff/students";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
+import { parseDirectorySort, type DirectorySort } from "@/lib/ui/directory-sort";
 
 const LIFECYCLES = new Set(["prospect", "active", "paused", "completed", "archived"]);
+
+function studentOrderBy(sort: DirectorySort) {
+  if (sort === "oldest") {
+    return [asc(students.createdAt), asc(students.displayName)] as const;
+  }
+  if (sort === "name_asc") {
+    return [asc(students.displayName), desc(students.createdAt)] as const;
+  }
+  return [desc(students.createdAt), asc(students.displayName)] as const;
+}
 
 export async function GET(request: Request) {
   try {
@@ -21,6 +32,7 @@ export async function GET(request: Request) {
     const grade = (searchParams.get("grade") ?? "").trim();
     const school = (searchParams.get("school") ?? "").trim();
     const householdId = (searchParams.get("householdId") ?? searchParams.get("household") ?? "").trim();
+    const sort = parseDirectorySort(searchParams.get("sort"));
 
     if (lifecycle && lifecycle !== "all" && !LIFECYCLES.has(lifecycle)) {
       return NextResponse.json({ ok: false, error: "Invalid lifecycle filter." }, { status: 400 });
@@ -54,6 +66,7 @@ export async function GET(request: Request) {
         householdId: students.householdId,
         householdDisplayName: households.displayName,
         householdBillingOwnerGuardianId: households.billingOwnerGuardianId,
+        createdAt: students.createdAt,
         updatedAt: students.updatedAt,
         bookingCount: sql<number>`count(distinct ${bookings.id})::int`.mapWith(Number),
         enrollmentCount: sql<number>`count(distinct ${courseEnrollments.id})::int`.mapWith(Number),
@@ -75,9 +88,10 @@ export async function GET(request: Request) {
         students.householdId,
         households.displayName,
         households.billingOwnerGuardianId,
+        students.createdAt,
         students.updatedAt,
       )
-      .orderBy(desc(students.updatedAt));
+      .orderBy(...studentOrderBy(sort));
 
     const householdIds = [
       ...new Set(rows.map((row) => row.householdId).filter((id): id is string => Boolean(id))),
@@ -153,6 +167,7 @@ export async function GET(request: Request) {
           householdDisplayName: row.householdDisplayName || "Unassigned",
           subjects: subjectsByStudent.get(row.id) ?? [],
           canDelete: bookingCount === 0 && enrollmentCount === 0,
+          createdAt: row.createdAt.toISOString(),
           updatedAt: row.updatedAt.toISOString(),
         };
       }),

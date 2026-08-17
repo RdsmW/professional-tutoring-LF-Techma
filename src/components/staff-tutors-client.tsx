@@ -4,9 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
-import { StaffDirectoryChrome, StaffDirectoryResults } from "@/components/staff-directory-chrome";
+import {
+  DirectorySortSelect,
+  StaffDirectoryChrome,
+  StaffDirectoryResults,
+} from "@/components/staff-directory-chrome";
 import { StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import {
+  DEFAULT_DIRECTORY_SORT,
+  formatDirectoryCreatedAt,
+  type DirectorySort,
+} from "@/lib/ui/directory-sort";
 import { useDebouncedValue } from "@/lib/ui/use-debounced-value";
 import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -20,6 +29,7 @@ type TutorRow = {
   maxSeatsPerSlot: number;
   notesPreview: string | null;
   canDelete: boolean;
+  createdAt: string;
 };
 
 const ACTIVE_OPTIONS = [
@@ -47,10 +57,11 @@ export function StaffTutorsClient() {
   const [saving, setSaving] = useState(false);
   const [q, setQ] = useState("");
   const [active, setActive] = useState("true");
+  const [sort, setSort] = useState<DirectorySort>(DEFAULT_DIRECTORY_SORT);
   const debouncedQ = useDebouncedValue(q.trim(), 300);
   // Memoize so reload deps stay stable (inline object would refetch every render).
-  const applied = useMemo(() => ({ q: debouncedQ, active }), [debouncedQ, active]);
-  const filtersActive = q.trim() !== "" || active !== "true";
+  const applied = useMemo(() => ({ q: debouncedQ, active, sort }), [debouncedQ, active, sort]);
+  const filtersActive = q.trim() !== "" || active !== "true" || sort !== DEFAULT_DIRECTORY_SORT;
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -59,6 +70,7 @@ export function StaffTutorsClient() {
       const params = new URLSearchParams();
       if (applied.q) params.set("q", applied.q);
       if (applied.active) params.set("active", applied.active);
+      params.set("sort", applied.sort);
       const query = params.toString();
       const response = await fetch(`/api/staff/tutors${query ? `?${query}` : ""}`);
       const data = await response.json();
@@ -89,6 +101,7 @@ export function StaffTutorsClient() {
   function clearFilters() {
     setQ("");
     setActive("true");
+    setSort(DEFAULT_DIRECTORY_SORT);
   }
 
   async function setTutorActive(id: string, nextActive: boolean) {
@@ -272,7 +285,7 @@ export function StaffTutorsClient() {
         viewLabel="Tutors layout"
         filtersActive={filtersActive}
         onClearFilters={clearFilters}
-        filterColumns="1.6fr 1fr"
+        filterColumns="1.6fr 1fr 1fr"
       >
         <label className="student-search">
           Search name, email, or phone
@@ -292,6 +305,7 @@ export function StaffTutorsClient() {
             ))}
           </select>
         </label>
+        <DirectorySortSelect value={sort} onChange={setSort} />
       </StaffDirectoryChrome>
 
       <StaffDirectoryResults
@@ -323,6 +337,7 @@ export function StaffTutorsClient() {
               fields={[
                 { label: "Email", value: row.email || "—" },
                 { label: "Phone", value: row.phone || "—" },
+                { label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
               ]}
               actions={actions}
               onOpen={() => router.push(`/staff/tutors/${row.id}`)}
@@ -334,6 +349,7 @@ export function StaffTutorsClient() {
             <div className="table-head staff-dir-cols-tutors">
               <span>Name</span>
               <span>Email</span>
+              <span>Created</span>
               <span className="staff-dir-col-status">Status</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
@@ -353,6 +369,7 @@ export function StaffTutorsClient() {
               >
                 <strong>{row.displayName}</strong>
                 <span>{row.email || "—"}</span>
+                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-status">
                   <span className={`pill ${statusTone(row.active ? "active" : "inactive")}`}>
                     {formatStatusLabel(row.active ? "active" : "archived")}

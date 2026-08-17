@@ -7,7 +7,7 @@ type StaffDirectoryCardProps = {
   title: string;
   subtitle?: string;
   status: ReactNode;
-  fields: { label: string; value: ReactNode }[];
+  fields: { label: string; value: ReactNode; wide?: boolean }[];
   actions: StaffRowAction[];
   onOpen: () => void;
 };
@@ -46,7 +46,7 @@ export function StaffDirectoryCard({
         {fields.length > 0 ? (
           <div className="mini-fields">
             {fields.map((field) => (
-              <span key={field.label}>
+              <span key={field.label} className={field.wide ? "mini-field-wide" : undefined}>
                 <small>{field.label}</small>
                 {field.value}
               </span>

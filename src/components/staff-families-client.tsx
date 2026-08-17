@@ -5,11 +5,20 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
-import { StaffDirectoryChrome, StaffDirectoryResults } from "@/components/staff-directory-chrome";
+import {
+  DirectorySortSelect,
+  StaffDirectoryChrome,
+  StaffDirectoryResults,
+} from "@/components/staff-directory-chrome";
 import { StaffNewFamilyWizard } from "@/components/staff-new-family-wizard";
 import { StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import {
+  DEFAULT_DIRECTORY_SORT,
+  formatDirectoryCreatedAt,
+  type DirectorySort,
+} from "@/lib/ui/directory-sort";
 import { useDebouncedValue } from "@/lib/ui/use-debounced-value";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
@@ -42,10 +51,11 @@ export function StaffFamiliesClient({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
+  const [sort, setSort] = useState<DirectorySort>(DEFAULT_DIRECTORY_SORT);
   const debouncedQ = useDebouncedValue(q.trim(), 300);
   // Memoize so reload deps stay stable (inline object would refetch every render).
-  const applied = useMemo(() => ({ q: debouncedQ, status }), [debouncedQ, status]);
-  const filtersActive = q.trim() !== "" || status !== "";
+  const applied = useMemo(() => ({ q: debouncedQ, status, sort }), [debouncedQ, status, sort]);
+  const filtersActive = q.trim() !== "" || status !== "" || sort !== DEFAULT_DIRECTORY_SORT;
   const [guardianForm, setGuardianForm] = useState({
     householdId: "",
     firstName: "",
@@ -71,6 +81,7 @@ export function StaffFamiliesClient({
       const params = new URLSearchParams();
       if (applied.q) params.set("q", applied.q);
       if (applied.status) params.set("status", applied.status);
+      params.set("sort", applied.sort);
       const query = params.toString();
       const response = await fetch(`/api/staff/families${query ? `?${query}` : ""}`);
       const data = await response.json();
@@ -112,6 +123,7 @@ export function StaffFamiliesClient({
   function clearFilters() {
     setQ("");
     setStatus("");
+    setSort(DEFAULT_DIRECTORY_SORT);
   }
 
   async function setFamilyStatus(id: string, next: "active" | "archived") {
@@ -333,7 +345,7 @@ export function StaffFamiliesClient({
         viewLabel="Families layout"
         filtersActive={filtersActive}
         onClearFilters={clearFilters}
-        filterColumns="1.6fr 1fr"
+        filterColumns="1.6fr 1fr 1fr"
       >
         <label className="student-search">
           Search name or phone
@@ -353,6 +365,7 @@ export function StaffFamiliesClient({
             ))}
           </select>
         </label>
+        <DirectorySortSelect value={sort} onChange={setSort} />
       </StaffDirectoryChrome>
 
       <StaffDirectoryResults
@@ -383,6 +396,7 @@ export function StaffFamiliesClient({
                 { label: "Students", value: row.studentCount },
                 { label: "Card on file", value: row.cardOnFile ? "Yes" : "No" },
                 { label: "Auto-charge", value: row.autoCharge ? "Yes" : "No" },
+                { label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
               ]}
               actions={actions}
               onOpen={() => router.push(`/staff/families/${row.id}`)}
@@ -397,6 +411,7 @@ export function StaffFamiliesClient({
               <span>Students</span>
               <span>Card on file</span>
               <span>Auto-charge</span>
+              <span>Created</span>
               <span className="staff-dir-col-status">Status</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
@@ -419,6 +434,7 @@ export function StaffFamiliesClient({
                 <span>{row.studentCount}</span>
                 <span>{row.cardOnFile ? "Yes" : "No"}</span>
                 <span>{row.autoCharge ? "Yes" : "No"}</span>
+                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-status">
                   <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
                 </span>

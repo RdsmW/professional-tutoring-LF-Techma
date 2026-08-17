@@ -13,8 +13,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get("q") ?? "").trim();
     const status = (searchParams.get("status") ?? "").trim();
+    const sort = (searchParams.get("sort") ?? "").trim();
 
-    const guardians = await listStaffGuardians({ q, status });
+    const guardians = await listStaffGuardians({ q, status, sort });
 
     return NextResponse.json({
       ok: true,

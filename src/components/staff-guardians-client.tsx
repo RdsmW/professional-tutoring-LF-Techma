@@ -5,9 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
-import { StaffDirectoryChrome, StaffDirectoryResults } from "@/components/staff-directory-chrome";
+import {
+  DirectorySortSelect,
+  StaffDirectoryChrome,
+  StaffDirectoryResults,
+} from "@/components/staff-directory-chrome";
 import { StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import {
+  DEFAULT_DIRECTORY_SORT,
+  formatDirectoryCreatedAt,
+  type DirectorySort,
+} from "@/lib/ui/directory-sort";
 import { useDebouncedValue } from "@/lib/ui/use-debounced-value";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -29,6 +38,7 @@ type GuardianRow = {
     displayName: string;
     status: string;
   };
+  createdAt: string;
   updatedAt: string;
 };
 
@@ -49,10 +59,11 @@ export function StaffGuardiansClient() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
+  const [sort, setSort] = useState<DirectorySort>(DEFAULT_DIRECTORY_SORT);
   const debouncedQ = useDebouncedValue(q.trim(), 300);
   // Memoize so reload deps stay stable (inline object would refetch every render).
-  const applied = useMemo(() => ({ q: debouncedQ, status }), [debouncedQ, status]);
-  const filtersActive = q.trim() !== "" || status !== "";
+  const applied = useMemo(() => ({ q: debouncedQ, status, sort }), [debouncedQ, status, sort]);
+  const filtersActive = q.trim() !== "" || status !== "" || sort !== DEFAULT_DIRECTORY_SORT;
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -61,6 +72,7 @@ export function StaffGuardiansClient() {
       const params = new URLSearchParams();
       if (applied.q) params.set("q", applied.q);
       if (applied.status) params.set("status", applied.status);
+      params.set("sort", applied.sort);
       const query = params.toString();
       const response = await fetch(`/api/staff/guardians${query ? `?${query}` : ""}`);
       const data = await response.json();
@@ -87,6 +99,7 @@ export function StaffGuardiansClient() {
   function clearFilters() {
     setQ("");
     setStatus("");
+    setSort(DEFAULT_DIRECTORY_SORT);
   }
 
   function openGuardian(guardianId: string) {
@@ -176,7 +189,7 @@ export function StaffGuardiansClient() {
         viewLabel="Guardians layout"
         filtersActive={filtersActive}
         onClearFilters={clearFilters}
-        filterColumns="1.8fr 1fr"
+        filterColumns="1.8fr 1fr 1fr"
       >
         <label className="student-search">
           Search
@@ -196,6 +209,7 @@ export function StaffGuardiansClient() {
             ))}
           </select>
         </label>
+        <DirectorySortSelect value={sort} onChange={setSort} />
       </StaffDirectoryChrome>
 
       <StaffDirectoryResults
@@ -221,6 +235,7 @@ export function StaffGuardiansClient() {
                   value: <GuardianRelationshipRolePill role={row.relationshipRole} />,
                 },
                 { label: "Family", value: row.household.displayName },
+                { label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
               ]}
               actions={rowActions(row)}
               onOpen={() => openGuardian(row.id)}
@@ -234,6 +249,7 @@ export function StaffGuardiansClient() {
               <span>Parent role</span>
               <span>Email</span>
               <span>Family</span>
+              <span>Created</span>
               <span className="staff-dir-col-status">Status</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
@@ -262,6 +278,7 @@ export function StaffGuardiansClient() {
                   </span>
                   <span>{row.email}</span>
                   <span>{row.household.displayName}</span>
+                  <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                   <span className="staff-dir-col-status">
                     <span className={`pill ${statusTone(statusKey)}`}>{formatStatusLabel(statusKey)}</span>
                   </span>

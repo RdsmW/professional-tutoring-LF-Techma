@@ -44,8 +44,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get("q") ?? "").trim();
     const status = (searchParams.get("status") ?? "").trim();
+    const sort = (searchParams.get("sort") ?? "").trim();
 
-    const families = await listStaffFamilies({ q, status });
+    const families = await listStaffFamilies({ q, status, sort });
 
     return NextResponse.json({
       ok: true,
