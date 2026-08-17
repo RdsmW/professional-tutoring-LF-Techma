@@ -24,6 +24,9 @@ import {
 } from "@/components/staff-record-integrations-card";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
+import { StaffDetailField, StaffDetailFieldGroup } from "@/components/staff-detail-fields";
+import { formatStaffDate } from "@/lib/ui/datetime";
+import { formatGradeLabelDisplay } from "@/lib/ui/grade";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 
@@ -135,11 +138,7 @@ function initials(name: string) {
 }
 
 function formatDate(value: string) {
-  try {
-    return new Date(value).toLocaleDateString();
-  } catch {
-    return "—";
-  }
+  return formatStaffDate(value);
 }
 
 /** Quiet badge only for non-default portal states (Clerk link itself is not shown). */
@@ -1013,6 +1012,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               {portalBadge ? (
                 <small className="family-guardian-link-status">{portalBadge}</small>
               ) : null}
+              {!g.linked ? (
+                <button
+                  type="button"
+                  className="family-send-invite"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void refreshInvite(g.id);
+                  }}
+                >
+                  {g.invitePath ? "Regenerate invite" : "Send invite"}
+                </button>
+              ) : null}
             </span>
             <span>
               <GuardianRelationshipRolePill role={g.relationshipRole} />
@@ -1057,7 +1069,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           >
             <strong>{s.displayName}</strong>
             <span>{formatSubjectsPreview(s.subjects)}</span>
-            <span>{s.gradeLabel || "—"}</span>
+            <span>{formatGradeLabelDisplay(s.gradeLabel)}</span>
             <span>{s.schoolName || "—"}</span>
             <span className="staff-dir-col-status">
               <span className={`pill ${statusTone(s.lifecycle)}`}>{formatStatusLabel(s.lifecycle)}</span>
@@ -1216,13 +1228,11 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense">
-              <div className="family-household-upper">
-                <span className="family-household-field-phone">
-                  <small>Phone</small>
-                  <strong>{family.primaryPhone || "—"}</strong>
-                </span>
-                <span className="family-household-field-payer">
-                  <small>Responsible for payment</small>
+              <StaffDetailFieldGroup className="family-household-upper">
+                <StaffDetailField label="Phone" className="family-household-field-phone">
+                  {family.primaryPhone}
+                </StaffDetailField>
+                <StaffDetailField label="Responsible for payment" className="family-household-field-payer">
                   {billingOwner && family.billingOwnerName ? (
                     <button
                       type="button"
@@ -1232,34 +1242,27 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                       {family.billingOwnerName}
                     </button>
                   ) : family.billingOwnerName ? (
-                    <strong>{family.billingOwnerName}</strong>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-                <span className="family-household-field-card">
-                  <small>Card on file</small>
-                  <strong>{cardLabel}</strong>
-                </span>
-                <span className="family-household-field-autocharge">
-                  <small>Auto-charge</small>
-                  <strong>{yesNo(family.autoCharge)}</strong>
-                </span>
-              </div>
-              <div className="family-household-lower">
-                <span className="family-household-field-address">
-                  <small>Billing address</small>
+                    family.billingOwnerName
+                  ) : null}
+                </StaffDetailField>
+                <StaffDetailField label="Card on file" className="family-household-field-card">
+                  {cardLabel}
+                </StaffDetailField>
+                <StaffDetailField label="Auto-charge" className="family-household-field-autocharge">
+                  {yesNo(family.autoCharge)}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-lower">
+                <StaffDetailField label="Billing address" className="family-household-field-address">
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (
                         <span key={`${index}-${line}`}>{line}</span>
                       ))}
                     </div>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-              </div>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
             </div>
           </div>
         </Panel>
@@ -1343,7 +1346,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </Panel>
       </div>
 
-      <div className="family-activity-band">
+      <div className="family-activity-band staff-equal-cards">
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Course enrollments</h2>
@@ -1491,7 +1494,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                           <span className="family-assign-row-copy">
                             <strong>{s.displayName}</strong>
                             <small>
-                              {s.gradeLabel || "—"} · {s.householdDisplayName}
+                              {formatGradeLabelDisplay(s.gradeLabel)} · {s.householdDisplayName}
                             </small>
                           </span>
                         </button>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FamilyHomeHero } from "@/components/family-home-hero";
 import { learningNeedChips } from "@/lib/family/learning-needs";
+import { formatGradeLabel } from "@/lib/ui/grade";
 
 type HomeStudent = {
   id: string;
@@ -204,7 +205,7 @@ export function FamilyHomeDashboard() {
                     <span>
                       <strong>{student.displayName}</strong>
                       <small>
-                        {student.schoolName ?? "School pending"} · {student.gradeLabel ?? "Grade pending"}
+                        {student.schoolName ?? "School pending"} · {formatGradeLabel(student.gradeLabel) ?? "Grade pending"}
                         {chips.length ? ` · ${chips.join(", ")}` : ""}
                       </small>
                     </span>

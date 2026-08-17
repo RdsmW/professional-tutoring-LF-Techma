@@ -15,6 +15,7 @@ import {
   composeLearningNeeds,
   learningNeedsToEditState,
 } from "@/lib/family/learning-needs";
+import { formatGradeLabel } from "@/lib/ui/grade";
 import {
   ACADEMIC_ADVANCED_RATE_PACKAGES,
   ACADEMIC_PAYMENT_PLANS,
@@ -128,7 +129,7 @@ function toProfileForm(student: StudentDetail): ProfileForm {
     displayName: student.displayName,
     gender: student.gender ?? "",
     birthdate: student.birthdate ?? "",
-    gradeLabel: student.gradeLabel ?? "",
+    gradeLabel: formatGradeLabel(student.gradeLabel) ?? "",
     graduationYear: student.graduationYear != null ? String(student.graduationYear) : "",
     schoolName: student.schoolName ?? "",
     cellPhone: student.cellPhone ?? "",
@@ -236,7 +237,7 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
           displayName: profileForm.displayName,
           gender: profileForm.gender || null,
           birthdate: profileForm.birthdate || null,
-          gradeLabel: profileForm.gradeLabel || null,
+          gradeLabel: formatGradeLabel(profileForm.gradeLabel) || null,
           graduationYear: profileForm.graduationYear ? Number(profileForm.graduationYear) : null,
           schoolName: profileForm.schoolName || null,
           cellPhone: profileForm.cellPhone || null,

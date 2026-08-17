@@ -17,6 +17,7 @@ import {
   StaffRecordIntegrationsCard,
   StaffRecordPrimaryRow,
 } from "@/components/staff-record-integrations-card";
+import { StaffDetailField, StaffDetailFieldGroup } from "@/components/staff-detail-fields";
 import { Panel } from "@/components/ui";
 import { learningNeedNotes, parseLearningNeeds } from "@/lib/family/learning-needs";
 import {
@@ -25,6 +26,8 @@ import {
   ACADEMIC_RATE_PACKAGES,
   ACADEMIC_SCHEDULE_WINDOWS,
 } from "@/lib/forms/options";
+import { formatStaffDateTime } from "@/lib/ui/datetime";
+import { formatGradeLabel } from "@/lib/ui/grade";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type CatalogSubject = { id: string; code: string; name: string; category: string | null };
@@ -113,7 +116,7 @@ function parseScheduleIds(value: string | null | undefined) {
 }
 
 function optionLabel(list: { options: Array<{ id: string; label: string }> }, id: string | null | undefined) {
-  if (!id) return "—";
+  if (!id) return null;
   return list.options.find((option) => option.id === id)?.label ?? id;
 }
 
@@ -486,7 +489,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         <span>
           <strong>{enrollment.courseName}</strong>
           <small>
-            {enrollment.courseCode} · {new Date(enrollment.createdAt).toLocaleString()}
+            {enrollment.courseCode} · {formatStaffDateTime(enrollment.createdAt)}
           </small>
         </span>
         <span className={`pill ${statusTone(enrollment.status)}`}>{formatStatusLabel(enrollment.status)}</span>
@@ -501,7 +504,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           <strong>{booking.subjectName || booking.status}</strong>
           <small>
             {booking.tutorName ? `Tutor: ${booking.tutorName}` : "Tutor unassigned"} ·{" "}
-            {new Date(booking.createdAt).toLocaleString()}
+            {formatStaffDateTime(booking.createdAt)}
           </small>
         </span>
         <span className={`pill ${statusTone(booking.status)}`}>{formatStatusLabel(booking.status)}</span>
@@ -568,7 +571,12 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
       <section className="family-record-hero">
         <span className="avatar navy">{initials(student.fullName || student.displayName)}</span>
         <div className="family-record-hero-copy">
-          <h2>{student.listLabel}</h2>
+          <h2>{student.fullName || student.displayName}</h2>
+          {student.email?.trim() || student.household?.billingEmail?.trim() ? (
+            <p className="family-record-hero-meta">
+              {student.email?.trim() || student.household?.billingEmail}
+            </p>
+          ) : null}
         </div>
         <span className={`pill family-record-hero-status-pill ${statusTone(student.lifecycle)}`}>
           {formatStatusLabel(student.lifecycle)}
@@ -584,129 +592,93 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense student-profile-dense">
-              <div className="family-household-upper">
-                <span>
-                  <small>Legal name</small>
-                  <strong>
-                    {[student.firstName, student.lastName].filter(Boolean).join(" ") || "—"}
-                  </strong>
-                </span>
-                <span>
-                  <small>Gender</small>
-                  <strong>{student.gender || "—"}</strong>
-                </span>
-                <span>
-                  <small>Birthdate</small>
-                  <strong>{student.birthdate || "—"}</strong>
-                </span>
-                <span>
-                  <small>Phone</small>
-                  <strong>{student.cellPhone || "—"}</strong>
-                </span>
-              </div>
-              <div className="family-household-upper">
-                <span>
-                  <small>Grade</small>
-                  <strong>{student.gradeLabel || "—"}</strong>
-                </span>
-                <span>
-                  <small>Grade year</small>
-                  <strong>{student.graduationYear ?? "—"}</strong>
-                </span>
-                <span>
-                  <small>School</small>
-                  <strong>{student.schoolName || "—"}</strong>
-                </span>
-                <span>
-                  <small>Availability</small>
-                  <strong style={{ whiteSpace: "pre-wrap" }}>{student.availabilityNotes || "—"}</strong>
-                </span>
-              </div>
-              <div className="family-household-lower">
-                <span className="family-household-field-address">
-                  <small>Mailing address</small>
+              <StaffDetailFieldGroup className="family-household-upper">
+                <StaffDetailField label="Legal name">
+                  {[student.firstName, student.lastName].filter(Boolean).join(" ")}
+                </StaffDetailField>
+                <StaffDetailField label="Gender">{student.gender}</StaffDetailField>
+                <StaffDetailField label="Birthdate">{student.birthdate}</StaffDetailField>
+                <StaffDetailField label="Phone">{student.cellPhone}</StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-upper">
+                <StaffDetailField label="Grade">{formatGradeLabel(student.gradeLabel)}</StaffDetailField>
+                <StaffDetailField label="Grade year">{student.graduationYear}</StaffDetailField>
+                <StaffDetailField label="School">{student.schoolName}</StaffDetailField>
+                <StaffDetailField label="Availability">
+                  {student.availabilityNotes ? (
+                    <strong style={{ whiteSpace: "pre-wrap" }}>{student.availabilityNotes}</strong>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-lower">
+                <StaffDetailField label="Mailing address" className="family-household-field-address">
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (
                         <span key={`${index}-${line}`}>{line}</span>
                       ))}
                     </div>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-              </div>
-              <div className="family-household-lower student-profile-family-description-row">
-                <span>
-                  <small>Family</small>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-lower student-profile-family-description-row">
+                <StaffDetailField label="Family">
                   {student.household ? (
                     <Link href={`/staff/families/${student.household.id}`} className="family-household-payer-link">
                       {student.household.displayName}
                     </Link>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-                <span>
-                  <small>Description</small>
-                  <strong style={{ whiteSpace: "pre-wrap" }}>{student.description || "—"}</strong>
-                </span>
-              </div>
+                  ) : null}
+                </StaffDetailField>
+                <StaffDetailField label="Description">
+                  {student.description ? (
+                    <strong style={{ whiteSpace: "pre-wrap" }}>{student.description}</strong>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
             </div>
           </div>
         </Panel>
         <StaffRecordIntegrationsCard zohoId={student.zohoDealId} zohoUrl={student.zohoDealUrl} />
       </StaffRecordPrimaryRow>
 
-      <div className="student-payment-learning-band">
+      <div className="student-payment-learning-band staff-equal-cards">
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Tutoring</h2>
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense student-tutoring-dense">
-              <div className="family-household-upper student-tutoring-primary-row">
-                <span>
-                  <small>Academic year</small>
-                  <strong>{student.academicYear || "—"}</strong>
-                </span>
-                <span>
-                  <small>Subjects</small>
+              <StaffDetailFieldGroup className="family-household-upper student-tutoring-primary-row">
+                <StaffDetailField label="Academic year">{student.academicYear}</StaffDetailField>
+                <StaffDetailField label="Subjects">
                   {student.subjects.length > 0 ? (
                     <div className="field-cloud">
                       {student.subjects.map((subject) => (
                         <span key={subject.id}>{subject.name}</span>
                       ))}
                     </div>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-              </div>
-              <div className="family-household-upper student-tutoring-schedule-row">
-                <span>
-                  <small>Preferred schedule</small>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-upper student-tutoring-schedule-row">
+                <StaffDetailField label="Preferred schedule">
                   {scheduleChips.length > 0 ? (
                     <div className="field-cloud">
                       {scheduleChips.map((chip) => (
                         <span key={chip.id}>{chip.label}</span>
                       ))}
                     </div>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-              </div>
-              <div className="family-household-upper student-tutoring-rates-row">
-                <span>
-                  <small>Hours/rates</small>
-                  <strong>{optionLabel(ACADEMIC_RATE_PACKAGES, student.hoursRatePackage)}</strong>
-                </span>
-                <span>
-                  <small>Advanced subjects hours/rates</small>
-                  <strong>{optionLabel(ACADEMIC_ADVANCED_RATE_PACKAGES, student.advancedHoursRatePackage)}</strong>
-                </span>
-              </div>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-upper student-tutoring-rates-row">
+                <StaffDetailField label="Hours/rates">
+                  {optionLabel(ACADEMIC_RATE_PACKAGES, student.hoursRatePackage)}
+                </StaffDetailField>
+                <StaffDetailField label="Advanced subjects hours/rates">
+                  {optionLabel(ACADEMIC_ADVANCED_RATE_PACKAGES, student.advancedHoursRatePackage)}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
             </div>
           </div>
         </Panel>
@@ -717,32 +689,29 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense">
-              <div className="family-household-upper" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
-                <span>
-                  <small>Responsible for payment</small>
+              <StaffDetailFieldGroup
+                className="family-household-upper"
+                style={{ gridTemplateColumns: "minmax(0, 1fr)" }}
+              >
+                <StaffDetailField label="Responsible for payment">
                   {student.household?.payerName && payerHref ? (
                     <Link href={payerHref} className="family-household-payer-link">
                       {student.household.payerName}
                     </Link>
-                  ) : (
-                    <strong>{student.household?.payerName || "—"}</strong>
-                  )}
-                </span>
-                <span>
-                  <small>Auto-charge (family)</small>
-                  <strong>{student.household ? yesNo(student.household.autoCharge) : "—"}</strong>
-                </span>
-                <span>
-                  <small>Payment plan</small>
-                  <strong>{optionLabel(ACADEMIC_PAYMENT_PLANS, student.paymentPlan)}</strong>
-                </span>
-                <span>
-                  <small>Deposit</small>
-                  <strong>
-                    {student.depositCents == null ? "—" : `$${(student.depositCents / 100).toFixed(2)}`}
-                  </strong>
-                </span>
-              </div>
+                  ) : student.household?.payerName ? (
+                    student.household.payerName
+                  ) : null}
+                </StaffDetailField>
+                <StaffDetailField label="Auto-charge (family)">
+                  {student.household ? yesNo(student.household.autoCharge) : null}
+                </StaffDetailField>
+                <StaffDetailField label="Payment plan">
+                  {optionLabel(ACADEMIC_PAYMENT_PLANS, student.paymentPlan)}
+                </StaffDetailField>
+                <StaffDetailField label="Deposit">
+                  {student.depositCents == null ? null : `$${(student.depositCents / 100).toFixed(2)}`}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
               {!student.household ? (
                 <p className="family-empty" style={{ margin: 0 }}>
                   Assign a family to show payer and auto-charge.
@@ -791,7 +760,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         </Panel>
       </div>
 
-      <div className="family-activity-band">
+      <div className="family-activity-band staff-equal-cards">
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Enrollments</h2>

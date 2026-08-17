@@ -17,6 +17,7 @@ import {
   formatDirectoryCreatedAt,
   type DirectorySort,
 } from "@/lib/ui/directory-sort";
+import { formatGradeLabel, formatGradeLabelDisplay } from "@/lib/ui/grade";
 import { useDebouncedValue } from "@/lib/ui/use-debounced-value";
 import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -216,7 +217,10 @@ export function StaffStudentsClient() {
       const response = await fetch("/api/staff/students", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          gradeLabel: formatGradeLabel(form.gradeLabel) ?? "",
+        }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
@@ -374,7 +378,7 @@ export function StaffStudentsClient() {
                 </span>
               }
               fields={[
-                { id: "grade", label: "Grade", value: row.gradeLabel ?? "—" },
+                { id: "grade", label: "Grade", value: formatGradeLabelDisplay(row.gradeLabel) },
                 { id: "school", label: "School", value: row.schoolName ?? "—" },
                 { id: "subject", label: "Subject", value: formatSubjectsPreview(row.subjects) },
               ]}
@@ -395,7 +399,7 @@ export function StaffStudentsClient() {
               name: row.listLabel || row.displayName,
               household: row.householdDisplayName,
               subjects: formatSubjectsPreview(row.subjects),
-              grade: row.gradeLabel ?? "—",
+              grade: formatGradeLabelDisplay(row.gradeLabel),
               school: row.schoolName ?? "—",
               statusLabel: formatStatusLabel(row.lifecycle),
               statusTone: statusTone(row.lifecycle),

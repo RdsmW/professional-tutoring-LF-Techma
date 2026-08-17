@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatStaffDateTime } from "@/lib/ui/datetime";
+import { formatGradeLabelDisplay } from "@/lib/ui/grade";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type SessionDetail = {
@@ -51,18 +53,7 @@ const ATTENDANCE_OPTIONS = ["", "present", "absent", "late", "excused"];
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function formatWhen(iso: string | null) {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
+  return formatStaffDateTime(iso);
 }
 
 function formatSlot(slot: SessionDetail["slot"]) {
@@ -211,7 +202,8 @@ export function StaffSessionDetailClient({ sessionId }: { sessionId: string }) {
             <span>
               <small>Grade / school</small>
               <strong>
-                {session.student.gradeLabel || "—"} · {session.student.schoolName || "—"}
+                {formatGradeLabelDisplay(session.student.gradeLabel)}
+                {session.student.schoolName ? ` · ${session.student.schoolName}` : ""}
               </strong>
             </span>
             <span>

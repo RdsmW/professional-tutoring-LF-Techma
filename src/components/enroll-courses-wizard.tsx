@@ -9,6 +9,7 @@ import {
 } from "@/components/stripe-card-saver";
 import type { EnrollFormId } from "@/lib/enrollment/course-map";
 import { REFERRAL_SOURCE } from "@/lib/forms/options";
+import { formatGradeLabel } from "@/lib/ui/grade";
 
 type Option = { id: string; label: string };
 type Student = { id: string; displayName: string; gradeLabel: string | null; schoolName: string | null };
@@ -357,7 +358,7 @@ export function EnrollCoursesWizard() {
                 onClick={() => setDraft({ ...draft, studentId: student.id })}
               >
                 <strong>{student.displayName}</strong>
-                <p>{student.gradeLabel || "Grade TBD"}</p>
+                <p>{formatGradeLabel(student.gradeLabel) || "Grade TBD"}</p>
                 <small>{student.schoolName || "School TBD"}</small>
               </button>
             ))}

@@ -19,6 +19,7 @@ import {
   subjects,
 } from "@/lib/db/schema";
 import { buildStudentListLabel } from "@/lib/staff/students";
+import { formatGradeLabelDisplay } from "@/lib/ui/grade";
 import { formatDirectoryCreatedAt } from "@/lib/ui/directory-sort";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
@@ -253,7 +254,7 @@ async function loadDashboardData() {
       }),
       household: row.householdName || "—",
       subjects: formatSubjectsPreview(subjectsByStudent.get(row.id)),
-      grade: row.gradeLabel || "—",
+      grade: formatGradeLabelDisplay(row.gradeLabel),
       school: row.schoolName || "—",
       statusLabel: formatStatusLabel(row.lifecycle),
       statusTone: statusTone(row.lifecycle),
@@ -355,7 +356,7 @@ export default async function StaffDashboardPage() {
         </article>
       </section>
 
-      <div className="dashboard-main-row">
+      <div className="dashboard-main-row staff-equal-cards">
         <section className="panel">
           <div className="panel-heading">
             <div>

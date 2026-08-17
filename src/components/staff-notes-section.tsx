@@ -8,6 +8,7 @@ import {
   IconTrash,
   StaffIconButton,
 } from "@/components/staff-action-icons";
+import { formatStaffDateTime } from "@/lib/ui/datetime";
 
 /** Shared note shape for Family / Guardian (and later Student / Tutor) staff notes UI. */
 export type StaffNoteItem = {
@@ -22,24 +23,7 @@ export type StaffNoteItem = {
 const PREVIEW_LIMIT = 3;
 
 function formatWhen(value: string | null | undefined) {
-  if (!value) return "—";
-  try {
-    const date = new Date(value);
-    const now = new Date();
-    const sameYear = date.getFullYear() === now.getFullYear();
-    const day = date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      ...(sameYear ? {} : { year: "numeric" }),
-    });
-    const time = date.toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    return `${day} · ${time}`;
-  } catch {
-    return "—";
-  }
+  return formatStaffDateTime(value);
 }
 
 function ConfirmDeleteModal({
@@ -328,7 +312,7 @@ export function StaffNotesSection({
 
   return (
     <>
-      <div className="family-notes-layout">
+      <div className="family-notes-layout staff-equal-cards">
         <Panel className="family-notes-panel family-equal-panel">
           <div className="family-panel-heading">
             <h2>Add note</h2>

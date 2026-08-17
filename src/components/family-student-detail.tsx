@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { learningNeedChips } from "@/lib/family/learning-needs";
+import { formatGradeLabel } from "@/lib/ui/grade";
 
 export type StudentDetailModel = {
   id: string;
@@ -55,7 +56,7 @@ export function FamilyStudentDetail({
           <span className="eyebrow">Student detail</span>
           <h2>{student.displayName}</h2>
           <p>
-            {student.schoolName ?? "School pending"} · {student.gradeLabel ?? "Grade pending"}
+            {student.schoolName ?? "School pending"} · {formatGradeLabel(student.gradeLabel) ?? "Grade pending"}
             {student.graduationYear ? ` · Graduation ${student.graduationYear}` : ""}
           </p>
         </div>

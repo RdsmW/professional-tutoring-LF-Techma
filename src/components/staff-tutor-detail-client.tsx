@@ -17,7 +17,9 @@ import {
   StaffRecordIntegrationsCard,
   StaffRecordPrimaryRow,
 } from "@/components/staff-record-integrations-card";
+import { StaffDetailField, StaffDetailFieldGroup } from "@/components/staff-detail-fields";
 import { Panel } from "@/components/ui";
+import { formatTime12hEnglish } from "@/lib/ui/datetime";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type TutorDetail = {
@@ -77,14 +79,14 @@ const WEEKDAY_OPTIONS = [
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function formatTimeLabel(value: string) {
-  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(value.trim());
-  if (!match) return value;
-  const hour = Number.parseInt(match[1]!, 10);
-  const minute = match[2]!;
-  if (!Number.isFinite(hour)) return value;
-  const suffix = hour >= 12 ? "pm" : "am";
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour12}:${minute}${suffix}`;
+  return formatTime12hEnglish(value);
+}
+
+function isRedundantHourLabel(label: string | null, range: string) {
+  if (!label?.trim()) return true;
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "").replace(/[.–—]/g, "-");
+  if (norm(label) === norm(range)) return true;
+  return /^\d/.test(label.trim()) && /(am|pm|\d:\d)/i.test(label);
 }
 
 function initials(name: string) {
@@ -638,45 +640,30 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense tutor-profile-dense">
-              <div className="family-household-upper">
-                <span>
-                  <small>Name</small>
-                  <strong>{tutor.displayName || "—"}</strong>
-                </span>
-                <span>
-                  <small>Email</small>
-                  <strong>{tutor.email || "—"}</strong>
-                </span>
-                <span>
-                  <small>Phone</small>
-                  <strong>{tutor.phone || "—"}</strong>
-                </span>
-                <span>
-                  <small>Open bookings</small>
-                  <strong>{tutor.workloadCount}</strong>
-                </span>
-              </div>
-              <div className="family-household-lower">
-                <span className="family-household-field-address">
-                  <small>Mailing address</small>
+              <StaffDetailFieldGroup className="family-household-upper">
+                <StaffDetailField label="Name">{tutor.displayName}</StaffDetailField>
+                <StaffDetailField label="Email">{tutor.email}</StaffDetailField>
+                <StaffDetailField label="Phone">{tutor.phone}</StaffDetailField>
+                <StaffDetailField label="Open bookings">{tutor.workloadCount}</StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-lower">
+                <StaffDetailField label="Mailing address" className="family-household-field-address">
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (
                         <span key={`${index}-${line}`}>{line}</span>
                       ))}
                     </div>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-              </div>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
             </div>
           </div>
         </Panel>
         <StaffRecordIntegrationsCard />
       </StaffRecordPrimaryRow>
 
-      <div className="tutor-capacity-subjects-band">
+      <div className="tutor-capacity-subjects-band staff-equal-cards">
         <Panel className="family-equal-panel tutor-capacity-panel">
           <div className="family-panel-heading">
             <h2>Capacity</h2>
@@ -819,18 +806,19 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             <ul className="tutor-open-hours-list">
               {openHours.map((slot) => {
                 const day = DAY_LABELS[slot.dayOfWeek] ?? `Day ${slot.dayOfWeek}`;
-                const range = `${formatTimeLabel(slot.startTimeLocal)}–${formatTimeLabel(slot.endTimeLocal)}`;
+                const range = `${formatTimeLabel(slot.startTimeLocal)} – ${formatTimeLabel(slot.endTimeLocal)}`;
                 const seatsUsed = slot.heldSeats + slot.bookedSeats;
+                const showLabel = !isRedundantHourLabel(slot.label, range);
                 return (
                   <li key={slot.id} className="tutor-open-hours-row">
                     <div className="tutor-open-hours-row-main">
                       <strong className="tutor-open-hours-day">{day}</strong>
                       <span className="tutor-open-hours-range">{range}</span>
-                      {slot.label ? <span className="tutor-open-hours-label">{slot.label}</span> : null}
+                      {showLabel ? <span className="tutor-open-hours-label">{slot.label}</span> : null}
                     </div>
                     <div className="tutor-open-hours-row-meta">
                       <span className="tutor-open-hours-seats">
-                        {seatsUsed}/{slot.capacitySeats} seats
+                        {seatsUsed} of {slot.capacitySeats} booked
                       </span>
                       <button
                         type="button"

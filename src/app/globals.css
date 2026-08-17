@@ -721,17 +721,17 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr);
   gap: var(--space-4);
   margin-bottom: 18px;
-  align-items: start;
+  align-items: stretch;
 }
 .dashboard-main-row > .panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: auto;
+  height: 100%;
 }
 .dashboard-main-row .attention-list,
 .dashboard-main-row .capacity-bars {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
 }
 .staff-create-menu { position: relative; z-index: 30; }
 .staff-create-menu-trigger {
@@ -1212,18 +1212,18 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   color: var(--restore-action-ink);
 }
 .staff-row-actions-item-archive {
-  color: var(--orange-action);
+  color: var(--nav-accent);
 }
 .staff-row-actions-item-archive:hover:not(:disabled) {
-  background: #fff4e5;
-  color: var(--orange-action-deep);
+  background: var(--gold-soft);
+  color: var(--navy);
 }
 .staff-row-actions-item-danger {
-  color: var(--red-action);
+  color: var(--navy);
 }
 .staff-row-actions-item-danger:hover:not(:disabled) {
-  background: #ffe5ea;
-  color: var(--red-action-deep);
+  background: var(--gold-soft);
+  color: var(--navy);
 }
 /* Unassign: calm default; soft amber warning on hover (not Delete red, not Archive orange). */
 .staff-row-actions-item-unassign {
@@ -1407,6 +1407,29 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   max-width: 220px;
 }
 
+/* Side-by-side staff cards: same row = same height. */
+.staff-equal-cards,
+.staff-record-primary-row,
+.family-activity-band,
+.family-notes-layout,
+.student-payment-learning-band,
+.tutor-capacity-subjects-band,
+.dashboard-main-row {
+  align-items: stretch;
+}
+.staff-equal-cards > .panel,
+.staff-record-primary-row > .panel,
+.family-activity-band > .panel,
+.family-notes-layout > .panel,
+.student-payment-learning-band > .panel,
+.tutor-capacity-subjects-band > .panel,
+.dashboard-main-row > .panel {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 .family-activity-band,
 .family-notes-layout,
 .student-payment-learning-band {
@@ -1643,7 +1666,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .tutor-open-hours-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--muted);
 }
 .tutor-open-hours-row-meta {
   display: inline-flex;
@@ -1654,8 +1677,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .tutor-open-hours-seats {
   font-size: 12px;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--navy);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .tutor-open-hours-remove {
   border: 1px solid var(--line);
@@ -2054,12 +2078,19 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   gap: 10px;
   margin: 0 0 12px;
 }
+/* Card names: gold Georgia sentence case (not ALL-CAPS sans). */
+.staff-section-title,
+.family-panel-heading h2,
+.guardian-edit-section-label,
+.staff-edit-section-label {
+  margin: 0;
+  color: var(--nav-accent);
+  font: 700 18px/1.2 Georgia, serif;
+  letter-spacing: -0.015em;
+  text-transform: none;
+}
 .family-panel-heading h2 {
   margin: 0 !important;
-  color: var(--nav-accent);
-  font: 800 12px Arial, Helvetica, sans-serif;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
 }
 .family-panel-heading-actions {
   display: inline-flex;
@@ -2067,12 +2098,52 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   gap: 6px;
   flex: 0 0 auto;
 }
+.family-record-hero-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.family-record-hero h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.family-record-hero-meta {
+  margin: 0;
+  color: #c1ccd6;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.family-send-invite {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--nav-accent);
+  background: transparent;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.family-send-invite:hover,
+.family-send-invite:focus-visible {
+  background: var(--gold-soft);
+  outline: none;
+}
 .family-household-dense {
   display: flex;
   flex-direction: column;
   gap: 24px;
   width: 100%;
   min-width: 0;
+}
+.family-household-dense > :empty {
+  display: none;
 }
 /* Student Profile: 4 equal columns on identity/school bands; description full width */
 .student-profile-dense .family-household-upper {
@@ -2115,11 +2186,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   margin: 20px 0 4px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
-  color: var(--nav-accent);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
 }
 .guardian-edit-section-label:first-child,
 .staff-edit-section-label:first-child {
@@ -2264,7 +2330,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px 20px;
-  align-items: start;
+  align-items: stretch;
   min-width: 0;
   margin-top: 8px;
   padding-top: 8px;
@@ -2507,6 +2573,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   gap: 4px;
   min-width: 0;
 }
+.family-household-upper > span:only-child,
+.family-household-lower > span:only-child {
+  grid-column: 1 / -1;
+}
 .family-household-dense small {
   font-size: 12px;
   color: var(--muted);
@@ -2732,16 +2802,17 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   padding: 0;
   border: 1px solid var(--line);
   background: #fff;
-  color: var(--ink);
+  color: var(--navy);
   cursor: pointer;
   border-radius: var(--radius-sm);
   flex: 0 0 auto;
 }
 .staff-icon-btn:hover:not(:disabled),
 .staff-icon-btn:focus-visible {
-  background: var(--blue-soft);
-  border-color: #a9bfd2;
-  outline: 2px solid rgba(60, 104, 145, 0.22);
+  background: var(--gold-soft);
+  border-color: var(--nav-accent);
+  color: var(--navy);
+  outline: 2px solid rgba(216, 168, 64, 0.28);
   outline-offset: 1px;
 }
 .staff-icon-btn:disabled {
@@ -2749,7 +2820,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   cursor: not-allowed;
 }
 .staff-icon-btn-edit {
-  color: var(--edit-action, #24382f);
+  color: var(--navy);
 }
 .staff-icon-btn-muted {
   border-color: transparent;
@@ -2757,32 +2828,33 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   color: var(--muted);
 }
 .staff-icon-btn-archive {
-  color: var(--orange-action);
+  color: var(--nav-accent);
 }
 .staff-icon-btn-archive:hover:not(:disabled),
 .staff-icon-btn-archive:focus-visible {
-  background: #fff4e5;
-  border-color: #f0d4a8;
-  color: var(--orange-action-deep);
+  background: var(--gold-soft);
+  border-color: var(--nav-accent);
+  color: var(--navy);
 }
 .staff-icon-btn-restore {
-  color: var(--restore-action-ink);
+  color: var(--navy);
 }
 .staff-icon-btn-restore:hover:not(:disabled),
 .staff-icon-btn-restore:focus-visible {
-  background: var(--restore-action);
-  border-color: var(--restore-action-deep);
+  background: var(--gold-soft);
+  border-color: var(--nav-accent);
+  color: var(--navy);
 }
 .staff-icon-btn-danger {
-  color: var(--red-action);
-  border-color: rgba(255, 0, 51, 0.35);
+  color: var(--navy);
+  border-color: var(--line);
 }
 .staff-icon-btn-danger:hover:not(:disabled),
 .staff-icon-btn-danger:focus-visible {
-  background: #ffe5eb;
-  border-color: var(--red-action);
-  color: var(--red-action-deep);
-  outline: 2px solid rgba(255, 0, 51, 0.22);
+  background: var(--gold-soft);
+  border-color: var(--nav-accent);
+  color: var(--navy);
+  outline: 2px solid rgba(216, 168, 64, 0.28);
   outline-offset: 1px;
 }
 .staff-row-actions-item-icon {
@@ -3107,7 +3179,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 .staff-record-primary-row:has(> :nth-child(3)) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3118,7 +3190,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-record-primary-row > .panel {
   margin-bottom: 0 !important;
   min-width: 0;
-  height: auto;
+  height: 100%;
+}
+.staff-record-primary-row > .panel > .family-household-summary {
+  flex: 1 1 auto;
 }
 .staff-record-info-card .family-household-dense small {
   text-transform: none;

@@ -119,9 +119,9 @@ function buildIntegrationFields({
 
 export const STAFF_RECORD_INFO_CARD_CLASS = "family-equal-panel staff-record-info-card";
 
-/** Side-by-side Profile / Household / Integrations row (height follows content). */
+/** Side-by-side Profile / Household / Integrations row (equal height). */
 export function StaffRecordPrimaryRow({ children }: { children: ReactNode }) {
-  return <div className="staff-record-primary-row">{children}</div>;
+  return <div className="staff-record-primary-row staff-equal-cards">{children}</div>;
 }
 
 /**

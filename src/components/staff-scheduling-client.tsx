@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageIntro, Panel } from "@/components/ui";
+import { formatGradeLabel } from "@/lib/ui/grade";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 type BookingRow = {
@@ -399,7 +400,7 @@ export function StaffSchedulingClient() {
                   {students.map((row) => (
                     <option key={row.id} value={row.id}>
                       {row.displayName}
-                      {row.gradeLabel ? ` · ${row.gradeLabel}` : ""}
+                      {row.gradeLabel ? ` · ${formatGradeLabel(row.gradeLabel)}` : ""}
                     </option>
                   ))}
                 </select>

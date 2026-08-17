@@ -35,6 +35,8 @@ import {
   type StaffGuardianNote,
   type StaffGuardianStudentRow,
 } from "@/lib/staff/guardian-shared";
+import { StaffDetailField, StaffDetailFieldGroup } from "@/components/staff-detail-fields";
+import { formatGradeLabelDisplay } from "@/lib/ui/grade";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 
@@ -718,7 +720,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           >
             <strong>{s.displayName}</strong>
             <span>{formatSubjectsPreview(s.subjects)}</span>
-            <span>{s.gradeLabel || "—"}</span>
+            <span>{formatGradeLabelDisplay(s.gradeLabel)}</span>
             <span>{s.schoolName || "—"}</span>
             <span className="staff-dir-col-status">
               <span className={`pill ${statusTone(s.lifecycle)}`}>{formatStatusLabel(s.lifecycle)}</span>
@@ -812,46 +814,28 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense guardian-identity-dense">
-              <div className="family-household-upper">
-                <span>
-                  <small>First name</small>
-                  <strong>{guardian.firstName}</strong>
-                </span>
-                <span>
-                  <small>Last name</small>
-                  <strong>{guardian.lastName}</strong>
-                </span>
-                <span>
-                  <small>Email</small>
-                  <strong>{guardian.email}</strong>
-                </span>
-                <span>
-                  <small>Phone</small>
-                  <strong>{guardian.phone || "—"}</strong>
-                </span>
-              </div>
-              <div className="family-household-lower guardian-identity-address-row">
-                <span className="family-household-field-address">
-                  <small>Mailing address</small>
+              <StaffDetailFieldGroup className="family-household-upper">
+                <StaffDetailField label="First name">{guardian.firstName}</StaffDetailField>
+                <StaffDetailField label="Last name">{guardian.lastName}</StaffDetailField>
+                <StaffDetailField label="Email">{guardian.email}</StaffDetailField>
+                <StaffDetailField label="Phone">{guardian.phone}</StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-lower guardian-identity-address-row">
+                <StaffDetailField label="Mailing address" className="family-household-field-address">
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (
                         <span key={`${index}-${line}`}>{line}</span>
                       ))}
                     </div>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-                <span className="guardian-identity-other-field">
-                  <small>Other information</small>
+                  ) : null}
+                </StaffDetailField>
+                <StaffDetailField label="Other information" className="guardian-identity-other-field">
                   {guardian.otherInformation?.trim() ? (
                     <strong className="guardian-other-info-text">{guardian.otherInformation}</strong>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-              </div>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
             </div>
           </div>
         </Panel>
@@ -862,9 +846,8 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense guardian-household-dense">
-              <div className="family-household-upper">
-                <span>
-                  <small>Family</small>
+              <StaffDetailFieldGroup className="family-household-upper">
+                <StaffDetailField label="Family">
                   {guardian.household ? (
                     <Link
                       href={`/staff/families/${guardian.household.id}`}
@@ -873,22 +856,14 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                       {guardian.household.displayName}
                     </Link>
                   ) : (
-                    <strong>Unassigned</strong>
+                    "Unassigned"
                   )}
-                </span>
-                <span>
-                  <small>Parent role</small>
-                  {roleLabel ? (
-                    <GuardianRelationshipRolePill role={guardian.relationshipRole} />
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
-                <span>
-                  <small>Responsible for payment</small>
-                  <strong>{yesNo(guardian.isBillingOwner)}</strong>
-                </span>
-              </div>
+                </StaffDetailField>
+                <StaffDetailField label="Parent role">
+                  {roleLabel ? <GuardianRelationshipRolePill role={guardian.relationshipRole} /> : null}
+                </StaffDetailField>
+                <StaffDetailField label="Responsible for payment">{yesNo(guardian.isBillingOwner)}</StaffDetailField>
+              </StaffDetailFieldGroup>
               {!guardian.household ? (
                 <div className="family-household-lower">
                   <p className="family-empty" style={{ margin: 0, gridColumn: "1 / -1" }}>
@@ -1015,7 +990,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                           <span className="family-assign-row-copy">
                             <strong>{s.displayName}</strong>
                             <small>
-                              {s.gradeLabel || "—"} · {s.householdDisplayName}
+                              {formatGradeLabelDisplay(s.gradeLabel)} · {s.householdDisplayName}
                             </small>
                           </span>
                         </button>

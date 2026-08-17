@@ -12,6 +12,7 @@ import { useFamilyPortal } from "@/components/family-portal-context";
 import { DirectoryViewToggle } from "@/components/directory-view-toggle";
 import { PageIntro } from "@/components/ui";
 import { learningNeedChips } from "@/lib/family/learning-needs";
+import { formatGradeLabel } from "@/lib/ui/grade";
 import { useDirectoryView } from "@/lib/ui/directory-view";
 import { statusTone } from "@/lib/ui/status";
 
@@ -283,7 +284,7 @@ export function FamilyStudentsClient({
                   >
                     <strong>{student.displayName}</strong>
                     <span>{student.schoolName ?? "School pending"}</span>
-                    <span>{student.gradeLabel ?? "Grade pending"}</span>
+                    <span>{formatGradeLabel(student.gradeLabel) ?? "Grade pending"}</span>
                     <span>
                       <span className={`pill ${active ? "mint" : statusTone(student.lifecycle)}`}>
                         {statusLabel(student.lifecycle)}
@@ -314,7 +315,7 @@ export function FamilyStudentsClient({
                   </div>
                   <h3>{student.displayName}</h3>
                   <p>
-                    {student.schoolName ?? "School pending"} · {student.gradeLabel ?? "Grade pending"}
+                    {student.schoolName ?? "School pending"} · {formatGradeLabel(student.gradeLabel) ?? "Grade pending"}
                   </p>
                   <div className="field-cloud">
                     {chips.length > 0 ? (
