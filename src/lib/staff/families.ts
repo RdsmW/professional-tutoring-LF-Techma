@@ -33,6 +33,8 @@ export type ListStaffFamiliesFilters = {
   status?: string;
   /** `newest` | `oldest` | `name_asc` — defaults to newest by createdAt. */
   sort?: string;
+  /** Optional cap (Staff Home recently added). */
+  limit?: number;
 };
 
 const HOUSEHOLD_STATUSES = new Set(["pending", "active", "inactive", "archived"]);
@@ -163,7 +165,7 @@ export async function listStaffFamilies(
     whereParts.push(ne(households.status, "archived"));
   }
 
-  const rows = await database
+  const query = database
     .select({
       id: households.id,
       displayName: households.displayName,
@@ -206,6 +208,9 @@ export async function listStaffFamilies(
       households.billingOwnerGuardianId,
     )
     .orderBy(...familyOrderBy(sort));
+
+  const rows =
+    typeof filters.limit === "number" && filters.limit > 0 ? await query.limit(filters.limit) : await query;
 
   return rows.map((row) => {
     const studentCount = Number(row.studentCount ?? 0);

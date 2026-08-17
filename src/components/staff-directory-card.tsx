@@ -1,41 +1,14 @@
 "use client";
 
 import type { KeyboardEvent, ReactNode } from "react";
+import {
+  DirectoryCardFields,
+  type DirectoryCardFieldSlot,
+} from "@/components/directory-card-fields";
 import { StaffRowActions, type StaffRowAction } from "@/components/staff-row-actions";
 
-export type DirectoryCardFieldSlot = {
-  id: string;
-  label: string;
-  value: ReactNode;
-};
-
-type DirectoryCardFieldsProps = {
-  /** Labeled slots, laid out 3 per row (future field-picker can pass an ordered list). */
-  fields: DirectoryCardFieldSlot[];
-  /** Always last, full-width (typically Created). */
-  footer?: DirectoryCardFieldSlot | null;
-};
-
-/** Shared labeled-slot grid for directory cards — 3 fields per line, optional footer row. */
-export function DirectoryCardFields({ fields, footer }: DirectoryCardFieldsProps) {
-  if (fields.length === 0 && !footer) return null;
-  return (
-    <div className="mini-fields staff-dir-card-fields">
-      {fields.map((field) => (
-        <span key={field.id}>
-          <small>{field.label}</small>
-          {field.value}
-        </span>
-      ))}
-      {footer ? (
-        <span className="staff-dir-card-field-footer">
-          <small>{footer.label}</small>
-          {footer.value}
-        </span>
-      ) : null}
-    </div>
-  );
-}
+export type { DirectoryCardFieldSlot };
+export { DirectoryCardFields };
 
 type StaffDirectoryCardProps = {
   title: string;
