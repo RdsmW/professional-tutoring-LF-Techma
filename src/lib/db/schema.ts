@@ -96,6 +96,8 @@ export const guardians = pgTable("guardians", {
   postalCode: varchar("postal_code", { length: 32 }),
   /** Always United States for this product; locked in UI/API. */
   country: text("country").notNull().default("United States"),
+  zohoCrmId: text("zoho_crm_id"),
+  zohoCrmUrl: text("zoho_crm_url"),
   /** Parent 1 / Parent 2 within a household; null when unassigned or unset. */
   relationshipRole: guardianRelationshipRoleEnum("relationship_role"),
   isBillingOwner: boolean("is_billing_owner").notNull().default(false),

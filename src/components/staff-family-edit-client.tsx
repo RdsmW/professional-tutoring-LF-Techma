@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { StaffEditSectionLabel, StaffRecordEditShell } from "@/components/staff-record-edit-shell";
+import { StaffZohoCrmFields } from "@/components/staff-zoho-crm-fields";
 import { isValidPhone } from "@/lib/validation/contact";
 
 type GuardianRow = {
@@ -248,24 +249,13 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
             <input value="United States" readOnly />
           </label>
         </div>
-        <div className="staff-edit-field-row staff-edit-field-row--2">
-          <label>
-            Zoho CRM ID
-            <input
-              value={householdForm.zohoCrmId}
-              onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmId: e.target.value })}
-            />
-          </label>
-          <label>
-            Zoho CRM URL
-            <input
-              type="url"
-              placeholder="https://…"
-              value={householdForm.zohoCrmUrl}
-              onChange={(e) => setHouseholdForm({ ...householdForm, zohoCrmUrl: e.target.value })}
-            />
-          </label>
-        </div>
+
+        <StaffZohoCrmFields
+          crmId={householdForm.zohoCrmId}
+          crmUrl={householdForm.zohoCrmUrl}
+          onCrmIdChange={(zohoCrmId) => setHouseholdForm({ ...householdForm, zohoCrmId })}
+          onCrmUrlChange={(zohoCrmUrl) => setHouseholdForm({ ...householdForm, zohoCrmUrl })}
+        />
 
         <StaffEditSectionLabel>Billing</StaffEditSectionLabel>
         <div className="staff-edit-field-row staff-edit-field-row--3">

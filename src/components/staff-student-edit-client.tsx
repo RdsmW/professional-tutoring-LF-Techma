@@ -10,6 +10,7 @@ import {
   StaffRecordEditShell,
   StaffWrapSelect,
 } from "@/components/staff-record-edit-shell";
+import { StaffZohoCrmFields } from "@/components/staff-zoho-crm-fields";
 import {
   composeLearningNeeds,
   learningNeedsToEditState,
@@ -465,22 +466,13 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             <input value="United States" readOnly />
           </label>
         </div>
-        <div className="staff-edit-field-row staff-edit-field-row--2">
-          <label>
-            Zoho CRM ID
-            <input
-              value={profileForm.zohoDealId}
-              onChange={(e) => setProfileForm({ ...profileForm, zohoDealId: e.target.value })}
-            />
-          </label>
-          <label>
-            Zoho CRM URL
-            <input
-              value={profileForm.zohoDealUrl}
-              onChange={(e) => setProfileForm({ ...profileForm, zohoDealUrl: e.target.value })}
-            />
-          </label>
-        </div>
+
+        <StaffZohoCrmFields
+          crmId={profileForm.zohoDealId}
+          crmUrl={profileForm.zohoDealUrl}
+          onCrmIdChange={(zohoDealId) => setProfileForm({ ...profileForm, zohoDealId })}
+          onCrmUrlChange={(zohoDealUrl) => setProfileForm({ ...profileForm, zohoDealUrl })}
+        />
 
         <StaffEditSectionLabel>Description</StaffEditSectionLabel>
         <StaffMultilineField

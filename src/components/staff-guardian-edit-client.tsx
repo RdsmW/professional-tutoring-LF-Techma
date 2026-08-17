@@ -9,6 +9,7 @@ import {
   StaffMultilineField,
   StaffRecordEditShell,
 } from "@/components/staff-record-edit-shell";
+import { StaffZohoCrmFields } from "@/components/staff-zoho-crm-fields";
 import type { GuardianRelationshipRole, StaffGuardianDetail } from "@/lib/staff/guardian-shared";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 
@@ -23,6 +24,8 @@ type ProfileForm = {
   city: string;
   state: string;
   postalCode: string;
+  zohoCrmId: string;
+  zohoCrmUrl: string;
   relationshipRole: "" | GuardianRelationshipRole;
   isBillingOwner: boolean;
 };
@@ -39,6 +42,8 @@ function toProfileForm(guardian: StaffGuardianDetail): ProfileForm {
     city: guardian.city || "",
     state: guardian.state || "",
     postalCode: guardian.postalCode || "",
+    zohoCrmId: guardian.zohoCrmId || "",
+    zohoCrmUrl: guardian.zohoCrmUrl || "",
     relationshipRole: guardian.relationshipRole ?? "",
     isBillingOwner: guardian.isBillingOwner,
   };
@@ -134,6 +139,8 @@ export function StaffGuardianEditClient({ guardianId }: { guardianId: string }) 
           city: profileForm.city,
           state: profileForm.state,
           postalCode: profileForm.postalCode,
+          zohoCrmId: profileForm.zohoCrmId,
+          zohoCrmUrl: profileForm.zohoCrmUrl,
           relationshipRole: profileForm.relationshipRole || null,
           isBillingOwner: profileForm.isBillingOwner,
         }),
@@ -263,6 +270,13 @@ export function StaffGuardianEditClient({ guardianId }: { guardianId: string }) 
             <input value="United States" readOnly />
           </label>
         </div>
+
+        <StaffZohoCrmFields
+          crmId={profileForm.zohoCrmId}
+          crmUrl={profileForm.zohoCrmUrl}
+          onCrmIdChange={(zohoCrmId) => setProfileForm({ ...profileForm, zohoCrmId })}
+          onCrmUrlChange={(zohoCrmUrl) => setProfileForm({ ...profileForm, zohoCrmUrl })}
+        />
 
         <StaffEditSectionLabel>Household role</StaffEditSectionLabel>
         <div className="staff-edit-field-row staff-edit-field-row--2">

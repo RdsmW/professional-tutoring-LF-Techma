@@ -485,6 +485,8 @@ export async function getStaffGuardianDetail(guardianId: string): Promise<StaffG
     state: g.state,
     postalCode: g.postalCode,
     country: g.country || HOUSEHOLD_COUNTRY_US,
+    zohoCrmId: g.zohoCrmId,
+    zohoCrmUrl: g.zohoCrmUrl,
     status: normalizeGuardianStatus(g.status),
     relationshipRole: isGuardianRelationshipRole(g.relationshipRole) ? g.relationshipRole : null,
     isBillingOwner: g.isBillingOwner,

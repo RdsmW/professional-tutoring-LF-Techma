@@ -56,6 +56,8 @@ export type StaffGuardianDetail = {
   state: string | null;
   postalCode: string | null;
   country: string;
+  zohoCrmId: string | null;
+  zohoCrmUrl: string | null;
   status: GuardianStatus;
   relationshipRole: GuardianRelationshipRole | null;
   isBillingOwner: boolean;

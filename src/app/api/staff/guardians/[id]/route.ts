@@ -29,6 +29,8 @@ type PatchBody = {
   city?: string | null;
   state?: string | null;
   postalCode?: string | null;
+  zohoCrmId?: string | null;
+  zohoCrmUrl?: string | null;
   relationshipRole?: GuardianRelationshipRole | null;
   isBillingOwner?: boolean;
   canManageStudents?: boolean;
@@ -158,6 +160,21 @@ export async function PATCH(
     }
     if (addressTouched) {
       updates.country = HOUSEHOLD_COUNTRY_US;
+    }
+
+    if (body.zohoCrmId !== undefined) {
+      updates.zohoCrmId =
+        typeof body.zohoCrmId === "string" ? body.zohoCrmId.trim() || null : null;
+    }
+    if (body.zohoCrmUrl !== undefined) {
+      const url = typeof body.zohoCrmUrl === "string" ? body.zohoCrmUrl.trim() : "";
+      if (url && !/^https?:\/\//i.test(url)) {
+        return NextResponse.json(
+          { ok: false, error: "Zoho CRM URL must start with http:// or https://." },
+          { status: 400 },
+        );
+      }
+      updates.zohoCrmUrl = url || null;
     }
 
     if (typeof body.canManageStudents === "boolean") updates.canManageStudents = body.canManageStudents;
