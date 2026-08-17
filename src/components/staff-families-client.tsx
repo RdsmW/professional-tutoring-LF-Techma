@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro } from "@/components/ui";
@@ -43,7 +43,8 @@ export function StaffFamiliesClient({
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const debouncedQ = useDebouncedValue(q.trim(), 300);
-  const applied = { q: debouncedQ, status };
+  // Memoize so reload deps stay stable (inline object would refetch every render).
+  const applied = useMemo(() => ({ q: debouncedQ, status }), [debouncedQ, status]);
   const filtersActive = q.trim() !== "" || status !== "";
   const [guardianForm, setGuardianForm] = useState({
     householdId: "",

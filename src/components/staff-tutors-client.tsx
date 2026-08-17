@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
@@ -48,7 +48,8 @@ export function StaffTutorsClient() {
   const [q, setQ] = useState("");
   const [active, setActive] = useState("true");
   const debouncedQ = useDebouncedValue(q.trim(), 300);
-  const applied = { q: debouncedQ, active };
+  // Memoize so reload deps stay stable (inline object would refetch every render).
+  const applied = useMemo(() => ({ q: debouncedQ, active }), [debouncedQ, active]);
   const filtersActive = q.trim() !== "" || active !== "true";
 
   const reload = useCallback(async () => {

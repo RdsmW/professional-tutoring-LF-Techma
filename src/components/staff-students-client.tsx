@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
@@ -59,12 +59,16 @@ export function StaffStudentsClient() {
   const debouncedQ = useDebouncedValue(q.trim(), 300);
   const debouncedGrade = useDebouncedValue(grade.trim(), 300);
   const debouncedSchool = useDebouncedValue(school.trim(), 300);
-  const applied = {
-    q: debouncedQ,
-    lifecycle,
-    grade: debouncedGrade,
-    school: debouncedSchool,
-  };
+  // Memoize so reload deps stay stable (inline object would refetch every render).
+  const applied = useMemo(
+    () => ({
+      q: debouncedQ,
+      lifecycle,
+      grade: debouncedGrade,
+      school: debouncedSchool,
+    }),
+    [debouncedQ, lifecycle, debouncedGrade, debouncedSchool],
+  );
   const filtersActive =
     q.trim() !== "" || lifecycle !== "" || grade.trim() !== "" || school.trim() !== "";
 
