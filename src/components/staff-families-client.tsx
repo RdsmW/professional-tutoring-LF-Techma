@@ -392,12 +392,16 @@ export function StaffFamiliesClient({
                 <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
               }
               fields={[
-                { label: "Payer", value: row.payerName || "—" },
-                { label: "Students", value: row.studentCount },
-                { label: "Card on file", value: row.cardOnFile ? "Yes" : "No" },
-                { label: "Auto-charge", value: row.autoCharge ? "Yes" : "No" },
-                { label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
+                { id: "payer", label: "Payer", value: row.payerName || "—" },
+                { id: "students", label: "Students", value: row.studentCount },
+                { id: "auto_charge", label: "Auto-charge", value: row.autoCharge ? "Yes" : "No" },
+                { id: "card_on_file", label: "Card on file", value: row.cardOnFile ? "Yes" : "No" },
               ]}
+              footerField={{
+                id: "created",
+                label: "Created",
+                value: formatDirectoryCreatedAt(row.createdAt),
+              }}
               actions={actions}
               onOpen={() => router.push(`/staff/families/${row.id}`)}
             />
@@ -411,8 +415,8 @@ export function StaffFamiliesClient({
               <span>Students</span>
               <span>Card on file</span>
               <span>Auto-charge</span>
-              <span>Created</span>
               <span className="staff-dir-col-status">Status</span>
+              <span>Created</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {families.map((row) => (
@@ -434,10 +438,10 @@ export function StaffFamiliesClient({
                 <span>{row.studentCount}</span>
                 <span>{row.cardOnFile ? "Yes" : "No"}</span>
                 <span>{row.autoCharge ? "Yes" : "No"}</span>
-                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-status">
                   <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
                 </span>
+                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-actions">
                   <StaffRowActions
                     label="Row actions"

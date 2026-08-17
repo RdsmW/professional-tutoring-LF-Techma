@@ -373,11 +373,15 @@ export function StaffStudentsClient() {
                 </span>
               }
               fields={[
-                { label: "Grade", value: row.gradeLabel ?? "—" },
-                { label: "School", value: row.schoolName ?? "—" },
-                { label: "Subjects", value: formatSubjectsPreview(row.subjects), wide: true },
-                { label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
+                { id: "grade", label: "Grade", value: row.gradeLabel ?? "—" },
+                { id: "school", label: "School", value: row.schoolName ?? "—" },
+                { id: "subject", label: "Subject", value: formatSubjectsPreview(row.subjects) },
               ]}
+              footerField={{
+                id: "created",
+                label: "Created",
+                value: formatDirectoryCreatedAt(row.createdAt),
+              }}
               actions={actions}
               onOpen={() => router.push(`/staff/students/${row.id}`)}
             />
@@ -391,8 +395,8 @@ export function StaffStudentsClient() {
               <span>Subjects</span>
               <span>Grade</span>
               <span>School</span>
-              <span>Created</span>
               <span className="staff-dir-col-status">Status</span>
+              <span>Created</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {students.map((row) => (
@@ -414,10 +418,10 @@ export function StaffStudentsClient() {
                 <span>{formatSubjectsPreview(row.subjects)}</span>
                 <span>{row.gradeLabel ?? "—"}</span>
                 <span>{row.schoolName ?? "—"}</span>
-                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-status">
                   <span className={`pill ${statusTone(row.lifecycle)}`}>{formatStatusLabel(row.lifecycle)}</span>
                 </span>
+                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-actions">
                   <StaffRowActions
                     label="Row actions"

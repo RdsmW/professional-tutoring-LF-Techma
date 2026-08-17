@@ -1,3 +1,5 @@
+import { APP_TIMEZONE } from "@/lib/constants";
+
 /** Shared staff directory sort values (Families / Guardians / Students / Tutors). */
 
 export const DIRECTORY_SORT_OPTIONS = [
@@ -22,10 +24,11 @@ export function formatDirectoryCreatedAt(value: string | null | undefined): stri
   try {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "—";
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
+      timeZone: APP_TIMEZONE,
     });
   } catch {
     return "—";

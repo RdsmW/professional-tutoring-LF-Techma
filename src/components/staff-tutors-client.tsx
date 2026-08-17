@@ -328,16 +328,15 @@ export function StaffTutorsClient() {
             <StaffDirectoryCard
               key={row.id}
               title={row.displayName}
-              subtitle={row.email || undefined}
               status={
                 <span className={`pill ${statusTone(row.active ? "active" : "inactive")}`}>
                   {formatStatusLabel(row.active ? "active" : "archived")}
                 </span>
               }
               fields={[
-                { label: "Email", value: row.email || "—" },
-                { label: "Phone", value: row.phone || "—" },
-                { label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
+                { id: "email", label: "Email", value: row.email || "—" },
+                { id: "phone", label: "Phone", value: row.phone || "—" },
+                { id: "created", label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
               ]}
               actions={actions}
               onOpen={() => router.push(`/staff/tutors/${row.id}`)}
@@ -349,8 +348,8 @@ export function StaffTutorsClient() {
             <div className="table-head staff-dir-cols-tutors">
               <span>Name</span>
               <span>Email</span>
-              <span>Created</span>
               <span className="staff-dir-col-status">Status</span>
+              <span>Created</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {tutors.map((row) => (
@@ -369,12 +368,12 @@ export function StaffTutorsClient() {
               >
                 <strong>{row.displayName}</strong>
                 <span>{row.email || "—"}</span>
-                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-status">
                   <span className={`pill ${statusTone(row.active ? "active" : "inactive")}`}>
                     {formatStatusLabel(row.active ? "active" : "archived")}
                   </span>
                 </span>
+                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                 <span className="staff-dir-col-actions">
                   <StaffRowActions
                     label="Row actions"

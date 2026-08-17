@@ -231,12 +231,18 @@ export function StaffGuardiansClient() {
               }
               fields={[
                 {
+                  id: "parent_role",
                   label: "Parent role",
                   value: <GuardianRelationshipRolePill role={row.relationshipRole} />,
                 },
-                { label: "Family", value: row.household.displayName },
-                { label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
+                { id: "family", label: "Family", value: row.household.displayName },
+                { id: "phone", label: "Phone", value: row.phone || "—" },
               ]}
+              footerField={{
+                id: "created",
+                label: "Created",
+                value: formatDirectoryCreatedAt(row.createdAt),
+              }}
               actions={rowActions(row)}
               onOpen={() => openGuardian(row.id)}
             />
@@ -249,8 +255,8 @@ export function StaffGuardiansClient() {
               <span>Parent role</span>
               <span>Email</span>
               <span>Family</span>
-              <span>Created</span>
               <span className="staff-dir-col-status">Status</span>
+              <span>Created</span>
               <span className="staff-dir-col-actions" aria-label="Actions" />
             </div>
             {guardians.map((row) => {
@@ -278,10 +284,10 @@ export function StaffGuardiansClient() {
                   </span>
                   <span>{row.email}</span>
                   <span>{row.household.displayName}</span>
-                  <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                   <span className="staff-dir-col-status">
                     <span className={`pill ${statusTone(statusKey)}`}>{formatStatusLabel(statusKey)}</span>
                   </span>
+                  <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
                   <span className="staff-dir-col-actions">
                     <StaffRowActions label="Row actions" actions={rowActions(row)} />
                   </span>

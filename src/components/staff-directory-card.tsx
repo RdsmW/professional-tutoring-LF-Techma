@@ -3,11 +3,46 @@
 import type { KeyboardEvent, ReactNode } from "react";
 import { StaffRowActions, type StaffRowAction } from "@/components/staff-row-actions";
 
+export type DirectoryCardFieldSlot = {
+  id: string;
+  label: string;
+  value: ReactNode;
+};
+
+type DirectoryCardFieldsProps = {
+  /** Labeled slots, laid out 3 per row (future field-picker can pass an ordered list). */
+  fields: DirectoryCardFieldSlot[];
+  /** Always last, full-width (typically Created). */
+  footer?: DirectoryCardFieldSlot | null;
+};
+
+/** Shared labeled-slot grid for directory cards — 3 fields per line, optional footer row. */
+export function DirectoryCardFields({ fields, footer }: DirectoryCardFieldsProps) {
+  if (fields.length === 0 && !footer) return null;
+  return (
+    <div className="mini-fields staff-dir-card-fields">
+      {fields.map((field) => (
+        <span key={field.id}>
+          <small>{field.label}</small>
+          {field.value}
+        </span>
+      ))}
+      {footer ? (
+        <span className="staff-dir-card-field-footer">
+          <small>{footer.label}</small>
+          {footer.value}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 type StaffDirectoryCardProps = {
   title: string;
   subtitle?: string;
   status: ReactNode;
-  fields: { label: string; value: ReactNode; wide?: boolean }[];
+  fields: DirectoryCardFieldSlot[];
+  footerField?: DirectoryCardFieldSlot | null;
   actions: StaffRowAction[];
   onOpen: () => void;
 };
@@ -18,6 +53,7 @@ export function StaffDirectoryCard({
   subtitle,
   status,
   fields,
+  footerField,
   actions,
   onOpen,
 }: StaffDirectoryCardProps) {
@@ -43,16 +79,7 @@ export function StaffDirectoryCard({
       <div className="staff-dir-card-body">
         <h3>{title}</h3>
         {subtitle ? <p>{subtitle}</p> : null}
-        {fields.length > 0 ? (
-          <div className="mini-fields">
-            {fields.map((field) => (
-              <span key={field.label} className={field.wide ? "mini-field-wide" : undefined}>
-                <small>{field.label}</small>
-                {field.value}
-              </span>
-            ))}
-          </div>
-        ) : null}
+        <DirectoryCardFields fields={fields} footer={footerField} />
       </div>
     </article>
   );
