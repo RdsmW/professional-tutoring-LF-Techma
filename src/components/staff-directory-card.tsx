@@ -12,6 +12,7 @@ type StaffDirectoryCardProps = {
   onOpen: () => void;
 };
 
+/** One record per card; whole card opens detail (no separate Open control). */
 export function StaffDirectoryCard({
   title,
   subtitle,
@@ -52,9 +53,6 @@ export function StaffDirectoryCard({
             ))}
           </div>
         ) : null}
-        <span className="card-action">
-          Open <span>→</span>
-        </span>
       </div>
     </article>
   );

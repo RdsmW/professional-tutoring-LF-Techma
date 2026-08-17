@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageIntro, Panel } from "@/components/ui";
-import { DirectoryViewToggle } from "@/components/directory-view-toggle";
+import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
-import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
+import { StaffDirectoryChrome, StaffDirectoryResults } from "@/components/staff-directory-chrome";
+import { StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import { useDebouncedValue } from "@/lib/ui/use-debounced-value";
 import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
@@ -55,7 +56,17 @@ export function StaffStudentsClient() {
   const [lifecycle, setLifecycle] = useState("");
   const [grade, setGrade] = useState("");
   const [school, setSchool] = useState("");
-  const [applied, setApplied] = useState({ q: "", lifecycle: "", grade: "", school: "" });
+  const debouncedQ = useDebouncedValue(q.trim(), 300);
+  const debouncedGrade = useDebouncedValue(grade.trim(), 300);
+  const debouncedSchool = useDebouncedValue(school.trim(), 300);
+  const applied = {
+    q: debouncedQ,
+    lifecycle,
+    grade: debouncedGrade,
+    school: debouncedSchool,
+  };
+  const filtersActive =
+    q.trim() !== "" || lifecycle !== "" || grade.trim() !== "" || school.trim() !== "";
 
   useEffect(() => {
     if (searchParams.get("new") === "1") setCreating(true);
@@ -117,22 +128,11 @@ export function StaffStudentsClient() {
     })();
   }, [creating]);
 
-  function applyFilters(event: React.FormEvent) {
-    event.preventDefault();
-    setApplied({
-      q: q.trim(),
-      lifecycle,
-      grade: grade.trim(),
-      school: school.trim(),
-    });
-  }
-
   function clearFilters() {
     setQ("");
     setLifecycle("");
     setGrade("");
     setSchool("");
-    setApplied({ q: "", lifecycle: "", grade: "", school: "" });
   }
 
   async function setStudentLifecycle(id: string, nextLifecycle: string) {
@@ -291,84 +291,75 @@ export function StaffStudentsClient() {
         </p>
       ) : null}
 
-      <div className="directory-toolbar">
-        <StaffDirectoryFilters>
-          <form
-            className="student-filter-panel"
-            onSubmit={applyFilters}
-            style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1fr auto auto" }}
-          >
-            <label className="student-search">
-              Search name
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Student name" />
-            </label>
-            <label>
-              Lifecycle
-              <select value={lifecycle} onChange={(e) => setLifecycle(e.target.value)}>
-                {LIFECYCLE_OPTIONS.map((option) => (
-                  <option key={option.value || "default"} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Grade
-              <input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Grade" />
-            </label>
-            <label>
-              School
-              <input value={school} onChange={(e) => setSchool(e.target.value)} placeholder="School" />
-            </label>
-            <button type="submit" className="filter-btn">
-              Filter
-            </button>
-            <button type="button" className="clear-btn" onClick={clearFilters}>
-              Clear
-            </button>
-          </form>
-        </StaffDirectoryFilters>
-        <DirectoryViewToggle view={view} onChange={setView} label="Students layout" />
-      </div>
+      <StaffDirectoryChrome
+        view={view}
+        onViewChange={setView}
+        viewLabel="Students layout"
+        filtersActive={filtersActive}
+        onClearFilters={clearFilters}
+        filterColumns="1.6fr 1fr 1fr 1fr"
+      >
+        <label className="student-search">
+          Search name
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Student name" />
+        </label>
+        <label>
+          Lifecycle
+          <select value={lifecycle} onChange={(e) => setLifecycle(e.target.value)}>
+            {LIFECYCLE_OPTIONS.map((option) => (
+              <option key={option.value || "default"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Grade
+          <input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Grade" />
+        </label>
+        <label>
+          School
+          <input value={school} onChange={(e) => setSchool(e.target.value)} placeholder="School" />
+        </label>
+      </StaffDirectoryChrome>
 
-      <Panel>
-        {loading ? <p className="dashboard-empty">Loading students…</p> : null}
-        {students.length === 0 && !loading ? (
-          <p className="dashboard-empty">No students match these filters.</p>
-        ) : view === "cards" ? (
-          <div className="staff-dir-card-grid">
-            {students.map((row) => {
-              const actions = lifecycleActions({
-                isArchived: row.lifecycle === "archived",
-                canDelete: Boolean(row.canDelete),
-                busy: busyId === row.id,
-                onEdit: () => router.push(`/staff/students/${row.id}/edit`),
-                onArchive: () => void setStudentLifecycle(row.id, "archived"),
-                onRestore: () => void setStudentLifecycle(row.id, "active"),
-                onDelete: () => void deleteStudent(row.id),
-              });
-              return (
-                <StaffDirectoryCard
-                  key={row.id}
-                  title={row.listLabel || row.displayName}
-                  subtitle={row.householdDisplayName}
-                  status={
-                    <span className={`pill ${statusTone(row.lifecycle)}`}>
-                      {formatStatusLabel(row.lifecycle)}
-                    </span>
-                  }
-                  fields={[
-                    { label: "Subjects", value: formatSubjectsPreview(row.subjects) },
-                    { label: "Grade", value: row.gradeLabel ?? "—" },
-                    { label: "School", value: row.schoolName ?? "—" },
-                  ]}
-                  actions={actions}
-                  onOpen={() => router.push(`/staff/students/${row.id}`)}
-                />
-              );
-            })}
-          </div>
-        ) : (
+      <StaffDirectoryResults
+        view={view}
+        loading={loading}
+        isEmpty={students.length === 0}
+        loadingMessage="Loading students…"
+        emptyMessage="No students match these filters."
+        cards={students.map((row) => {
+          const actions = lifecycleActions({
+            isArchived: row.lifecycle === "archived",
+            canDelete: Boolean(row.canDelete),
+            busy: busyId === row.id,
+            onEdit: () => router.push(`/staff/students/${row.id}/edit`),
+            onArchive: () => void setStudentLifecycle(row.id, "archived"),
+            onRestore: () => void setStudentLifecycle(row.id, "active"),
+            onDelete: () => void deleteStudent(row.id),
+          });
+          return (
+            <StaffDirectoryCard
+              key={row.id}
+              title={row.listLabel || row.displayName}
+              subtitle={row.householdDisplayName}
+              status={
+                <span className={`pill ${statusTone(row.lifecycle)}`}>
+                  {formatStatusLabel(row.lifecycle)}
+                </span>
+              }
+              fields={[
+                { label: "Subjects", value: formatSubjectsPreview(row.subjects) },
+                { label: "Grade", value: row.gradeLabel ?? "—" },
+                { label: "School", value: row.schoolName ?? "—" },
+              ]}
+              actions={actions}
+              onOpen={() => router.push(`/staff/students/${row.id}`)}
+            />
+          );
+        })}
+        table={
           <div className="table-panel staff-dir-table">
             <div className="table-head staff-dir-cols-students">
               <span>Name</span>
@@ -418,8 +409,8 @@ export function StaffStudentsClient() {
               </div>
             ))}
           </div>
-        )}
-      </Panel>
+        }
+      />
     </>
   );
 }

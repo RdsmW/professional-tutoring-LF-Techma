@@ -160,6 +160,16 @@ export async function listStaffFamilies(
       status: households.status,
       primaryPhone: households.primaryPhone,
       updatedAt: households.updatedAt,
+      cardOnFile: households.cardOnFile,
+      autoCharge: households.autoCharge,
+      stripeDefaultPaymentMethodId: households.stripeDefaultPaymentMethodId,
+      cardLast4: households.cardLast4,
+      payerName: sql<string | null>`(
+        select nullif(trim(both from concat_ws(' ', g.first_name, g.last_name)), '')
+        from guardians g
+        where g.id = ${households.billingOwnerGuardianId}
+        limit 1
+      )`,
       studentCount: sql<number>`count(distinct ${students.id})::int`.mapWith(Number),
       guardianCount: sql<number>`count(distinct ${guardians.id})::int`.mapWith(Number),
       bookingCount: sql<number>`count(distinct ${bookings.id})::int`.mapWith(Number),
@@ -177,6 +187,11 @@ export async function listStaffFamilies(
       households.status,
       households.primaryPhone,
       households.updatedAt,
+      households.cardOnFile,
+      households.autoCharge,
+      households.stripeDefaultPaymentMethodId,
+      households.cardLast4,
+      households.billingOwnerGuardianId,
     )
     .orderBy(desc(households.updatedAt));
 
@@ -185,6 +200,7 @@ export async function listStaffFamilies(
     const guardianCount = Number(row.guardianCount ?? 0);
     const bookingCount = Number(row.bookingCount ?? 0);
     const enrollmentCount = Number(row.enrollmentCount ?? 0);
+    const hasStripeCard = Boolean(row.stripeDefaultPaymentMethodId && row.cardLast4);
     return {
       id: row.id,
       displayName: row.displayName,
@@ -192,6 +208,9 @@ export async function listStaffFamilies(
       primaryPhone: row.primaryPhone,
       studentCount,
       guardianCount,
+      payerName: row.payerName?.trim() || null,
+      cardOnFile: Boolean(row.cardOnFile) || hasStripeCard,
+      autoCharge: Boolean(row.autoCharge),
       canDelete: studentCount === 0 && bookingCount === 0 && enrollmentCount === 0,
       updatedAt: row.updatedAt.toISOString(),
     };

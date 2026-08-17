@@ -465,9 +465,9 @@ button { color: inherit; }
 .flow-stage button.active span { background: var(--navy); color: #fff; }
 .flow-stage i { color: #b8c0c7; font-style: normal; }
 .content { padding: 24px 34px 44px; max-width: 1560px; margin: 0 auto; }
+/* All staff/family pages: tighter padding when the sidebar is collapsed. */
 .app-shell.is-nav-collapsed .content {
-  padding-left: 16px;
-  padding-right: 16px;
+  padding: 20px 16px 36px;
 }
 .app-shell.is-nav-collapsed .topbar,
 .app-shell.is-nav-collapsed .flow-rail {
@@ -960,9 +960,11 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-dir-card-body .mini-fields {
   margin-top: auto;
 }
-.staff-dir-card-body .card-action {
-  margin-top: 4px;
-  padding-bottom: 0;
+.staff-dir-status {
+  margin: 4px 0 14px;
+}
+.panel.staff-dir-table-panel {
+  padding: 0;
 }
 .family-directory-toolbar {
   display: flex;

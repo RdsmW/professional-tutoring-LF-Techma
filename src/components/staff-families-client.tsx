@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageIntro, Panel } from "@/components/ui";
-import { DirectoryViewToggle } from "@/components/directory-view-toggle";
+import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
+import { StaffDirectoryChrome, StaffDirectoryResults } from "@/components/staff-directory-chrome";
 import { StaffNewFamilyWizard } from "@/components/staff-new-family-wizard";
-import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
+import { StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import type { StaffFamilyListRow } from "@/lib/staff/family-list-types";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import { useDebouncedValue } from "@/lib/ui/use-debounced-value";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 import { staffCreateCancelPath } from "@/lib/ui/staff-create-return";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
@@ -41,7 +42,9 @@ export function StaffFamiliesClient({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
-  const [applied, setApplied] = useState({ q: "", status: "" });
+  const debouncedQ = useDebouncedValue(q.trim(), 300);
+  const applied = { q: debouncedQ, status };
+  const filtersActive = q.trim() !== "" || status !== "";
   const [guardianForm, setGuardianForm] = useState({
     householdId: "",
     firstName: "",
@@ -105,15 +108,9 @@ export function StaffFamiliesClient({
     })();
   }, [addingGuardian]);
 
-  function applyFilters(event: React.FormEvent) {
-    event.preventDefault();
-    setApplied({ q: q.trim(), status });
-  }
-
   function clearFilters() {
     setQ("");
     setStatus("");
-    setApplied({ q: "", status: "" });
   }
 
   async function setFamilyStatus(id: string, next: "active" | "archived") {
@@ -329,76 +326,69 @@ export function StaffFamiliesClient({
         </p>
       ) : null}
 
-      <div className="directory-toolbar">
-        <StaffDirectoryFilters>
-          <form
-            className="student-filter-panel"
-            onSubmit={applyFilters}
-            style={{ gridTemplateColumns: "1.6fr 1fr auto auto" }}
-          >
-            <label className="student-search">
-              Search name or phone
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Household name or phone"
-              />
-            </label>
-            <label>
-              Status
-              <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value || "default"} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="filter-btn">
-              Filter
-            </button>
-            <button type="button" className="clear-btn" onClick={clearFilters}>
-              Clear
-            </button>
-          </form>
-        </StaffDirectoryFilters>
-        <DirectoryViewToggle view={view} onChange={setView} label="Families layout" />
-      </div>
+      <StaffDirectoryChrome
+        view={view}
+        onViewChange={setView}
+        viewLabel="Families layout"
+        filtersActive={filtersActive}
+        onClearFilters={clearFilters}
+        filterColumns="1.6fr 1fr"
+      >
+        <label className="student-search">
+          Search name or phone
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Household name or phone"
+          />
+        </label>
+        <label>
+          Status
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value || "default"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </StaffDirectoryChrome>
 
-      <Panel>
-        {loading ? <p className="dashboard-empty">Loading families…</p> : null}
-        {families.length === 0 && !loading ? (
-          <p className="dashboard-empty">No households match these filters.</p>
-        ) : view === "cards" ? (
-          <div className="staff-dir-card-grid">
-            {families.map((row) => {
-              const actions = lifecycleActions({
-                isArchived: row.status === "archived",
-                canDelete: Boolean(row.canDelete),
-                busy: busyId === row.id,
-                onEdit: () => router.push(`/staff/families/${row.id}/edit`),
-                onArchive: () => void setFamilyStatus(row.id, "archived"),
-                onRestore: () => void setFamilyStatus(row.id, "active"),
-                onDelete: () => void deleteFamily(row.id),
-              });
-              return (
-                <StaffDirectoryCard
-                  key={row.id}
-                  title={row.displayName}
-                  status={
-                    <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
-                  }
-                  fields={[
-                    { label: "Students", value: row.studentCount },
-                    { label: "Guardians", value: row.guardianCount },
-                  ]}
-                  actions={actions}
-                  onOpen={() => router.push(`/staff/families/${row.id}`)}
-                />
-              );
-            })}
-          </div>
-        ) : (
+      <StaffDirectoryResults
+        view={view}
+        loading={loading}
+        isEmpty={families.length === 0}
+        loadingMessage="Loading families…"
+        emptyMessage="No households match these filters."
+        cards={families.map((row) => {
+          const actions = lifecycleActions({
+            isArchived: row.status === "archived",
+            canDelete: Boolean(row.canDelete),
+            busy: busyId === row.id,
+            onEdit: () => router.push(`/staff/families/${row.id}/edit`),
+            onArchive: () => void setFamilyStatus(row.id, "archived"),
+            onRestore: () => void setFamilyStatus(row.id, "active"),
+            onDelete: () => void deleteFamily(row.id),
+          });
+          return (
+            <StaffDirectoryCard
+              key={row.id}
+              title={row.displayName}
+              status={
+                <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
+              }
+              fields={[
+                { label: "Payer", value: row.payerName || "—" },
+                { label: "Students", value: row.studentCount },
+                { label: "Card on file", value: row.cardOnFile ? "Yes" : "No" },
+                { label: "Auto-charge", value: row.autoCharge ? "Yes" : "No" },
+              ]}
+              actions={actions}
+              onOpen={() => router.push(`/staff/families/${row.id}`)}
+            />
+          );
+        })}
+        table={
           <div className="table-panel staff-dir-table">
             <div className="table-head staff-dir-cols-families">
               <span>Name</span>
@@ -444,8 +434,8 @@ export function StaffFamiliesClient({
               </div>
             ))}
           </div>
-        )}
-      </Panel>
+        }
+      />
     </>
   );
 }

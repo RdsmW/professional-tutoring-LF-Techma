@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PageIntro, Panel } from "@/components/ui";
-import { DirectoryViewToggle } from "@/components/directory-view-toggle";
+import { PageIntro } from "@/components/ui";
 import { StaffDirectoryCard } from "@/components/staff-directory-card";
-import { StaffDirectoryFilters, StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
+import { StaffDirectoryChrome, StaffDirectoryResults } from "@/components/staff-directory-chrome";
+import { StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
 import { useDirectoryView } from "@/lib/ui/directory-view";
+import { useDebouncedValue } from "@/lib/ui/use-debounced-value";
 import { GuardianRelationshipRolePill } from "@/components/guardian-relationship-role-pill";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
@@ -48,7 +49,9 @@ export function StaffGuardiansClient() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
-  const [applied, setApplied] = useState({ q: "", status: "" });
+  const debouncedQ = useDebouncedValue(q.trim(), 300);
+  const applied = { q: debouncedQ, status };
+  const filtersActive = q.trim() !== "" || status !== "";
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -80,15 +83,9 @@ export function StaffGuardiansClient() {
     Boolean(error) &&
     (error!.toLowerCase().includes("staff profile") || error!.toLowerCase().includes("database not configured"));
 
-  function applyFilters(event: FormEvent) {
-    event.preventDefault();
-    setApplied({ q: q.trim(), status });
-  }
-
   function clearFilters() {
     setQ("");
     setStatus("");
-    setApplied({ q: "", status: "" });
   }
 
   function openGuardian(guardianId: string) {
@@ -172,73 +169,64 @@ export function StaffGuardiansClient() {
         </p>
       ) : null}
 
-      <div className="directory-toolbar">
-        <StaffDirectoryFilters>
-          <form
-            className="student-filter-panel"
-            onSubmit={applyFilters}
-            style={{ gridTemplateColumns: "1.8fr 1fr auto auto" }}
-          >
-            <label className="student-search">
-              Search
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Name, email, phone, or family"
-              />
-            </label>
-            <label>
-              Status
-              <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="filter-btn">
-              Filter
-            </button>
-            <button type="button" className="clear-btn" onClick={clearFilters}>
-              Clear
-            </button>
-          </form>
-        </StaffDirectoryFilters>
-        <DirectoryViewToggle view={view} onChange={setView} label="Guardians layout" />
-      </div>
+      <StaffDirectoryChrome
+        view={view}
+        onViewChange={setView}
+        viewLabel="Guardians layout"
+        filtersActive={filtersActive}
+        onClearFilters={clearFilters}
+        filterColumns="1.8fr 1fr"
+      >
+        <label className="student-search">
+          Search
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Name, email, phone, or family"
+          />
+        </label>
+        <label>
+          Status
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </StaffDirectoryChrome>
 
-      <Panel>
-        {loading ? <p className="dashboard-empty">Loading guardians…</p> : null}
-        {guardians.length === 0 && !loading ? (
-          <p className="dashboard-empty">No guardians match these filters.</p>
-        ) : view === "cards" ? (
-          <div className="staff-dir-card-grid">
-            {guardians.map((row) => {
-              const fullName = `${row.firstName} ${row.lastName}`.trim();
-              const statusKey = rowStatusKey(row);
-              return (
-                <StaffDirectoryCard
-                  key={row.id}
-                  title={fullName}
-                  subtitle={row.email}
-                  status={
-                    <span className={`pill ${statusTone(statusKey)}`}>{formatStatusLabel(statusKey)}</span>
-                  }
-                  fields={[
-                    {
-                      label: "Parent role",
-                      value: <GuardianRelationshipRolePill role={row.relationshipRole} />,
-                    },
-                    { label: "Family", value: row.household.displayName },
-                  ]}
-                  actions={rowActions(row)}
-                  onOpen={() => openGuardian(row.id)}
-                />
-              );
-            })}
-          </div>
-        ) : (
+      <StaffDirectoryResults
+        view={view}
+        loading={loading}
+        isEmpty={guardians.length === 0}
+        loadingMessage="Loading guardians…"
+        emptyMessage="No guardians match these filters."
+        cards={guardians.map((row) => {
+          const fullName = `${row.firstName} ${row.lastName}`.trim();
+          const statusKey = rowStatusKey(row);
+          return (
+            <StaffDirectoryCard
+              key={row.id}
+              title={fullName}
+              subtitle={row.email}
+              status={
+                <span className={`pill ${statusTone(statusKey)}`}>{formatStatusLabel(statusKey)}</span>
+              }
+              fields={[
+                {
+                  label: "Parent role",
+                  value: <GuardianRelationshipRolePill role={row.relationshipRole} />,
+                },
+                { label: "Family", value: row.household.displayName },
+              ]}
+              actions={rowActions(row)}
+              onOpen={() => openGuardian(row.id)}
+            />
+          );
+        })}
+        table={
           <div className="table-panel staff-dir-table">
             <div className="table-head staff-dir-cols-guardians">
               <span>Name</span>
@@ -283,8 +271,8 @@ export function StaffGuardiansClient() {
               );
             })}
           </div>
-        )}
-      </Panel>
+        }
+      />
     </>
   );
 }
