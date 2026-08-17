@@ -900,10 +900,21 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 0.6fr 0.8fr 0.8fr 0.8fr 0.85fr 64px;
 }
 .staff-dir-cols-students {
-  grid-template-columns: minmax(160px, 1.4fr) minmax(110px, 1fr) minmax(100px, 0.95fr) 70px minmax(100px, 0.95fr) 90px 0.85fr 64px;
+  width: 100%;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(96px, 0.6fr) minmax(0, 1.25fr) minmax(120px, 0.85fr) minmax(112px, max-content) 64px;
 }
 .staff-dir-cols-students.staff-dir-cols-no-actions {
-  grid-template-columns: minmax(160px, 1.4fr) minmax(110px, 1fr) minmax(100px, 0.95fr) 70px minmax(100px, 0.95fr) 90px 0.85fr;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(96px, 0.6fr) minmax(0, 1.25fr) minmax(120px, 0.85fr) minmax(112px, max-content);
+}
+.staff-dir-cols-students > * {
+  min-width: 0;
+  padding-inline: var(--space-2);
+}
+.staff-dir-cols-students > :first-child {
+  padding-left: 0;
+}
+.staff-dir-cols-students > :last-child {
+  padding-right: 0;
 }
 .staff-dir-cols-tutors {
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) 0.85fr 0.9fr 64px;
