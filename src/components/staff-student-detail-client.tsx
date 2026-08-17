@@ -411,7 +411,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
     ? learningParsed.chips
     : learningParsed.chips.slice(0, LEARNING_CHIP_PREVIEW);
   const learningChipRemaining = learningParsed.chips.length - visibleLearningChips.length;
-  const zohoUrl = (student.zohoDealUrl || "").trim();
   const payerHref = student.household?.billingOwnerGuardianId
     ? `/staff/guardians/${student.household.billingOwnerGuardianId}`
     : student.household
@@ -632,20 +631,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                     <strong>—</strong>
                   )}
                 </span>
-                <span className="family-household-field-zoho-id">
-                  <small>Zoho CRM ID</small>
-                  <strong>{student.zohoDealId || "—"}</strong>
-                </span>
-                <span className="family-household-field-zoho-url">
-                  <small>Zoho CRM URL</small>
-                  {zohoUrl ? (
-                    <a href={zohoUrl} target="_blank" rel="noreferrer" className="family-zoho-url-link" title={zohoUrl}>
-                      {zohoUrl}
-                    </a>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
               </div>
               <div className="family-household-lower student-profile-family-description-row">
                 <span>
@@ -830,7 +815,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
 
       <StaffRecordIntegrationsCard
         zohoId={student.zohoDealId}
-        supports={{ zoho: true, stripe: false, acuity: false, quickbooks: false }}
+        zohoUrl={student.zohoDealUrl}
       />
 
       {SHOW_STAFF_NOTES ? (

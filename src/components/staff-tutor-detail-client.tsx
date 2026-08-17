@@ -846,9 +846,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         </div>
       </Panel>
 
-      <StaffRecordIntegrationsCard
-        supports={{ zoho: false, stripe: false, acuity: false, quickbooks: false }}
-      />
+      <StaffRecordIntegrationsCard />
 
       <StaffNotesSection
         notes={tutor.notesList}

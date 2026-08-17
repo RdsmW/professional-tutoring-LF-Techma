@@ -261,6 +261,7 @@ export async function GET(
         zohoCrmId: household.zohoCrmId,
         zohoCrmUrl: household.zohoCrmUrl,
         stripeCustomerId: household.stripeCustomerId,
+        stripeDefaultPaymentMethodId: household.stripeDefaultPaymentMethodId,
         billingOwnerGuardianId: billingOwner?.id ?? household.billingOwnerGuardianId,
         billingOwnerName: billingOwner
           ? `${billingOwner.firstName} ${billingOwner.lastName}`.trim()
@@ -525,6 +526,7 @@ export async function PATCH(
         zohoCrmId: fresh.zohoCrmId,
         zohoCrmUrl: fresh.zohoCrmUrl,
         stripeCustomerId: fresh.stripeCustomerId,
+        stripeDefaultPaymentMethodId: fresh.stripeDefaultPaymentMethodId,
         billingOwnerGuardianId: fresh.billingOwnerGuardianId,
         billingOwnerName: billingOwner
           ? `${billingOwner.firstName} ${billingOwner.lastName}`.trim()

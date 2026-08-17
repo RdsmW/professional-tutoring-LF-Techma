@@ -938,7 +938,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
 
       <StaffRecordIntegrationsCard
         zohoId={guardian.zohoCrmId}
-        supports={{ zoho: true, stripe: false, acuity: false, quickbooks: false }}
+        zohoUrl={guardian.zohoCrmUrl}
       />
 
       {SHOW_STAFF_NOTES ? (

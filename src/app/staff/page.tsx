@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
 import { StaffHomeHeroActions } from "@/components/staff-home-create-menu";
 import {
   StaffStudentsDirectoryTable,
@@ -22,41 +22,15 @@ import { buildStudentListLabel } from "@/lib/staff/students";
 import { formatDirectoryCreatedAt } from "@/lib/ui/directory-sort";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
+import {
+  PRIORITY_QUEUE_RECENT_LIMIT,
+  PREVIEW_REQUEST_TOTAL,
+  previewQueueRows,
+} from "@/lib/staff/preview-requests";
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
 const OPEN_BOOKING_STATUSES = ["confirmed", "held", "pending_payment", "pending_staff_review"] as const;
-
-/** UI-only Priority Queue preview when the DB has no open change requests (not persisted). */
-const PREVIEW_FAMILY_REQUESTS = [
-  {
-    id: "preview-req-1",
-    initials: "EC",
-    title: "Cancel session · Emerson Chen",
-    copy: "Chen Family · Cancel upcoming booking",
-    meta: "Preview",
-    tone: "rose",
-    href: "/staff/sessions",
-  },
-  {
-    id: "preview-req-2",
-    initials: "MR",
-    title: "Reschedule · Maya Ruiz",
-    copy: "Ruiz Family · Move to another day",
-    meta: "Preview",
-    tone: "blue",
-    href: "/staff/sessions",
-  },
-  {
-    id: "preview-req-3",
-    initials: "JL",
-    title: "Tutor change · Jordan Lee",
-    copy: "Lee Family · Request different tutor",
-    meta: "Preview",
-    tone: "amber",
-    href: "/staff/sessions",
-  },
-] as const;
 
 function greetingForHour(hour: number) {
   if (hour < 12) return "Good morning";
@@ -119,12 +93,19 @@ async function loadDashboardData() {
       tone: string;
       href: string;
     }[],
+    familyRequestsTotal: 0,
     recentStudents: [] as StaffStudentDirectoryTableRow[],
     weekBars: WEEK_DAYS.map((day) => ({
       day: formatCapacityDay(weekStart, day),
       width: 0,
+      booked: 0,
+      open: 0,
+      capacity: 0,
       count: "0 / 0",
     })),
+    weekBooked: 0,
+    weekOpen: 0,
+    weekCapacity: 0,
     weekBarsLive: false,
   };
 
@@ -152,6 +133,7 @@ async function loadDashboardData() {
       weekBookingRows,
       slotRows,
       exceptionRows,
+      openRequestCountRows,
       openRequests,
       recentStudentRows,
     ] = await Promise.all([
@@ -176,6 +158,10 @@ async function loadDashboardData() {
         .from(paymentRecords)
         .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"])),
       db
+        .select({ total: count() })
+        .from(changeRequests)
+        .where(inArray(changeRequests.status, ["submitted", "under_review"])),
+      db
         .select({
           id: changeRequests.id,
           changeType: changeRequests.changeType,
@@ -189,7 +175,7 @@ async function loadDashboardData() {
         .innerJoin(households, eq(changeRequests.householdId, households.id))
         .where(inArray(changeRequests.status, ["submitted", "under_review"]))
         .orderBy(desc(changeRequests.createdAt))
-        .limit(8),
+        .limit(PRIORITY_QUEUE_RECENT_LIMIT),
       db
         .select({
           id: students.id,
@@ -225,14 +211,20 @@ async function loadDashboardData() {
 
     const weekBars = WEEK_DAYS.map((day) => {
       const bucket = byDay.get(day) ?? { open: 0, capacity: 0 };
-      const used = Math.max(0, bucket.capacity - bucket.open);
-      const width = bucket.capacity > 0 ? Math.round((used / bucket.capacity) * 100) : 0;
+      const booked = Math.max(0, bucket.capacity - bucket.open);
+      const width = bucket.capacity > 0 ? Math.round((booked / bucket.capacity) * 100) : 0;
       return {
         day: formatCapacityDay(weekStart, day),
         width,
-        count: `${used} / ${bucket.capacity}`,
+        booked,
+        open: bucket.open,
+        capacity: bucket.capacity,
+        count: `${booked} / ${bucket.capacity}`,
       };
     });
+    const weekCapacity = weekBars.reduce((sum, row) => sum + row.capacity, 0);
+    const weekOpen = weekBars.reduce((sum, row) => sum + row.open, 0);
+    const weekBooked = weekBars.reduce((sum, row) => sum + row.booked, 0);
 
     const familyRequests = openRequests.map((row) => ({
       id: row.id,
@@ -241,7 +233,7 @@ async function loadDashboardData() {
       copy: `${row.householdName} · ${formatStatusLabel(row.requestedOutcome)}`,
       meta: formatStatusLabel(row.status),
       tone: statusTone(row.status) || (row.status === "under_review" ? "blue" : "rose"),
-      href: `/staff/sessions?exceptionId=${row.id}`,
+      href: `/staff/requests/${row.id}`,
     }));
 
     const studentIds = recentStudentRows.map((row) => row.id);
@@ -291,8 +283,12 @@ async function loadDashboardData() {
       billingExceptions: exceptionRows.length,
       billingExceptionsLive: true,
       familyRequests,
+      familyRequestsTotal: Number(openRequestCountRows[0]?.total ?? 0),
       recentStudents,
       weekBars,
+      weekBooked,
+      weekOpen,
+      weekCapacity,
       weekBarsLive: slotRows.length > 0,
     };
   } catch (error) {
@@ -320,9 +316,10 @@ export default async function StaffDashboardPage() {
   }).format(new Date());
   const greeting = greetingForHour(nowNy.getHours());
   const usingPreviewRequests = data.familyRequests.length === 0 && !data.loadError;
-  const priorityRequests = usingPreviewRequests
-    ? PREVIEW_FAMILY_REQUESTS.map((row) => ({ ...row }))
-    : data.familyRequests;
+  const priorityRequests = usingPreviewRequests ? previewQueueRows() : data.familyRequests;
+  const priorityRequestTotal = usingPreviewRequests ? PREVIEW_REQUEST_TOTAL : data.familyRequestsTotal;
+  const weekFill =
+    data.weekCapacity > 0 ? Math.round((data.weekBooked / data.weekCapacity) * 100) : 0;
 
   return (
     <>
@@ -386,7 +383,7 @@ export default async function StaffDashboardPage() {
               <div className="dashboard-kpi-strip" aria-label="Priority summary">
                 <span className="dashboard-kpi-chip">
                   Requests
-                  <strong>{priorityRequests.length}</strong>
+                  <strong>{priorityRequestTotal}</strong>
                 </span>
               </div>
               <Link href="/staff/sessions" className="text-button">
@@ -395,7 +392,13 @@ export default async function StaffDashboardPage() {
             </div>
           </div>
           {usingPreviewRequests ? (
-            <p className="dashboard-preview-note">Sample preview — not live requests.</p>
+            <p className="dashboard-preview-note">
+              Sample preview — {priorityRequests.length} recent of {priorityRequestTotal} (not live).
+            </p>
+          ) : priorityRequestTotal > priorityRequests.length ? (
+            <p className="dashboard-preview-note">
+              Showing {priorityRequests.length} recent of {priorityRequestTotal}.
+            </p>
           ) : null}
           <div className="attention-list">
             {priorityRequests.map((item) => (
@@ -403,7 +406,6 @@ export default async function StaffDashboardPage() {
                 key={item.id}
                 href={item.href}
                 className="attention-row"
-                style={{ textDecoration: "none", color: "inherit" }}
               >
                 <span className={`avatar ${item.tone}`}>{item.initials}</span>
                 <span>
@@ -432,7 +434,6 @@ export default async function StaffDashboardPage() {
                 key={row.day}
                 href="/staff/scheduling"
                 className="capacity-row"
-                style={{ textDecoration: "none", color: "inherit", display: "grid" }}
               >
                 <span>{row.day}</span>
                 <div className="bar-track">
@@ -442,10 +443,24 @@ export default async function StaffDashboardPage() {
               </Link>
             ))}
           </div>
+          <div className="capacity-week-summary" aria-label="Week seat totals">
+            <article>
+              <small>Booked</small>
+              <strong>{data.weekBooked}</strong>
+            </article>
+            <article>
+              <small>Open</small>
+              <strong>{data.weekOpen}</strong>
+            </article>
+            <article>
+              <small>Fill</small>
+              <strong>{weekFill}%</strong>
+            </article>
+          </div>
           {!data.weekBarsLive ? (
             <div className="capacity-note">
               <span className="signal-dot" />
-              Bars fill when availability slots exist in the database.
+              Totals fill when availability slots exist in the database.
             </div>
           ) : null}
         </section>

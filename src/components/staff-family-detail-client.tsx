@@ -72,6 +72,7 @@ type FamilyDetail = {
   zohoCrmId: string | null;
   zohoCrmUrl: string | null;
   stripeCustomerId?: string | null;
+  stripeDefaultPaymentMethodId?: string | null;
   billingOwnerGuardianId: string | null;
   billingOwnerName: string | null;
   billingOwnerPhone: string | null;
@@ -145,12 +146,6 @@ function guardianPortalBadge(g: GuardianRow) {
 
 function yesNo(value: boolean) {
   return value ? "Yes" : "No";
-}
-
-function zohoHref(family: FamilyDetail) {
-  const url = (family.zohoCrmUrl || "").trim();
-  if (url) return url;
-  return null;
 }
 
 /** Soft-hide Notes UI on Family / Guardian / Student detail (backend + recycle-bin kept). */
@@ -869,7 +864,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
     : null;
   const isArchived = family.status === "archived";
   const guardiansAtMax = family.guardians.length >= (family.maxGuardians || MAX_GUARDIANS);
-  const zohoLink = zohoHref(family);
 
   const previewGuardians = family.guardians.slice(0, PREVIEW_LIMIT);
   const previewStudents = family.students.slice(0, PREVIEW_LIMIT);
@@ -1261,26 +1255,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
                     <strong>—</strong>
                   )}
                 </span>
-                <span className="family-household-field-zoho-id">
-                  <small>Zoho CRM ID</small>
-                  <strong>{family.zohoCrmId || "—"}</strong>
-                </span>
-                <span className="family-household-field-zoho-url">
-                  <small>Zoho CRM URL</small>
-                  {zohoLink ? (
-                    <a
-                      href={zohoLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="family-zoho-url-link"
-                      title={zohoLink}
-                    >
-                      {zohoLink}
-                    </a>
-                  ) : (
-                    <strong>—</strong>
-                  )}
-                </span>
               </div>
             </div>
           </div>
@@ -1384,8 +1358,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
 
       <StaffRecordIntegrationsCard
         zohoId={family.zohoCrmId}
+        zohoUrl={family.zohoCrmUrl}
         stripeCustomerId={family.stripeCustomerId ?? null}
-        supports={{ zoho: true, stripe: true, acuity: false, quickbooks: false }}
+        stripePaymentMethodId={family.stripeDefaultPaymentMethodId ?? null}
+        supports={{ stripe: true }}
       />
 
       {SHOW_STAFF_NOTES ? (

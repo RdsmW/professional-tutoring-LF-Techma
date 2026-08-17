@@ -1,25 +1,9 @@
 import { eq } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { changeRequests, households, students } from "@/lib/db/schema";
+import { changeRequests, guardians, households, students } from "@/lib/db/schema";
+import type { StaffChangeRequestDto } from "@/lib/staff/change-request-types";
 
-export type StaffExceptionDto = {
-  id: string;
-  status: string;
-  changeType: string;
-  reason: string;
-  requestedOutcome: string;
-  preferredAlternatives: string | null;
-  policyRecommendation: string;
-  relatedEntityType: string;
-  relatedEntityId: string;
-  staffNotes: string | null;
-  studentId: string;
-  studentName: string;
-  householdId: string;
-  householdName: string;
-  createdAt: string;
-  resolvedAt: string | null;
-};
+export type StaffExceptionDto = StaffChangeRequestDto;
 
 const exceptionSelect = {
   id: changeRequests.id,
@@ -38,6 +22,8 @@ const exceptionSelect = {
   resolvedAt: changeRequests.resolvedAt,
   studentName: students.displayName,
   householdName: households.displayName,
+  requesterFirstName: guardians.firstName,
+  requesterLastName: guardians.lastName,
 };
 
 type ExceptionSelectRow = {
@@ -57,9 +43,15 @@ type ExceptionSelectRow = {
   resolvedAt: Date | null;
   studentName: string;
   householdName: string;
+  requesterFirstName: string | null;
+  requesterLastName: string | null;
 };
 
 export function mapExceptionRow(row: ExceptionSelectRow): StaffExceptionDto {
+  const requesterName = [row.requesterFirstName, row.requesterLastName]
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .join(" ");
   return {
     id: row.id,
     status: row.status,
@@ -75,6 +67,7 @@ export function mapExceptionRow(row: ExceptionSelectRow): StaffExceptionDto {
     studentName: row.studentName,
     householdId: row.householdId,
     householdName: row.householdName,
+    requesterName: requesterName || null,
     createdAt: row.createdAt.toISOString(),
     resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
   };
@@ -86,7 +79,8 @@ export function exceptionsBaseQuery() {
     .select(exceptionSelect)
     .from(changeRequests)
     .innerJoin(students, eq(changeRequests.studentId, students.id))
-    .innerJoin(households, eq(changeRequests.householdId, households.id));
+    .innerJoin(households, eq(changeRequests.householdId, households.id))
+    .leftJoin(guardians, eq(changeRequests.requestedByGuardianId, guardians.id));
 }
 
 export async function loadStaffException(id: string): Promise<StaffExceptionDto | null> {
