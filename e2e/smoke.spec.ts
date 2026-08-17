@@ -77,17 +77,16 @@ test.describe("staff families smoke", () => {
     });
   });
 
-  test("create menu is tight with icons", async ({ page }) => {
+  test("dashboard hero CTAs and layout", async ({ page }) => {
     await page.goto("/staff");
     await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible({ timeout: 20_000 });
-    await page.locator(".staff-create-menu-trigger").click();
-    const panel = page.locator(".staff-create-menu-panel");
-    await expect(panel).toBeVisible();
-    await expect(panel.getByRole("menuitem", { name: /Student/i })).toBeVisible();
-    await expect(panel.locator("svg").first()).toBeVisible();
-    const box = await panel.boundingBox();
-    expect(box).toBeTruthy();
-    expect((box?.width ?? 999) <= 200).toBeTruthy();
+    await expect(page.getByRole("link", { name: /New family/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /New tutor/i })).toBeVisible();
+    await expect(page.getByText("Families still setting up")).toBeVisible();
+    await expect(page.getByText("Sessions this week")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Family requests" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This week" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Recently added" })).toBeVisible();
   });
 
   test("families directory chrome", async ({ page }) => {

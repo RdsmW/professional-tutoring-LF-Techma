@@ -28,13 +28,6 @@ const sql = postgres(process.env.DATABASE_URL, {
   connect_timeout: 5,
 });
 
-const now = new Date();
-const startOfWeek = new Date(now);
-startOfWeek.setDate(now.getDate() - now.getDay());
-startOfWeek.setHours(0, 0, 0, 0);
-const endOfWeek = new Date(startOfWeek);
-endOfWeek.setDate(startOfWeek.getDate() + 7);
-
 const [metrics] = await sql`
   select
     (select count(*)::int from households h
@@ -49,10 +42,9 @@ const [metrics] = await sql`
           )
         )
     ) as onboarding_families,
-    (select count(*)::int from bookings
-      where created_at >= ${startOfWeek}
-        and created_at <= ${endOfWeek}
-        and status in ('confirmed','held','pending_payment','pending_staff_review')) as week_sessions,
+    (select count(*)::int from bookings b
+      inner join availability_slots s on s.id = b.slot_id
+      where b.status in ('confirmed','held','pending_payment','pending_staff_review')) as week_sessions,
     (select coalesce(sum(greatest(capacity_seats - held_seats - booked_seats, 0)), 0)::int
        from availability_slots where active = true) as tutor_openings,
     (select count(*)::int from payment_records

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { and, desc, eq, gte, inArray, isNotNull, lte, ne, notExists, or, sql } from "drizzle-orm";
-import { StaffHomeCreateMenu } from "@/components/staff-home-create-menu";
+import { and, desc, eq, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
+import { StaffHomeHeroActions } from "@/components/staff-home-create-menu";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { db } from "@/lib/db";
 import {
@@ -16,6 +16,7 @@ import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
+const OPEN_BOOKING_STATUSES = ["confirmed", "held", "pending_payment", "pending_staff_review"] as const;
 
 function greetingForHour(hour: number) {
   if (hour < 12) return "Good morning";
@@ -103,13 +104,6 @@ async function loadDashboardData() {
   }
 
   try {
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
-
     const linkedGuardianExists = db
       .select({ id: guardians.id })
       .from(guardians)
@@ -138,16 +132,12 @@ async function loadDashboardData() {
             or(eq(households.status, "pending"), notExists(linkedGuardianExists)),
           ),
         ),
+      // Sessions this week by weekly slot day (session schedule), not booking createdAt.
       db
         .select({ id: bookings.id })
         .from(bookings)
-        .where(
-          and(
-            gte(bookings.createdAt, startOfWeek),
-            lte(bookings.createdAt, endOfWeek),
-            inArray(bookings.status, ["confirmed", "held", "pending_payment", "pending_staff_review"]),
-          ),
-        ),
+        .innerJoin(availabilitySlots, eq(bookings.slotId, availabilitySlots.id))
+        .where(inArray(bookings.status, [...OPEN_BOOKING_STATUSES])),
       db.select().from(availabilitySlots).where(eq(availabilitySlots.active, true)),
       db
         .select({ id: paymentRecords.id })
@@ -276,49 +266,49 @@ export default async function StaffDashboardPage() {
             {greeting}, {firstName}.
           </h2>
         </div>
-        <StaffHomeCreateMenu />
+        <StaffHomeHeroActions />
       </section>
 
       {data.loadError ? <p className="form-error">{data.loadError}</p> : null}
 
-      <section className="metric-grid" aria-label="Dashboard metrics">
+      <section className="metric-grid metric-strip" aria-label="Dashboard metrics">
         <article className="metric-card">
           <span className="metric-mark navy" />
-          <p>Onboarding families</p>
+          <p>Families still setting up</p>
           <strong>{data.onboardingFamilies}</strong>
-          <small>Pending / incomplete households</small>
+          <small>Pending or no parent login</small>
         </article>
         <article className="metric-card">
           <span className="metric-mark blue" />
-          <p>This week&apos;s sessions</p>
+          <p>Sessions this week</p>
           <strong>{data.weekSessions}</strong>
           <small>
-            {data.weekSessionsLive && data.weekSessions > 0
-              ? "Bookings created this week"
+            {data.weekSessionsLive
+              ? "Scheduled or happening this week"
               : "Live when sessions exist"}
           </small>
         </article>
         <article className="metric-card">
           <span className="metric-mark mint" />
-          <p>Tutor openings</p>
+          <p>Open tutor seats</p>
           <strong>{data.tutorOpenings}</strong>
           <small>
-            {data.tutorOpeningsLive ? "Open seats across active slots" : "Live when availability exists"}
+            {data.tutorOpeningsLive ? "Seats still free on active times" : "Live when availability exists"}
           </small>
         </article>
         <article className="metric-card">
           <span className="metric-mark gold" />
-          <p>Billing exceptions</p>
+          <p>Payments needing attention</p>
           <strong>{data.billingExceptions}</strong>
           <small>
             {data.billingExceptionsLive
-              ? "Reviewable payment records"
+              ? "Unpaid, pending, failed, or partial"
               : "Live when payment rows exist"}
           </small>
         </article>
       </section>
 
-      <div className="dashboard-triptych">
+      <div className="dashboard-main-row">
         <section className="panel">
           <div className="panel-heading">
             <div>
@@ -341,39 +331,6 @@ export default async function StaffDashboardPage() {
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
                   <span className={`avatar ${item.tone}`}>{item.initials}</span>
-                  <span>
-                    <strong>{item.title}</strong>
-                    <small>{item.copy}</small>
-                  </span>
-                  <span className={`pill ${item.tone}`}>{item.meta}</span>
-                </Link>
-              ))
-            )}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Students</span>
-              <h3>Recently added</h3>
-            </div>
-            <Link href="/staff/students" className="text-button">
-              Open students
-            </Link>
-          </div>
-          <div className="attention-list">
-            {data.recentStudents.length === 0 ? (
-              <p className="dashboard-empty">No students yet. Use + to add one.</p>
-            ) : (
-              data.recentStudents.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className="attention-row"
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <span className="avatar blue">{item.initials}</span>
                   <span>
                     <strong>{item.title}</strong>
                     <small>{item.copy}</small>
@@ -419,6 +376,39 @@ export default async function StaffDashboardPage() {
           </div>
         </section>
       </div>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">Students</span>
+            <h3>Recently added</h3>
+          </div>
+          <Link href="/staff/students" className="text-button">
+            Open students
+          </Link>
+        </div>
+        <div className="attention-list">
+          {data.recentStudents.length === 0 ? (
+            <p className="dashboard-empty">No students yet. Add a family to get started.</p>
+          ) : (
+            data.recentStudents.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="attention-row"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <span className="avatar blue">{item.initials}</span>
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.copy}</small>
+                </span>
+                <span className={`pill ${item.tone}`}>{item.meta}</span>
+              </Link>
+            ))
+          )}
+        </div>
+      </section>
     </>
   );
 }

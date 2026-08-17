@@ -1,4 +1,4 @@
-/** Dashboard + menu passes `from=dashboard` (or `returnTo=/staff`) on create URLs. */
+/** Dashboard CTAs pass `from=dashboard` (or `returnTo=/staff`) on create URLs. */
 export function isStaffCreateFromDashboard(searchParams: {
   get: (key: string) => string | null;
 }): boolean {
@@ -7,7 +7,7 @@ export function isStaffCreateFromDashboard(searchParams: {
 
 /**
  * Where Cancel should go after leaving a create flow.
- * - From Dashboard + → `/staff`
+ * - From Dashboard CTAs → `/staff`
  * - Opened via `?new=1` / `?newGuardian=1` on a list → that list path
  * - Opened via in-page + button (no query) → `null` (clear create mode only)
  */
