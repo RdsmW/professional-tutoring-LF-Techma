@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { and, desc, eq, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
-import { StaffDashboardEntityCard } from "@/components/staff-dashboard-entity-card";
+import { and, asc, desc, eq, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
 import { StaffHomeHeroActions } from "@/components/staff-home-create-menu";
+import {
+  StaffStudentsDirectoryTable,
+  type StaffStudentDirectoryTableRow,
+} from "@/components/staff-students-directory-table";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { db } from "@/lib/db";
 import {
@@ -12,10 +15,13 @@ import {
   households,
   paymentRecords,
   students,
+  studentSubjects,
+  subjects,
 } from "@/lib/db/schema";
-import { listStaffFamilies } from "@/lib/staff/families";
+import { buildStudentListLabel } from "@/lib/staff/students";
 import { formatDirectoryCreatedAt } from "@/lib/ui/directory-sort";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
+import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
@@ -82,24 +88,7 @@ async function loadDashboardData() {
       tone: string;
       href: string;
     }[],
-    recentStudents: [] as {
-      id: string;
-      fields: {
-        id: string;
-        label: string;
-        value: string;
-      }[];
-      href: string;
-    }[],
-    recentFamilies: [] as {
-      id: string;
-      fields: {
-        id: string;
-        label: string;
-        value: string | number;
-      }[];
-      href: string;
-    }[],
+    recentStudents: [] as StaffStudentDirectoryTableRow[],
     weekBars: WEEK_DAYS.map((day) => ({
       day: formatCapacityDay(weekStart, day),
       width: 0,
@@ -134,7 +123,6 @@ async function loadDashboardData() {
       exceptionRows,
       openRequests,
       recentStudentRows,
-      recentFamilyRows,
     ] = await Promise.all([
       db
         .select({ id: households.id })
@@ -175,6 +163,8 @@ async function loadDashboardData() {
         .select({
           id: students.id,
           displayName: students.displayName,
+          firstName: students.firstName,
+          lastName: students.lastName,
           lifecycle: students.lifecycle,
           schoolName: students.schoolName,
           gradeLabel: students.gradeLabel,
@@ -183,9 +173,9 @@ async function loadDashboardData() {
         })
         .from(students)
         .innerJoin(households, eq(students.householdId, households.id))
+        .where(ne(students.lifecycle, "archived"))
         .orderBy(desc(students.createdAt))
         .limit(8),
-      listStaffFamilies({ sort: "newest", limit: 6 }),
     ]);
 
     const openSeats = slotRows.reduce((sum, slot) => {
@@ -223,30 +213,41 @@ async function loadDashboardData() {
       href: `/staff/sessions?exceptionId=${row.id}`,
     }));
 
+    const studentIds = recentStudentRows.map((row) => row.id);
+    const subjectsByStudent = new Map<string, Array<{ id: string; name: string }>>();
+    if (studentIds.length > 0) {
+      const subjectRows = await db
+        .select({
+          studentId: studentSubjects.studentId,
+          id: subjects.id,
+          name: subjects.name,
+        })
+        .from(studentSubjects)
+        .innerJoin(subjects, eq(studentSubjects.subjectId, subjects.id))
+        .where(inArray(studentSubjects.studentId, studentIds))
+        .orderBy(asc(subjects.name));
+      for (const row of subjectRows) {
+        const list = subjectsByStudent.get(row.studentId) ?? [];
+        list.push({ id: row.id, name: row.name });
+        subjectsByStudent.set(row.studentId, list);
+      }
+    }
+
     const recentStudents = recentStudentRows.map((row) => ({
       id: row.id,
-      fields: [
-        { id: "name", label: "Name", value: row.displayName || "—" },
-        { id: "family", label: "Family", value: row.householdName || "—" },
-        { id: "grade", label: "Grade", value: row.gradeLabel || "—" },
-        { id: "school", label: "School", value: row.schoolName || "—" },
-        { id: "created", label: "Created", value: formatDirectoryCreatedAt(row.createdAt.toISOString()) },
-      ],
+      name: buildStudentListLabel({
+        firstName: row.firstName,
+        lastName: row.lastName,
+        displayName: row.displayName,
+      }),
+      household: row.householdName || "—",
+      subjects: formatSubjectsPreview(subjectsByStudent.get(row.id)),
+      grade: row.gradeLabel || "—",
+      school: row.schoolName || "—",
+      statusLabel: formatStatusLabel(row.lifecycle),
+      statusTone: statusTone(row.lifecycle),
+      created: formatDirectoryCreatedAt(row.createdAt.toISOString()),
       href: `/staff/students/${row.id}`,
-    }));
-
-    const recentFamilies = recentFamilyRows.map((row) => ({
-      id: row.id,
-      fields: [
-        { id: "family", label: "Family", value: row.displayName || "—" },
-        { id: "payer", label: "Payer", value: row.payerName || "—" },
-        { id: "students", label: "Students", value: row.studentCount },
-        { id: "card_on_file", label: "Card on file", value: row.cardOnFile ? "Yes" : "No" },
-        { id: "auto_charge", label: "Auto-charge", value: row.autoCharge ? "Yes" : "No" },
-        { id: "status", label: "Status", value: formatStatusLabel(row.status) },
-        { id: "created", label: "Created", value: formatDirectoryCreatedAt(row.createdAt) },
-      ],
-      href: `/staff/families/${row.id}`,
     }));
 
     return {
@@ -260,7 +261,6 @@ async function loadDashboardData() {
       billingExceptionsLive: true,
       familyRequests,
       recentStudents,
-      recentFamilies,
       weekBars,
       weekBarsLive: slotRows.length > 0,
     };
@@ -421,7 +421,7 @@ export default async function StaffDashboardPage() {
         </section>
       </div>
 
-      <section className="panel">
+      <section className="panel dashboard-recent-students">
         <div className="panel-heading">
           <div>
             <span className="eyebrow">Students</span>
@@ -431,36 +431,11 @@ export default async function StaffDashboardPage() {
             Open students
           </Link>
         </div>
-        <div className="dashboard-entity-list">
-          {data.recentStudents.length === 0 ? (
-            <p className="dashboard-empty">No students yet. Add a family to get started.</p>
-          ) : (
-            data.recentStudents.map((item) => (
-              <StaffDashboardEntityCard key={item.id} href={item.href} fields={item.fields} />
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <span className="eyebrow">Families</span>
-            <h3>Recently added</h3>
-          </div>
-          <Link href="/staff/families" className="text-button">
-            Open families
-          </Link>
-        </div>
-        <div className="dashboard-entity-list">
-          {data.recentFamilies.length === 0 ? (
-            <p className="dashboard-empty">No families yet. Add a family to get started.</p>
-          ) : (
-            data.recentFamilies.map((item) => (
-              <StaffDashboardEntityCard key={item.id} href={item.href} fields={item.fields} />
-            ))
-          )}
-        </div>
+        {data.recentStudents.length === 0 ? (
+          <p className="dashboard-empty">No students yet. Add a student to get started.</p>
+        ) : (
+          <StaffStudentsDirectoryTable rows={data.recentStudents} />
+        )}
       </section>
     </>
   );

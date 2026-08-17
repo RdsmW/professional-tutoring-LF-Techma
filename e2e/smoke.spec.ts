@@ -87,6 +87,18 @@ test.describe("staff families smoke", () => {
     await expect(page.getByRole("heading", { name: "Family requests" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "This week" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Recently added" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Open students/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Open families/i })).toHaveCount(0);
+    const recent = page.locator(".dashboard-recent-students");
+    await expect(recent).toBeVisible();
+    const tableHead = recent.locator(".staff-dir-table .table-head");
+    if ((await tableHead.count()) > 0) {
+      await expect(tableHead).toContainText(/Name/);
+      await expect(tableHead).toContainText(/Household/);
+      await expect(tableHead).toContainText(/Created/);
+    } else {
+      await expect(recent.locator(".dashboard-empty")).toBeVisible();
+    }
   });
 
   test("families directory chrome", async ({ page }) => {

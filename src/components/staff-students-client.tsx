@@ -10,6 +10,7 @@ import {
   StaffDirectoryResults,
 } from "@/components/staff-directory-chrome";
 import { StaffRowActions, lifecycleActions } from "@/components/staff-row-actions";
+import { StaffStudentsDirectoryTable } from "@/components/staff-students-directory-table";
 import { useDirectoryView } from "@/lib/ui/directory-view";
 import {
   DEFAULT_DIRECTORY_SORT,
@@ -388,57 +389,39 @@ export function StaffStudentsClient() {
           );
         })}
         table={
-          <div className="table-panel staff-dir-table">
-            <div className="table-head staff-dir-cols-students">
-              <span>Name</span>
-              <span>Household</span>
-              <span>Subjects</span>
-              <span>Grade</span>
-              <span>School</span>
-              <span className="staff-dir-col-status">Status</span>
-              <span>Created</span>
-              <span className="staff-dir-col-actions" aria-label="Actions" />
-            </div>
-            {students.map((row) => (
-              <div
-                key={row.id}
-                className="table-row staff-dir-cols-students"
-                role="link"
-                tabIndex={0}
-                onClick={() => router.push(`/staff/students/${row.id}`)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    router.push(`/staff/students/${row.id}`);
-                  }
-                }}
-              >
-                <strong>{row.listLabel || row.displayName}</strong>
-                <span>{row.householdDisplayName}</span>
-                <span>{formatSubjectsPreview(row.subjects)}</span>
-                <span>{row.gradeLabel ?? "—"}</span>
-                <span>{row.schoolName ?? "—"}</span>
-                <span className="staff-dir-col-status">
-                  <span className={`pill ${statusTone(row.lifecycle)}`}>{formatStatusLabel(row.lifecycle)}</span>
-                </span>
-                <span>{formatDirectoryCreatedAt(row.createdAt)}</span>
-                <span className="staff-dir-col-actions">
-                  <StaffRowActions
-                    label="Row actions"
-                    actions={lifecycleActions({
-                      isArchived: row.lifecycle === "archived",
-                      canDelete: Boolean(row.canDelete),
-                      busy: busyId === row.id,
-                      onEdit: () => router.push(`/staff/students/${row.id}/edit`),
-                      onArchive: () => void setStudentLifecycle(row.id, "archived"),
-                      onRestore: () => void setStudentLifecycle(row.id, "active"),
-                      onDelete: () => void deleteStudent(row.id),
-                    })}
-                  />
-                </span>
-              </div>
-            ))}
-          </div>
+          <StaffStudentsDirectoryTable
+            rows={students.map((row) => ({
+              id: row.id,
+              name: row.listLabel || row.displayName,
+              household: row.householdDisplayName,
+              subjects: formatSubjectsPreview(row.subjects),
+              grade: row.gradeLabel ?? "—",
+              school: row.schoolName ?? "—",
+              statusLabel: formatStatusLabel(row.lifecycle),
+              statusTone: statusTone(row.lifecycle),
+              created: formatDirectoryCreatedAt(row.createdAt),
+              href: `/staff/students/${row.id}`,
+            }))}
+            onRowActivate={(href) => router.push(href)}
+            renderActions={(row) => {
+              const source = students.find((student) => student.id === row.id);
+              if (!source) return null;
+              return (
+                <StaffRowActions
+                  label="Row actions"
+                  actions={lifecycleActions({
+                    isArchived: source.lifecycle === "archived",
+                    canDelete: Boolean(source.canDelete),
+                    busy: busyId === source.id,
+                    onEdit: () => router.push(`/staff/students/${source.id}/edit`),
+                    onArchive: () => void setStudentLifecycle(source.id, "archived"),
+                    onRestore: () => void setStudentLifecycle(source.id, "active"),
+                    onDelete: () => void deleteStudent(source.id),
+                  })}
+                />
+              );
+            }}
+          />
         }
       />
     </>
