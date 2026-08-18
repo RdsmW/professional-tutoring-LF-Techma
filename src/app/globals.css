@@ -3908,7 +3908,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .auth-brand-lockup {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
   flex: 0 0 auto;
 }
 .auth-brand-mark {
@@ -3930,49 +3930,44 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 24px 0;
+  min-height: 0;
+  padding: 16px 0;
 }
 .auth-brand-headline {
-  margin: 0 0 16px;
-  font: 500 clamp(28px, 2.8vw, 32px)/1.22 Georgia, "Times New Roman", serif;
+  margin: 0 0 14px;
+  font: 500 clamp(24px, 2.5vw, 30px)/1.22 Georgia, "Times New Roman", serif;
   color: #fff;
   letter-spacing: -0.02em;
 }
-.auth-brand-lead {
-  margin: 0 0 20px;
-  font-size: 16px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.94);
-}
 .auth-brand-stats {
-  margin: 0 0 20px;
+  margin: 0 0 16px;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 .auth-brand-stats li {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 10px;
   align-items: start;
-  font-size: 16px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.35;
   color: rgba(255, 255, 255, 0.94);
 }
 .auth-brand-stat-icon {
   color: var(--auth-gold);
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   margin-top: 1px;
 }
 .auth-brand-close {
   margin: 0 0 8px;
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.45;
   color: rgba(255, 255, 255, 0.94);
 }
 .auth-brand-close:last-of-type {
@@ -4128,20 +4123,19 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
     min-height: auto;
   }
   .auth-brand-main {
-    padding: 20px 0;
+    padding: 16px 0;
   }
   .auth-brand-headline {
-    font-size: 24px;
+    font-size: 22px;
     margin-bottom: 12px;
   }
-  .auth-brand-lead,
   .auth-brand-stats li,
   .auth-brand-close {
-    font-size: 16px;
+    font-size: 13px;
   }
   .auth-brand-stats {
-    gap: 10px;
-    margin-bottom: 16px;
+    gap: 7px;
+    margin-bottom: 14px;
   }
   .auth-form {
     padding: 24px 16px 36px;

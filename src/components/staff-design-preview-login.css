@@ -1,21 +1,3 @@
-.login-preview-gallery {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-.login-preview-option > h2 {
-  margin: 0 0 10px;
-  font: 700 16px/1.3 Georgia, "Times New Roman", serif;
-  color: var(--navy);
-}
-
-.login-preview-option > p {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
 .login-preview-sheet.auth-shell {
   min-height: 680px;
   height: min(78vh, 760px);
@@ -28,85 +10,6 @@
 .login-preview-sheet .auth-brand,
 .login-preview-sheet .auth-form {
   animation: none;
-}
-
-.login-preview-lockup.auth-brand-lockup {
-  gap: 2px;
-}
-
-.login-preview-middle {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
-  min-height: 0;
-  padding: 20px 0;
-  overflow-y: auto;
-}
-
-.login-preview-middle.is-end {
-  justify-content: flex-end;
-}
-
-.login-preview-stats {
-  margin: 0;
-  font-size: 13px;
-  gap: 8px;
-}
-
-.login-preview-stats li {
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.login-preview-proof {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.94);
-}
-
-.login-preview-headline {
-  margin: 0 0 12px;
-  font: 500 clamp(22px, 2.4vw, 28px)/1.22 Georgia, "Times New Roman", serif;
-  color: #fff;
-  letter-spacing: -0.02em;
-}
-
-.login-preview-why {
-  margin: 0;
-}
-
-.login-preview-why > summary {
-  cursor: pointer;
-  width: fit-content;
-  color: var(--auth-gold);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  list-style: none;
-}
-
-.login-preview-why > summary::-webkit-details-marker {
-  display: none;
-}
-
-.login-preview-why > summary::after {
-  content: " ▾";
-  font-size: 11px;
-}
-
-.login-preview-why[open] > summary::after {
-  content: " ▴";
-}
-
-.login-preview-why-body {
-  margin-top: 12px;
-}
-
-.login-preview-why-body .auth-brand-close {
-  font-size: 13px;
 }
 
 .login-preview-clerk {

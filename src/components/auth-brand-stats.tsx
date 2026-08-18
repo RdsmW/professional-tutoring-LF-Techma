@@ -28,8 +28,8 @@ export const AUTH_BRAND_STATS = [
 
 export function AuthStatIcon({ name }: { name: (typeof AUTH_BRAND_STATS)[number]["icon"] }) {
   const common = {
-    width: 18,
-    height: 18,
+    width: 16,
+    height: 16,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
