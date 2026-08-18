@@ -20,6 +20,8 @@
   border: 1px solid var(--line);
   background: var(--paper);
   align-items: start;
+  overflow: hidden;
+  border-radius: var(--radius);
 }
 .staff-sessions-week-gutter,
 .staff-sessions-week-head,
@@ -77,7 +79,7 @@
   display: block;
   margin: 0 0 4px;
   padding: 5px 6px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   text-decoration: none;
   color: inherit;
   font-size: 11px;
@@ -124,6 +126,7 @@
   padding: 6px 10px;
   border: 1px solid var(--line);
   background: var(--paper);
+  border-radius: var(--radius);
 }
 .staff-sessions-unscheduled-label {
   color: var(--title-gold);
