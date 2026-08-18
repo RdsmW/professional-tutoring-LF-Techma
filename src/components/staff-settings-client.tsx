@@ -303,6 +303,8 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
         <Link href="/staff/design-preview/sessions">Sessions mock</Link>
         {" · "}
         <Link href="/staff/design-preview/tutor-seats">Tutor seats</Link>
+        {" · "}
+        <Link href="/staff/design-preview/login">Login sheet</Link>
       </p>
 
       <nav className="settings-tabs" aria-label="Settings sections">
