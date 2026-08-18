@@ -16,9 +16,9 @@ const OPEN_HOURS = [
 
 const SEAT_ROWS = [
   { window: "Tue · 3:15 PM", seat: "1", student: "Maya Chen", state: "confirmed" },
-  { window: "Tue · 3:15 PM", seat: "2", student: "OPEN", state: "open" },
+  { window: "Tue · 3:15 PM", seat: "2", student: "Available", state: "open" },
   { window: "Sun · 11:00 AM", seat: "1", student: "Liam Park", state: "confirmed" },
-  { window: "Sun · 11:00 AM", seat: "2", student: "OPEN", state: "open" },
+  { window: "Sun · 11:00 AM", seat: "2", student: "Available", state: "open" },
 ];
 
 function initials(name: string) {
@@ -167,12 +167,12 @@ export function StaffDesignPreviewTutorSeatsClient() {
             >
               <span>{row.window}</span>
               <span>{row.seat}</span>
-              <span style={{ fontWeight: row.student === "OPEN" ? 800 : undefined, color: row.student === "OPEN" ? "var(--muted)" : undefined }}>
+              <span className={row.state === "open" ? "tutor-seat-open" : undefined}>
                 {row.student}
               </span>
               <span className="staff-dir-col-status">
                 <span className={`pill ${row.state === "open" ? "amber" : statusTone(row.state)}`}>
-                  {row.state === "open" ? "Open" : formatStatusLabel(row.state)}
+                  {row.state === "open" ? "Available" : formatStatusLabel(row.state)}
                 </span>
               </span>
             </a>

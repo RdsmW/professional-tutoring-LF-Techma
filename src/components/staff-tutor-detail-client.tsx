@@ -890,7 +890,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
                     }));
               return seats.map((seat) => {
                 const isOpen = seat.state === "open";
-                const studentLabel = isOpen ? "OPEN" : seat.studentName?.trim() || "Booked";
+                const studentLabel = isOpen ? "Available" : seat.studentName?.trim() || "Booked";
                 const rowKey = `${slot.id}-${seat.seat}`;
                 const rowClass = `table-row staff-dir-cols-seats${isOpen ? " tutor-seat-row-static" : ""}`;
                 const cells = (
@@ -900,7 +900,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
                     <span className={isOpen ? "tutor-seat-open" : undefined}>{studentLabel}</span>
                     <span className="staff-dir-col-status">
                       <span className={`pill ${isOpen ? "amber" : statusTone(seat.state)}`}>
-                        {isOpen ? "Open" : formatStatusLabel(seat.state)}
+                        {isOpen ? "Available" : formatStatusLabel(seat.state)}
                       </span>
                     </span>
                   </>
