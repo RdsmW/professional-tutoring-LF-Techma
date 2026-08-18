@@ -3,137 +3,232 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Panel } from "@/components/ui";
+import {
+  SESSION_CHIP_LABEL,
+  SESSION_LAYOUTS,
+  SESSION_TYPE_FILTERS,
+  type StaffSessionKind,
+  type StaffSessionLayout,
+  type StaffSessionTab,
+  type StaffSessionTypeFilter,
+} from "@/lib/staff/sessions-list";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
-
-type SessionTab = "week" | "tutoring" | "classes" | "issues";
-
-type SessionType = "tutoring" | "class" | "test";
 
 type PreviewRow = {
   id: string;
-  when: string;
-  type: SessionType;
-  typeLabel: string;
+  whenDay: string;
+  whenDetail: string;
+  dayIndex: number | null;
+  timeLabel: string | null;
+  kind: StaffSessionKind;
+  sessionLabel: string;
   what: string;
-  who: string;
+  people: string;
   status: string;
-  tabs: SessionTab[];
+  tabs: StaffSessionTab[];
   issue?: boolean;
 };
 
-const TYPE_PILL: Record<SessionType, string> = {
-  tutoring: "blue",
-  class: "violet",
-  test: "gold",
-};
-
-const TABS: { id: SessionTab; label: string }[] = [
-  { id: "week", label: "Week (all)" },
-  { id: "tutoring", label: "Tutoring" },
-  { id: "classes", label: "Classes" },
-  { id: "issues", label: "Issues" },
-];
+const WEEK_DAYS = [
+  { dayIndex: 0, weekday: "Sun", dateLabel: "Aug 17" },
+  { dayIndex: 1, weekday: "Mon", dateLabel: "Aug 18" },
+  { dayIndex: 2, weekday: "Tue", dateLabel: "Aug 19" },
+  { dayIndex: 3, weekday: "Wed", dateLabel: "Aug 20" },
+  { dayIndex: 4, weekday: "Thu", dateLabel: "Aug 21" },
+  { dayIndex: 5, weekday: "Fri", dateLabel: "Aug 22" },
+  { dayIndex: 6, weekday: "Sat", dateLabel: "Aug 23" },
+] as const;
 
 const SAMPLE_ROWS: PreviewRow[] = [
   {
     id: "1",
-    when: "Tue · Aug 19 · 3:15 PM",
-    type: "tutoring",
-    typeLabel: "Tutoring",
+    whenDay: "Tue",
+    whenDetail: "Aug 19 · 3:15 PM",
+    dayIndex: 2,
+    timeLabel: "3:15 PM",
+    kind: "tutoring",
+    sessionLabel: "Tutoring · Algebra II",
     what: "Algebra II",
-    who: "Jordan Reed · Maya Chen",
+    people: "Jordan Reed · Maya Chen",
     status: "confirmed",
     tabs: ["week", "tutoring"],
   },
   {
     id: "2",
-    when: "Tue · Aug 19 · 4:30 PM",
-    type: "tutoring",
-    typeLabel: "Tutoring",
+    whenDay: "Tue",
+    whenDetail: "Aug 19 · 4:30 PM",
+    dayIndex: 2,
+    timeLabel: "4:30 PM",
+    kind: "tutoring",
+    sessionLabel: "Tutoring · SAT Math",
     what: "SAT Math",
-    who: "Jordan Reed · Liam Park",
+    people: "Jordan Reed · Liam Park",
     status: "pending_payment",
     tabs: ["week", "tutoring", "issues"],
     issue: true,
   },
   {
     id: "3",
-    when: "Wed · Aug 20 · 5:00 PM",
-    type: "class",
-    typeLabel: "Class",
+    whenDay: "Wed",
+    whenDetail: "Aug 20 · 5:00 PM",
+    dayIndex: 3,
+    timeLabel: "5:00 PM",
+    kind: "class",
+    sessionLabel: "Class · AP Chemistry Lab",
     what: "AP Chemistry Lab",
-    who: "Dr. Santos · 8 enrolled",
+    people: "Dr. Santos · 8 enrolled",
     status: "confirmed",
     tabs: ["week", "classes"],
   },
   {
     id: "4",
-    when: "Thu · Aug 21 · 10:00 AM",
-    type: "test",
-    typeLabel: "Test/makeup",
+    whenDay: "Thu",
+    whenDetail: "Aug 21 · 10:00 AM",
+    dayIndex: 4,
+    timeLabel: "10:00 AM",
+    kind: "test",
+    sessionLabel: "Test · Geometry Regents",
     what: "Geometry Regents",
-    who: "Jordan Reed · Ava Torres",
+    people: "Jordan Reed · Ava Torres",
     status: "confirmed",
     tabs: ["week", "tutoring"],
   },
   {
     id: "5",
-    when: "Sun · Aug 17 · 11:00 AM",
-    type: "tutoring",
-    typeLabel: "Tutoring",
+    whenDay: "Sun",
+    whenDetail: "Aug 17 · 11:00 AM",
+    dayIndex: 0,
+    timeLabel: "11:00 AM",
+    kind: "tutoring",
+    sessionLabel: "Tutoring · English Literature",
     what: "English Literature",
-    who: "Jordan Reed · 1 of 2 seats",
+    people: "Jordan Reed · 1 of 2 seats",
     status: "confirmed",
     tabs: ["week", "tutoring", "issues"],
     issue: true,
   },
   {
     id: "6",
-    when: "Mon · Aug 18 · 6:00 PM",
-    type: "class",
-    typeLabel: "Class",
+    whenDay: "Mon",
+    whenDetail: "Aug 18 · 6:00 PM",
+    dayIndex: 1,
+    timeLabel: "6:00 PM",
+    kind: "class",
+    sessionLabel: "Class · Creative Writing Workshop",
     what: "Creative Writing Workshop",
-    who: "Ms. Rivera · 12 enrolled",
+    people: "Ms. Rivera · 12 enrolled",
     status: "confirmed",
     tabs: ["week", "classes"],
   },
   {
     id: "7",
-    when: "Tue · Aug 19 · 3:15 PM",
-    type: "tutoring",
-    typeLabel: "Tutoring",
+    whenDay: "Tue",
+    whenDetail: "Aug 19 · 3:15 PM",
+    dayIndex: 2,
+    timeLabel: "3:15 PM",
+    kind: "tutoring",
+    sessionLabel: "Tutoring · Algebra II",
     what: "Algebra II",
-    who: "Jordan Reed · conflict — two bookings",
+    people: "Jordan Reed · Maya Chen",
     status: "held",
     tabs: ["issues"],
     issue: true,
   },
   {
     id: "8",
-    when: "Fri · Aug 22 · 2:00 PM",
-    type: "test",
-    typeLabel: "Test/makeup",
+    whenDay: "Fri",
+    whenDetail: "Aug 22 · 2:00 PM",
+    dayIndex: 5,
+    timeLabel: "2:00 PM",
+    kind: "test",
+    sessionLabel: "Test · Physics midterm review",
     what: "Physics midterm review",
-    who: "Jordan Reed · Noah Brooks",
+    people: "Jordan Reed · Noah Brooks",
     status: "pending_staff_review",
     tabs: ["week", "tutoring"],
+  },
+  {
+    id: "9",
+    whenDay: "Sat",
+    whenDetail: "Aug 23 · 9:00 AM",
+    dayIndex: 6,
+    timeLabel: "9:00 AM",
+    kind: "tutoring",
+    sessionLabel: "Tutoring · Geometry",
+    what: "Geometry",
+    people: "Jordan Reed · Available",
+    status: "available",
+    tabs: ["issues"],
+    issue: true,
   },
 ];
 
 function issueDetail(row: PreviewRow) {
   if (row.id === "2") return "Payment overdue — card declined";
-  if (row.id === "5") return "Open seat — 1 of 2 filled";
+  if (row.id === "5") return "Available — 1 of 2 filled";
   if (row.id === "7") return "Schedule conflict — tutor double-booked";
+  if (row.id === "9") return "Available — none filled";
   return null;
 }
 
-export function StaffDesignPreviewSessionsClient() {
-  const [tab, setTab] = useState<SessionTab>("week");
-
-  const visibleRows = useMemo(
-    () => SAMPLE_ROWS.filter((row) => row.tabs.includes(tab)),
-    [tab],
+function PreviewTable({ rows, showIssueDetail }: { rows: PreviewRow[]; showIssueDetail: boolean }) {
+  return (
+    <Panel style={{ padding: 0 }}>
+      <div className="table-panel staff-dir-table">
+        <div className="table-head staff-dir-cols-sessions">
+          <span>Date &amp; time</span>
+          <span>Session</span>
+          <span>People</span>
+          <span className="staff-dir-col-status">Status</span>
+        </div>
+        {rows.map((row) => {
+          const detail = showIssueDetail ? issueDetail(row) : null;
+          return (
+            <a
+              key={row.id}
+              href="#"
+              className={`table-row staff-dir-cols-sessions${row.issue && showIssueDetail ? " staff-dir-row-issue" : ""}`}
+              onClick={(event) => event.preventDefault()}
+            >
+              <span>
+                <strong>{row.whenDay}</strong>
+                <small style={{ display: "block", color: "var(--muted)", marginTop: 2 }}>
+                  {row.whenDetail}
+                </small>
+              </span>
+              <span>{row.sessionLabel}</span>
+              <span>
+                {row.people}
+                {detail ? (
+                  <small style={{ display: "block", color: "#8e661f", marginTop: 4, fontWeight: 700 }}>
+                    {detail}
+                  </small>
+                ) : null}
+              </span>
+              <span className="staff-dir-col-status">
+                <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </Panel>
   );
+}
+
+export function StaffDesignPreviewSessionsClient() {
+  const [layout, setLayout] = useState<StaffSessionLayout>("week");
+  const [typeFilter, setTypeFilter] = useState<StaffSessionTypeFilter>("all");
+  const [issues, setIssues] = useState(false);
+
+  const visibleRows = useMemo(() => {
+    const tab: StaffSessionTab = issues
+      ? "issues"
+      : typeFilter === "all"
+        ? "week"
+        : typeFilter;
+    return SAMPLE_ROWS.filter((row) => row.tabs.includes(tab));
+  }, [issues, typeFilter]);
 
   return (
     <>
@@ -141,7 +236,7 @@ export function StaffDesignPreviewSessionsClient() {
         <div className="page-header-copy">
           <span className="eyebrow">Design preview</span>
           <h1>Sessions</h1>
-          <p>Sample data only · validate before build</p>
+          <p>Sample data only · this week · Aug 17 – Aug 23</p>
         </div>
         <div className="page-header-action design-preview-header-links">
           <Link href="/staff/design-preview/tutor-seats" className="secondary-button">
@@ -157,69 +252,79 @@ export function StaffDesignPreviewSessionsClient() {
         <Link href="/staff/settings">Back to Settings</Link>
       </p>
 
-      <section className="segmented" aria-label="Session views">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={tab === item.id ? "active" : ""}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </section>
+      <div className="sessions-toolbar">
+        <section className="segmented" aria-label="Session layout">
+          {SESSION_LAYOUTS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={!issues && layout === item.id ? "active" : ""}
+              onClick={() => {
+                setLayout(item.id);
+                setIssues(false);
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </section>
+        {!issues ? (
+          <section className="filter-row" aria-label="Session type">
+            {SESSION_TYPE_FILTERS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`filter-chip${typeFilter === item.id ? " active" : ""}`}
+                onClick={() => {
+                  setTypeFilter(item.id);
+                  setIssues(false);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </section>
+        ) : null}
+        <button
+          type="button"
+          className={`filter-chip sessions-issues-chip${issues ? " active" : ""}`}
+          onClick={() => setIssues((value) => !value)}
+        >
+          Issues
+        </button>
+      </div>
 
-      <Panel style={{ padding: 0 }}>
-        <div className="table-panel staff-dir-table">
-          <div className="table-head staff-dir-cols-sessions">
-            <span>When</span>
-            <span>Type</span>
-            <span>What</span>
-            <span>Who</span>
-            <span className="staff-dir-col-status">Status</span>
+      {visibleRows.length === 0 ? (
+        <p className="dashboard-empty" style={{ padding: "18px 17px" }}>
+          No sample rows for this view.
+        </p>
+      ) : issues || layout === "list" ? (
+        <PreviewTable rows={visibleRows} showIssueDetail={issues} />
+      ) : (
+        <div className="sessions-week-wrap">
+          <div className="sessions-week" role="grid" aria-label="Week calendar">
+            {WEEK_DAYS.map((day) => (
+              <section key={day.dayIndex} className="sessions-week-day">
+                <h3 className="sessions-week-day-title">{day.weekday}</h3>
+                <small className="sessions-week-day-date">{day.dateLabel}</small>
+                {visibleRows
+                  .filter((row) => row.dayIndex === day.dayIndex)
+                  .map((row) => (
+                    <a
+                      key={row.id}
+                      href="#"
+                      className={`sessions-week-chip ${row.kind}`}
+                      onClick={(event) => event.preventDefault()}
+                    >
+                      {SESSION_CHIP_LABEL[row.kind]}
+                      <small>{[row.timeLabel, row.what].filter(Boolean).join(" · ")}</small>
+                    </a>
+                  ))}
+              </section>
+            ))}
           </div>
-          {visibleRows.length === 0 ? (
-            <p className="dashboard-empty" style={{ padding: "18px 17px" }}>
-              No sample rows for this tab.
-            </p>
-          ) : (
-            visibleRows.map((row) => {
-              const detail = tab === "issues" ? issueDetail(row) : null;
-              return (
-                <a
-                  key={row.id}
-                  href="#"
-                  className={`table-row staff-dir-cols-sessions${row.issue && tab === "issues" ? " staff-dir-row-issue" : ""}`}
-                  onClick={(event) => event.preventDefault()}
-                >
-                  <span>
-                    <strong>{row.when.split(" · ")[0]}</strong>
-                    <small style={{ display: "block", color: "var(--muted)", marginTop: 2 }}>
-                      {row.when.split(" · ").slice(1).join(" · ")}
-                    </small>
-                  </span>
-                  <span>
-                    <span className={`pill ${TYPE_PILL[row.type]}`}>{row.typeLabel}</span>
-                  </span>
-                  <span>{row.what}</span>
-                  <span>
-                    {row.who}
-                    {detail ? (
-                      <small style={{ display: "block", color: "#8e661f", marginTop: 4, fontWeight: 700 }}>
-                        {detail}
-                      </small>
-                    ) : null}
-                  </span>
-                  <span className="staff-dir-col-status">
-                    <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
-                  </span>
-                </a>
-              );
-            })
-          )}
         </div>
-      </Panel>
+      )}
     </>
   );
 }

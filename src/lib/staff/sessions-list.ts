@@ -1,13 +1,27 @@
 import { parseMinutes } from "@/lib/reports/slot-hours";
 import { formatTime12hEnglish } from "@/lib/ui/datetime";
 
+export const SESSION_LAYOUTS = [
+  { id: "week", label: "Week" },
+  { id: "list", label: "List" },
+] as const;
+
+export const SESSION_TYPE_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "tutoring", label: "Tutoring" },
+  { id: "classes", label: "Classes" },
+] as const;
+
+/** Row membership for week / type / issues filters. */
 export const SESSION_TABS = [
-  { id: "week", label: "Week (all)" },
+  { id: "week", label: "Week" },
   { id: "tutoring", label: "Tutoring" },
   { id: "classes", label: "Classes" },
   { id: "issues", label: "Issues" },
 ] as const;
 
+export type StaffSessionLayout = (typeof SESSION_LAYOUTS)[number]["id"];
+export type StaffSessionTypeFilter = (typeof SESSION_TYPE_FILTERS)[number]["id"];
 export type StaffSessionTab = (typeof SESSION_TABS)[number]["id"];
 export type StaffSessionKind = "tutoring" | "class" | "test";
 
@@ -20,7 +34,13 @@ export const SESSION_TYPE_PILL: Record<StaffSessionKind, string> = {
 export const SESSION_TYPE_LABEL: Record<StaffSessionKind, string> = {
   tutoring: "Tutoring",
   class: "Class",
-  test: "Test/makeup",
+  test: "Test",
+};
+
+export const SESSION_CHIP_LABEL: Record<StaffSessionKind, string> = {
+  tutoring: "Tutoring",
+  class: "Class",
+  test: "Test",
 };
 
 export const OPEN_SESSION_STATUSES = [
@@ -58,15 +78,32 @@ const DAY_NAME_TO_INDEX: Record<string, number> = {
   saturday: 6,
 };
 
+export type StaffSessionWeekDay = {
+  dayIndex: number;
+  weekday: (typeof DAY_SHORT)[number];
+  dateLabel: string;
+};
+
+export type StaffSessionWhen = {
+  day: string;
+  detail: string;
+  sortKey: string;
+  dayIndex: number | null;
+  timeLabel: string | null;
+};
+
 export type StaffSessionListRow = {
   id: string;
   kind: StaffSessionKind;
   typeLabel: string;
   whenDay: string;
   whenDetail: string;
+  dayIndex: number | null;
+  timeLabel: string | null;
   sortKey: string;
   what: string;
-  who: string;
+  sessionLabel: string;
+  people: string;
   status: string;
   href: string;
   issue: boolean;
@@ -109,12 +146,19 @@ export type SessionCourseInput = {
   scheduleSummary: string | null;
   enrolledCount: number;
   active: boolean;
+  instructorName?: string | null;
 };
 
 export type SessionPaymentInput = {
   relatedEntityType: string | null;
   relatedEntityId: string | null;
   status: string;
+};
+
+export type StaffSessionsSearchState = {
+  layout: StaffSessionLayout;
+  typeFilter: StaffSessionTypeFilter;
+  issues: boolean;
 };
 
 export function startOfWeekNy(now = new Date()) {
@@ -144,6 +188,19 @@ export function weekRangeLabel(weekStart: Date) {
   return `${fmt.format(weekStart)} – ${fmt.format(end)}`;
 }
 
+export function weekDays(weekStart: Date): StaffSessionWeekDay[] {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  });
+  return DAY_SHORT.map((weekday, dayIndex) => ({
+    dayIndex,
+    weekday,
+    dateLabel: fmt.format(new Date(weekStart.getTime() + dayIndex * 24 * 60 * 60 * 1000)),
+  }));
+}
+
 export function isOpenSessionStatus(status: string) {
   return (OPEN_SESSION_STATUSES as readonly string[]).includes(status);
 }
@@ -166,7 +223,7 @@ export function formatSlotWhen(
   dayOfWeek: number | null,
   startTime: string | null,
   fallbackLabel: string | null,
-) {
+): StaffSessionWhen {
   const dayIndex =
     dayOfWeek != null && dayOfWeek >= 0 && dayOfWeek <= 6 ? dayOfWeek : null;
   const day = dayIndex != null ? DAY_SHORT[dayIndex] : "—";
@@ -178,13 +235,13 @@ export function formatSlotWhen(
           day: "numeric",
         }).format(new Date(weekStart.getTime() + dayIndex * 24 * 60 * 60 * 1000))
       : null;
-  const time = startTime ? formatTime12hEnglish(startTime) : null;
-  const detail = [dateLabel, time || fallbackLabel].filter(Boolean).join(" · ") || "Schedule pending";
-  const sortKey = `${String(dayIndex ?? 9).padStart(2, "0")}-${time || startTime || "99:99"}`;
-  return { day, detail, sortKey };
+  const timeLabel = startTime ? formatTime12hEnglish(startTime) : null;
+  const detail = [dateLabel, timeLabel || fallbackLabel].filter(Boolean).join(" · ") || "Schedule pending";
+  const sortKey = `${String(dayIndex ?? 9).padStart(2, "0")}-${timeLabel || startTime || "99:99"}`;
+  return { day, detail, sortKey, dayIndex, timeLabel };
 }
 
-export function parseCourseSchedule(summary: string | null, weekStart: Date) {
+export function parseCourseSchedule(summary: string | null, weekStart: Date): StaffSessionWhen {
   const raw = (summary ?? "").trim();
   if (!raw) {
     return formatSlotWhen(weekStart, null, null, "Schedule pending");
@@ -201,7 +258,7 @@ export function parseCourseSchedule(summary: string | null, weekStart: Date) {
     startTime = toTwentyFourHour(clock, meridiem);
   }
   if (dayIndex == null && !startTime) {
-    return { day: "—", detail: raw, sortKey: `09-${raw}` };
+    return { day: "—", detail: raw, sortKey: `09-${raw}`, dayIndex: null, timeLabel: null };
   }
   return formatSlotWhen(weekStart, dayIndex, startTime, raw);
 }
@@ -241,8 +298,72 @@ function joinIssues(parts: string[]) {
   return parts.filter(Boolean).join(" · ") || null;
 }
 
-function whoLine(tutorName: string | null, studentOrSeat: string) {
+function peopleLine(tutorName: string | null, studentOrSeat: string) {
   return `${tutorName?.trim() || "Tutor pending"} · ${studentOrSeat}`;
+}
+
+function sessionLine(kind: StaffSessionKind, what: string) {
+  return `${SESSION_TYPE_LABEL[kind]} · ${what}`;
+}
+
+function classPeople(instructorName: string | null | undefined, enrolledCount: number) {
+  const enrolled = `${enrolledCount} enrolled`;
+  const instructor = instructorName?.trim();
+  return instructor ? `${instructor} · ${enrolled}` : enrolled;
+}
+
+function toListRow(
+  row: Omit<StaffSessionListRow, "sessionLabel" | "typeLabel"> & { typeLabel?: string },
+): StaffSessionListRow {
+  const typeLabel = row.typeLabel ?? SESSION_TYPE_LABEL[row.kind];
+  return {
+    ...row,
+    typeLabel,
+    sessionLabel: sessionLine(row.kind, row.what),
+  };
+}
+
+export function parseStaffSessionsSearch(searchParams: {
+  get: (key: string) => string | null;
+}): StaffSessionsSearchState {
+  const tab = searchParams.get("tab");
+  const typeParam = searchParams.get("type");
+  const layout: StaffSessionLayout = searchParams.get("view") === "list" ? "list" : "week";
+  let typeFilter: StaffSessionTypeFilter = "all";
+  if (typeParam === "tutoring" || typeParam === "classes") typeFilter = typeParam;
+  else if (tab === "tutoring") typeFilter = "tutoring";
+  else if (tab === "classes") typeFilter = "classes";
+  return {
+    layout,
+    typeFilter,
+    issues: tab === "issues",
+  };
+}
+
+export function staffSessionsHref(
+  state: StaffSessionsSearchState,
+  searchParams?: { toString: () => string },
+) {
+  const params = new URLSearchParams(searchParams?.toString() ?? "");
+  params.delete("exceptionId");
+  params.delete("tab");
+  params.delete("view");
+  params.delete("type");
+  if (state.layout === "list") params.set("view", "list");
+  if (state.typeFilter !== "all") params.set("type", state.typeFilter);
+  if (state.issues) params.set("tab", "issues");
+  const query = params.toString();
+  return query ? `/staff/sessions?${query}` : "/staff/sessions";
+}
+
+export function sessionRowTab(state: StaffSessionsSearchState): StaffSessionTab {
+  if (state.issues) return "issues";
+  if (state.typeFilter === "tutoring" || state.typeFilter === "classes") return state.typeFilter;
+  return "week";
+}
+
+export function fallbackWeekDays(): StaffSessionWeekDay[] {
+  return DAY_SHORT.map((weekday, dayIndex) => ({ dayIndex, weekday, dateLabel: "" }));
 }
 
 export function buildStaffSessionRows(input: {
@@ -333,21 +454,24 @@ export function buildStaffSessionRows(input: {
     if (issues.length > 0) tabs.push("issues");
     if (tabs.length === 0) continue;
 
-    rows.push({
-      id: booking.id,
-      kind,
-      typeLabel: SESSION_TYPE_LABEL[kind],
-      whenDay: when.day,
-      whenDetail: when.detail,
-      sortKey: `${when.sortKey}-${kind}-${booking.id}`,
-      what: booking.subjectName || booking.slotLabel || "Tutoring",
-      who: whoLine(booking.tutorName, booking.studentName || "Student pending"),
-      status: booking.status,
-      href: `/staff/sessions/${booking.id}`,
-      issue: issues.length > 0,
-      issueDetail: joinIssues(issues),
-      tabs,
-    });
+    rows.push(
+      toListRow({
+        id: booking.id,
+        kind,
+        whenDay: when.day,
+        whenDetail: when.detail,
+        dayIndex: when.dayIndex,
+        timeLabel: when.timeLabel,
+        sortKey: `${when.sortKey}-${kind}-${booking.id}`,
+        what: booking.subjectName || booking.slotLabel || "Tutoring",
+        people: peopleLine(booking.tutorName, booking.studentName || "Student pending"),
+        status: booking.status,
+        href: `/staff/sessions/${booking.id}`,
+        issue: issues.length > 0,
+        issueDetail: joinIssues(issues),
+        tabs,
+      }),
+    );
   }
 
   for (const slot of slots) {
@@ -358,33 +482,35 @@ export function buildStaffSessionRows(input: {
     if (remaining <= 0) continue;
 
     const when = formatSlotWhen(weekStart, slot.dayOfWeek, slot.startTimeLocal, slot.label);
-    const filledLabel =
-      claimed <= 0 ? "OPEN seat" : `${claimed} of ${slot.capacitySeats} seats`;
+    const seatLabel = claimed <= 0 ? "Available" : `${claimed} of ${slot.capacitySeats} seats`;
     const issueDetail =
       claimed <= 0
-        ? "Open seat — none filled"
-        : `Open seat — ${claimed} of ${slot.capacitySeats} filled`;
+        ? "Available — none filled"
+        : `Available — ${claimed} of ${slot.capacitySeats} filled`;
     const kind = classifyBookingKind({
       subjectName: onSlot[0]?.subjectName,
       slotLabel: slot.label,
     });
     const tabs: StaffSessionTab[] = claimed > 0 ? ["week", "tutoring", "issues"] : ["issues"];
 
-    rows.push({
-      id: `seat:${slot.id}`,
-      kind,
-      typeLabel: SESSION_TYPE_LABEL[kind],
-      whenDay: when.day,
-      whenDetail: when.detail,
-      sortKey: `${when.sortKey}-seat-${slot.id}`,
-      what: onSlot[0]?.subjectName || slot.label || "Open seat",
-      who: whoLine(slot.tutorName, filledLabel),
-      status: "open",
-      href: `/staff/tutors/${slot.tutorId}`,
-      issue: true,
-      issueDetail,
-      tabs,
-    });
+    rows.push(
+      toListRow({
+        id: `seat:${slot.id}`,
+        kind,
+        whenDay: when.day,
+        whenDetail: when.detail,
+        dayIndex: when.dayIndex,
+        timeLabel: when.timeLabel,
+        sortKey: `${when.sortKey}-seat-${slot.id}`,
+        what: onSlot[0]?.subjectName || slot.label || "Tutoring",
+        people: peopleLine(slot.tutorName, seatLabel),
+        status: claimed <= 0 ? "available" : "open",
+        href: `/staff/tutors/${slot.tutorId}`,
+        issue: true,
+        issueDetail,
+        tabs,
+      }),
+    );
   }
 
   for (const course of courses) {
@@ -396,21 +522,24 @@ export function buildStaffSessionRows(input: {
     const tabs: StaffSessionTab[] = ["week", "classes"];
     if (issues.length > 0) tabs.push("issues");
 
-    rows.push({
-      id: `class:${course.id}`,
-      kind: "class",
-      typeLabel: SESSION_TYPE_LABEL.class,
-      whenDay: when.day,
-      whenDetail: when.detail,
-      sortKey: `${when.sortKey}-class-${course.id}`,
-      what: course.name,
-      who: `${course.enrolledCount} enrolled`,
-      status: course.enrolledCount > 0 ? "confirmed" : "open",
-      href: `/staff/scheduling/courses/${course.id}`,
-      issue: issues.length > 0,
-      issueDetail: joinIssues(issues),
-      tabs,
-    });
+    rows.push(
+      toListRow({
+        id: `class:${course.id}`,
+        kind: "class",
+        whenDay: when.day,
+        whenDetail: when.detail,
+        dayIndex: when.dayIndex,
+        timeLabel: when.timeLabel,
+        sortKey: `${when.sortKey}-class-${course.id}`,
+        what: course.name,
+        people: classPeople(course.instructorName, course.enrolledCount),
+        status: course.enrolledCount > 0 ? "confirmed" : "open",
+        href: `/staff/scheduling/courses/${course.id}`,
+        issue: issues.length > 0,
+        issueDetail: joinIssues(issues),
+        tabs,
+      }),
+    );
   }
 
   rows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
@@ -419,4 +548,14 @@ export function buildStaffSessionRows(input: {
 
 export function isStaffSessionTab(value: string | null | undefined): value is StaffSessionTab {
   return SESSION_TABS.some((tab) => tab.id === value);
+}
+
+export function isStaffSessionLayout(value: string | null | undefined): value is StaffSessionLayout {
+  return SESSION_LAYOUTS.some((item) => item.id === value);
+}
+
+export function isStaffSessionTypeFilter(
+  value: string | null | undefined,
+): value is StaffSessionTypeFilter {
+  return SESSION_TYPE_FILTERS.some((item) => item.id === value);
 }

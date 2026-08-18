@@ -75,7 +75,7 @@ export function statusTone(status: string | null | undefined): StatusTone {
     return "mint";
   }
 
-  if (["review", "exceptions", "support", "open"].includes(key)) {
+  if (["review", "exceptions", "support", "open", "available"].includes(key)) {
     return "blue";
   }
 

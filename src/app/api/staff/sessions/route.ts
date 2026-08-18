@@ -17,6 +17,7 @@ import {
   PAYMENT_ISSUE_STATUSES,
   buildStaffSessionRows,
   startOfWeekNy,
+  weekDays,
   weekRangeLabel,
 } from "@/lib/staff/sessions-list";
 
@@ -75,6 +76,13 @@ export async function GET() {
           scheduleSummary: courseOfferings.scheduleSummary,
           enrolledCount: courseOfferings.enrolledCount,
           active: courseOfferings.active,
+          ...("instructorName" in courseOfferings
+            ? {
+                instructorName: (courseOfferings as typeof courseOfferings & {
+                  instructorName: typeof courseOfferings.name;
+                }).instructorName,
+              }
+            : {}),
         })
         .from(courseOfferings)
         .where(eq(courseOfferings.active, true)),
@@ -118,6 +126,10 @@ export async function GET() {
       courses: courseRows.map((row) => ({
         ...row,
         enrolledCount: enrollmentCountMap.get(row.id) ?? row.enrolledCount,
+        instructorName:
+          "instructorName" in row
+            ? ((row as { instructorName?: string | null }).instructorName ?? null)
+            : null,
       })),
       payments: paymentRows,
       enrollmentCourseIds,
@@ -126,6 +138,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       weekLabel: weekRangeLabel(weekStart),
+      weekDays: weekDays(weekStart),
       rows,
     });
   } catch (error) {
