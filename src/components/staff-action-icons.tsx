@@ -220,7 +220,7 @@ type StaffIconButtonProps = {
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   type?: "button" | "submit";
   disabled?: boolean;
-  tone?: "default" | "edit" | "danger" | "muted" | "archive" | "restore";
+  tone?: "default" | "edit" | "note" | "danger" | "muted" | "archive" | "restore";
   children: ReactNode;
   className?: string;
 };

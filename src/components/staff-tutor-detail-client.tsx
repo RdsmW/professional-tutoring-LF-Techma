@@ -605,6 +605,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           <StaffIconButton
             label="Add note"
             title="Add note"
+            tone="note"
             onClick={() => setNoteComposerOpen(true)}
           >
             <IconNote size={15} />
@@ -650,7 +651,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <StaffRecordPrimaryRow>
+      <StaffRecordPrimaryRow className="staff-record-primary-row--household-wide">
         <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Profile</h2>
@@ -677,7 +678,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             </div>
           </div>
         </Panel>
-        <StaffRecordIntegrationsCard />
+        <StaffRecordIntegrationsCard stackFields />
       </StaffRecordPrimaryRow>
 
       <div className="tutor-capacity-subjects-band staff-equal-cards">

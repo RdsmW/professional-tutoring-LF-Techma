@@ -25,11 +25,11 @@ export function AuthBrandPanel({
             className="auth-brand-mark"
             priority
           />
-          <strong className="auth-brand-wordmark">
+          <span className="auth-brand-wordmark">
             rofessional
             <br />
             Tutoring, LLC
-          </strong>
+          </span>
         </div>
         <div className="auth-brand-main">
           <Heading className="auth-brand-headline">

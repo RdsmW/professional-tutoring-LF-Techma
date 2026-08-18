@@ -15,12 +15,13 @@ import {
   IconArchive,
   IconClose,
   IconInvite,
+  IconNote,
   IconPencil,
   IconRestore,
   IconTrash,
 } from "@/components/staff-action-icons";
 
-export type StaffRowActionTone = "edit" | "restore" | "archive" | "danger" | "unassign" | "default";
+export type StaffRowActionTone = "edit" | "note" | "restore" | "archive" | "danger" | "unassign" | "default";
 
 export type StaffRowAction = {
   id: string;
@@ -44,6 +45,8 @@ function toneClass(tone: StaffRowActionTone | undefined) {
   switch (tone) {
     case "edit":
       return "staff-row-actions-item staff-row-actions-item-edit";
+    case "note":
+      return "staff-row-actions-item staff-row-actions-item-note";
     case "restore":
       return "staff-row-actions-item staff-row-actions-item-restore";
     case "archive":
@@ -60,6 +63,9 @@ function toneClass(tone: StaffRowActionTone | undefined) {
 function actionLeadingIcon(action: StaffRowAction) {
   if (action.id === "edit" || action.tone === "edit") {
     return <IconPencil size={14} />;
+  }
+  if (action.id === "note" || action.id === "add-note" || action.tone === "note") {
+    return <IconNote size={14} />;
   }
   if (action.id === "unassign" || action.tone === "unassign" || action.id === "close") {
     return <IconClose size={14} />;

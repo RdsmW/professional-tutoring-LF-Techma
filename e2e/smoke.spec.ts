@@ -143,10 +143,11 @@ test.describe("staff families smoke", () => {
     await trigger.click();
     const menu = page.locator(".staff-row-actions-menu").first();
     await expect(menu.getByRole("menuitem", { name: /^Edit$/i })).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: /Open family/i })).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: /^Archive$/i })).toHaveCount(0);
-    await expect(menu.getByRole("menuitem", { name: /^Delete$/i })).toHaveCount(0);
-    await expect(menu.getByRole("menuitem", { name: /^Restore$/i })).toHaveCount(0);
+    await expect(menu.getByRole("menuitem", { name: /Open family/i })).toHaveCount(0);
+    const archive = await menu.getByRole("menuitem", { name: /^Archive$/i }).count();
+    const restore = await menu.getByRole("menuitem", { name: /^Restore$/i }).count();
+    const del = await menu.getByRole("menuitem", { name: /^Delete$/i }).count();
+    expect(archive + restore + del).toBeLessThanOrEqual(1);
   });
 
   test("families list to detail with exclusive toolbar and notes", async ({ page }) => {

@@ -106,11 +106,6 @@ export function StaffGuardiansClient() {
     router.push(`/staff/guardians/${guardianId}`);
   }
 
-  function openFamily(householdId: string | null) {
-    if (!householdId) return;
-    router.push(`/staff/families/${householdId}`);
-  }
-
   async function setGuardianStatus(id: string, next: "active" | "archived") {
     if (busyId) return;
     setBusyId(id);
@@ -140,8 +135,7 @@ export function StaffGuardiansClient() {
   }
 
   function rowActions(row: GuardianRow) {
-    const familyId = row.household.id;
-    const actions = lifecycleActions({
+    return lifecycleActions({
       isArchived: row.status === "archived",
       canDelete: false,
       busy: busyId === row.id,
@@ -150,13 +144,6 @@ export function StaffGuardiansClient() {
       onRestore: () => void setGuardianStatus(row.id, "active"),
       onDelete: () => undefined,
     });
-    actions.push({
-      id: "open-family",
-      label: familyId ? "Open family" : "Unassigned",
-      disabled: !familyId,
-      onSelect: () => openFamily(familyId),
-    });
-    return actions;
   }
 
   return (

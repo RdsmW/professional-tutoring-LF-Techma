@@ -26,6 +26,17 @@ function formatWhen(value: string | null | undefined) {
   return formatStaffDateTime(value);
 }
 
+function noteEditedBy(note: StaffNoteItem) {
+  return note.editorDisplayName?.trim() || "—";
+}
+
+function noteEditedAt(note: StaffNoteItem) {
+  if (note.editorDisplayName?.trim() || note.updatedAt) {
+    return formatWhen(note.updatedAt);
+  }
+  return "—";
+}
+
 function ConfirmDeleteModal({
   busy,
   onCancel,
@@ -276,6 +287,8 @@ export function StaffNotesSection({
               <th className="family-notes-col-content">Note</th>
               <th className="family-notes-col-who">Created By</th>
               <th className="family-notes-col-when">Created Time</th>
+              <th className="family-notes-col-who">Edited By</th>
+              <th className="family-notes-col-when">Edited Time</th>
               <th className="family-notes-col-edit" aria-label="Actions" />
             </tr>
           </thead>
@@ -300,12 +313,14 @@ export function StaffNotesSection({
                 </td>
                 <td className="family-notes-col-who">{note.authorDisplayName}</td>
                 <td className="family-notes-col-when">{formatWhen(note.createdAt)}</td>
+                <td className="family-notes-col-who">{noteEditedBy(note)}</td>
+                <td className="family-notes-col-when">{noteEditedAt(note)}</td>
                 <td className="family-notes-col-edit">
                   <div className="family-notes-action-group" onClick={(event) => event.stopPropagation()}>
                     <StaffIconButton
                       label="Edit"
                       title="Edit"
-                      tone="muted"
+                      tone="edit"
                       className="family-notes-edit-btn"
                       onClick={(event) => {
                         event.stopPropagation();
