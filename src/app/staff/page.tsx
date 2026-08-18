@@ -5,7 +5,7 @@ import {
   StaffStudentsDirectoryTable,
   type StaffStudentDirectoryTableRow,
 } from "@/components/staff-students-directory-table";
-import { amountLabel, paymentStatusLabel } from "@/lib/billing";
+import { amountLabel } from "@/lib/billing";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { db } from "@/lib/db";
 import {
@@ -24,9 +24,11 @@ import { formatDirectoryCreatedAt } from "@/lib/ui/directory-sort";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 import {
+  formatQueueDate,
   PRIORITY_QUEUE_RECENT_LIMIT,
   PREVIEW_REQUEST_TOTAL,
   previewQueueRows,
+  type PreviewQueueRow,
 } from "@/lib/staff/preview-requests";
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
@@ -40,11 +42,8 @@ function greetingForHour(hour: number) {
   return "Good evening";
 }
 
-function initialsFromName(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "??";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+function queuePersonName(firstName?: string | null, lastName?: string | null, displayName?: string | null) {
+  return `${firstName ?? ""} ${lastName ?? ""}`.trim() || (displayName ?? "").trim();
 }
 
 function startOfWeekNy(now = new Date()) {
@@ -86,15 +85,7 @@ async function loadDashboardData() {
     tutorOpeningsLive: false,
     billingExceptions: 0,
     billingExceptionsLive: false,
-    familyRequests: [] as {
-      id: string;
-      initials: string;
-      title: string;
-      copy: string;
-      meta: string;
-      tone: string;
-      href: string;
-    }[],
+    familyRequests: [] as PreviewQueueRow[],
     familyRequestsTotal: 0,
     recentStudents: [] as StaffStudentDirectoryTableRow[],
     weekBars: WEEK_DAYS.map((day) => ({
@@ -158,13 +149,21 @@ async function loadDashboardData() {
       db
         .select({
           id: paymentRecords.id,
-          status: paymentRecords.status,
           amountCents: paymentRecords.amountCents,
           currency: paymentRecords.currency,
+          createdAt: paymentRecords.createdAt,
+          householdId: households.id,
           householdName: households.displayName,
+          payerFirstName: guardians.firstName,
+          payerLastName: guardians.lastName,
+          studentFirstName: students.firstName,
+          studentLastName: students.lastName,
+          studentDisplayName: students.displayName,
         })
         .from(paymentRecords)
         .innerJoin(households, eq(paymentRecords.householdId, households.id))
+        .leftJoin(guardians, eq(households.billingOwnerGuardianId, guardians.id))
+        .leftJoin(students, eq(students.id, paymentRecords.relatedEntityId))
         .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"]))
         .orderBy(desc(paymentRecords.createdAt))
         .limit(PRIORITY_QUEUE_RECENT_LIMIT),
@@ -215,15 +214,55 @@ async function loadDashboardData() {
       };
     });
 
-    const familyRequests = paymentAttentionRows.map((row) => ({
-      id: row.id,
-      initials: initialsFromName(row.householdName),
-      title: `${paymentStatusLabel(row.status)} · ${row.householdName}`,
-      copy: amountLabel(row.amountCents, row.currency),
-      meta: "Needs attention",
-      tone: row.status === "failed" ? "rose" : row.status === "pending" ? "blue" : "gold",
-      href: "/staff/billing",
-    }));
+    const studentNameByHousehold = new Map<string, string>();
+    const householdsNeedingStudent = [
+      ...new Set(
+        paymentAttentionRows
+          .filter(
+            (row) =>
+              !queuePersonName(row.studentFirstName, row.studentLastName, row.studentDisplayName),
+          )
+          .map((row) => row.householdId),
+      ),
+    ];
+    if (householdsNeedingStudent.length > 0) {
+      const householdStudentRows = await db
+        .select({
+          householdId: students.householdId,
+          firstName: students.firstName,
+          lastName: students.lastName,
+          displayName: students.displayName,
+        })
+        .from(students)
+        .where(
+          and(inArray(students.householdId, householdsNeedingStudent), ne(students.lifecycle, "archived")),
+        )
+        .orderBy(asc(students.createdAt));
+      for (const row of householdStudentRows) {
+        if (!row.householdId || studentNameByHousehold.has(row.householdId)) continue;
+        studentNameByHousehold.set(
+          row.householdId,
+          queuePersonName(row.firstName, row.lastName, row.displayName),
+        );
+      }
+    }
+
+    const familyRequests = paymentAttentionRows.map((row) => {
+      const payerName = queuePersonName(row.payerFirstName, row.payerLastName);
+      const name = (row.householdName || "").trim() || payerName || "Family";
+      const studentName =
+        queuePersonName(row.studentFirstName, row.studentLastName, row.studentDisplayName) ||
+        studentNameByHousehold.get(row.householdId) ||
+        "";
+      return {
+        id: row.id,
+        name,
+        studentName,
+        amountLabel: amountLabel(row.amountCents, row.currency),
+        dateLabel: formatQueueDate(row.createdAt),
+        href: "/staff/billing",
+      };
+    });
 
     const studentIds = recentStudentRows.map((row) => row.id);
     const subjectsByStudent = new Map<string, Array<{ id: string; name: string }>>();
@@ -324,35 +363,21 @@ export default async function StaffDashboardPage() {
           <span className="metric-mark navy" />
           <p>Families still setting up</p>
           <strong>{data.onboardingFamilies}</strong>
-          <small>Pending or no parent login</small>
         </article>
         <article className="metric-card">
           <span className="metric-mark blue" />
           <p>Sessions this week</p>
           <strong>{data.weekSessions}</strong>
-          <small>
-            {data.weekSessionsLive
-              ? "Scheduled or happening this week"
-              : "Live when sessions exist"}
-          </small>
         </article>
         <article className="metric-card">
           <span className="metric-mark mint" />
           <p>Open tutor seats</p>
           <strong>{data.tutorOpenings}</strong>
-          <small>
-            {data.tutorOpeningsLive ? "Seats still free on active times" : "Live when availability exists"}
-          </small>
         </article>
         <article className="metric-card">
           <span className="metric-mark gold" />
           <p>Payments needing attention</p>
           <strong>{data.billingExceptions}</strong>
-          <small>
-            {data.billingExceptionsLive
-              ? "Unpaid, pending, failed, or partial"
-              : "Live when payment rows exist"}
-          </small>
         </article>
       </section>
 
@@ -360,53 +385,8 @@ export default async function StaffDashboardPage() {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">Priority queue</span>
-              <h3>Payment issues</h3>
-            </div>
-            <div className="dashboard-heading-side">
-              <div className="dashboard-kpi-strip" aria-label="Priority summary">
-                <span className="dashboard-kpi-chip">
-                  Requests
-                  <strong>{priorityRequestTotal}</strong>
-                </span>
-              </div>
-              <Link href="/staff/sessions?tab=issues" className="text-button">
-                Open sessions
-              </Link>
-            </div>
-          </div>
-          {usingPreviewRequests ? (
-            <p className="dashboard-preview-note">
-              Sample preview — {priorityRequests.length} recent of {priorityRequestTotal} (not live).
-            </p>
-          ) : priorityRequestTotal > priorityRequests.length ? (
-            <p className="dashboard-preview-note">
-              Showing {priorityRequests.length} recent of {priorityRequestTotal}.
-            </p>
-          ) : null}
-          <div className="attention-list">
-            {priorityRequests.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="attention-row"
-              >
-                <span className={`avatar ${item.tone}`}>{item.initials}</span>
-                <span>
-                  <strong>{item.title}</strong>
-                  <small>{item.copy}</small>
-                </span>
-                <span className={`pill ${item.tone}`}>{item.meta}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
               <span className="eyebrow">Capacity</span>
-              <h3>This week</h3>
+              <h3 className="staff-section-title">This week</h3>
             </div>
             <Link href="/staff/sessions" className="text-button">
               Open schedule
@@ -434,13 +414,53 @@ export default async function StaffDashboardPage() {
             </div>
           ) : null}
         </section>
+
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">Priority queue</span>
+              <h3 className="staff-section-title dashboard-queue-title">
+                <span className="dashboard-count-badge">{priorityRequestTotal}</span>
+                Payment issues
+              </h3>
+            </div>
+            <Link href="/staff/sessions?tab=issues" className="text-button">
+              Open sessions
+            </Link>
+          </div>
+          {usingPreviewRequests ? (
+            <p className="dashboard-preview-note">
+              Sample preview — {priorityRequests.length} recent of {priorityRequestTotal} (not live).
+            </p>
+          ) : priorityRequestTotal > priorityRequests.length ? (
+            <p className="dashboard-preview-note">
+              Showing {priorityRequests.length} recent of {priorityRequestTotal}.
+            </p>
+          ) : null}
+          <div className="attention-list">
+            {priorityRequests.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="attention-row"
+              >
+                <span className="attention-row-name">
+                  <strong>{item.name}</strong>
+                  <small>{item.dateLabel}</small>
+                </span>
+                <span className="attention-row-student">{item.studentName || "—"}</span>
+                <span className="attention-row-amount">{item.amountLabel}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
       </div>
 
       <section className="panel dashboard-recent-students">
         <div className="panel-heading">
           <div>
             <span className="eyebrow">Students</span>
-            <h3>Recently added</h3>
+            <h3 className="staff-section-title">Recently added</h3>
           </div>
           <Link href="/staff/students" className="text-button">
             Open students
