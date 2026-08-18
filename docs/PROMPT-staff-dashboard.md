@@ -14,6 +14,7 @@ Redesign the **Staff Dashboard** of Professional Tutoring using the design syste
 2. Apply `docs/DESIGN-tutoring.md` fully: colour tokens (Staff navy + gold), Georgia titles / Arial UI, 14px radii, Paper-on-Canvas, HugeIcons outlined, skeleton loading that mirrors this layout, richer table chrome. No custom modals (this page has none — do not add any).
 3. This is the **Staff** shell (Midnight Navy wall), not Family forest.
 4. Dashboard is the active tab. Do not invent other pages in this pass.
+5. **No accent bars anywhere in the app.** Drop the gold inset stripe on sidebar tabs. Active tab = Navy Lift fill well + brighter icon/label only. Also drop left-edge colour marks on metric cards and any other decorative edge stripe. Capacity occupancy meters (the week fill tracks) stay — those are data, not accent bars.
 
 ### Sidebar — exact labels, top to bottom
 
@@ -26,7 +27,7 @@ Keep this chrome. Restyle it; do not add, remove, or rename items.
 
 **Primary tabs (exact names, this order)**
 
-1. Dashboard *(active)*
+1. Dashboard *(active — fill well only, no inset bar)*
 2. Families
 3. Guardians
 4. Students
@@ -64,7 +65,7 @@ Layout order is fixed: hero → four metrics → two-column row → students tab
 | Open tutor seats | count | Seats still free on active times | Live when availability exists |
 | Payments needing attention | count | Unpaid, pending, failed, or partial | Live when payment rows exist |
 
-Left-edge colour marks stay as status cues (navy / harbor / mint / gold). Do not retitle the cards.
+Do not retitle the cards. Do not keep the left-edge colour marks — no accent bars on these cards.
 
 **3. Left column — Priority queue**
 
@@ -98,6 +99,7 @@ Left-edge colour marks stay as status cues (navy / harbor / mint / gold). Do not
 ### What “redesign” means here
 
 - Visual consistency with the design system (surfaces, type scale, 14px cards/table container, gold eyebrows, navy primary CTA, HugeIcons in the sidebar).
+- No accent bars: no gold inset on tabs, no left-edge marks on KPI cards or rows.
 - The students table must look designed (header wash, row height, hover, pills) — not a plain HTML grid.
 - First paint: skeleton that matches this page (hero + 4 KPIs + queue/capacity + table), not a blank canvas.
 - Do not restyle other tabs. Do not change routing or data.

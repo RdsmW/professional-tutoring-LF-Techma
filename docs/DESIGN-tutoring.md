@@ -20,7 +20,7 @@ Staff is the default token set. Family overrides the primary wall (navy → fore
 | Navy Deep | `#000233` | `--color-navy-deep` | Pressed/darker navy for destructive-adjacent navy actions |
 | Navy Soft | `#e8e9f2` | `--color-navy-soft` | Light navy wash, avatar fill, selected-row tint, icon wells on canvas |
 | Signal Gold | `#c4922e` | `--color-signal-gold` | Idle nav icons, eyebrows, course kickers — the single chromatic accent. Do not promote it to the primary CTA fill |
-| Bright Gold | `#d8a840` | `--color-bright-gold` | Active nav accent bar, hover gold, selected gold moments |
+| Bright Gold | `#d8a840` | `--color-bright-gold` | Active nav icon, hover gold, selected gold moments — never an inset bar or edge strip |
 | Gold Soft | `#fff6e5` | `--color-gold-soft` | Soft highlight wash for gold-tinted cards, capacity notes, warning-adjacent surfaces |
 | Gold Glow | `linear-gradient(90deg, rgba(1, 3, 69, 0) 0%, rgba(26, 32, 104, 0.28) 35%, rgba(216, 168, 64, 0.28) 50%, rgba(26, 32, 104, 0.28) 65%, rgba(1, 3, 69, 0) 100%)` | `--color-gold-glow` | Horizontal brand gradient wash — navy to gold light streak used as a decorative band, never as a button fill |
 | Ink | `#172133` | `--color-ink` | Primary text, icon strokes on light surfaces, heading color on canvas |
@@ -201,7 +201,7 @@ Gold Soft or Navy Soft / Forest Soft background, 14px radius, 20px padding, Huge
 ### KPI / Metric Card
 **Role:** Dashboard number tile
 
-Paper background, 14px radius, 1px Line border, 20px padding. Eyebrow in Signal Gold uppercase 12px. Value in Georgia 27px / 700 Ink. Caption in Arial 14px Slate. No drop shadow; elevation is surface-on-canvas only.
+Paper background, 14px radius, 1px Line border, 20px padding. Eyebrow in Signal Gold uppercase 12px. Value in Georgia 27px / 700 Ink. Caption in Arial 14px Slate. No drop shadow; elevation is surface-on-canvas only. No left-edge colour mark.
 
 ### Data Table
 **Role:** Primary directory and queue surface
@@ -226,7 +226,7 @@ Paper or Midnight Navy background, 14px radius, single soft shadow, Mint icon we
 ### Navigation Sidebar
 **Role:** Primary app navigation
 
-Midnight Navy (Forest) full-bleed column, 248px / 72px. Wordmark: Georgia 12px / 700 Paper. Section labels: Chrome Label, uppercase 12px, letter-spacing 0.15em. Items: Arial 15px / 600 Chrome Label; HugeIcons 18px in Signal Gold idle, Bright Gold active. Active item: Navy Lift / Forest Active well + 3px Bright Gold inset bar. No top marketing bar — the sidebar is the brand wall.
+Midnight Navy (Forest) full-bleed column, 248px / 72px. Wordmark: Georgia 12px / 700 Paper. Section labels: Chrome Label, uppercase 12px, letter-spacing 0.15em. Items: Arial 15px / 600 Chrome Label; HugeIcons 18px in Signal Gold idle, Bright Gold active. Active item: Navy Lift / Forest Active well only — Paper/Chrome Hover text, no inset bar, no left stripe, no underline. No top marketing bar — the sidebar is the brand wall.
 
 ### Page Header Band
 **Role:** View title + primary action
@@ -270,6 +270,7 @@ Paper, 14px radius, 1px Line, 64px 20px padding, centered. HugeIcons 24px in a N
 - Do not leave pages without a loading treatment
 - Do not ship plain, borderless, unpadded tables
 - Do not stack multiple gradient washes on a dashboard view — gradients belong on auth/hero only
+- Do not use accent bars anywhere: no inset stripe on sidebar tabs, no left-edge colour marks on cards, no coloured left borders on calendar slots or list rows. Active state is a fill well (or type/icon colour), not a bar. Capacity occupancy meters are data, not accent bars — keep those.
 
 ## Surfaces
 
@@ -319,7 +320,7 @@ Example Component Prompts
 
 5. **Blocking confirm:** `window.confirm("Permanently delete this student? This cannot be undone.")` — no custom modal.
 
-6. **Sidebar:** Midnight Navy (Forest), HugeIcons 18px Signal Gold, Arial 15px/600 Chrome Label, active Navy Lift + Bright Gold inset bar.
+6. **Sidebar:** Midnight Navy (Forest), HugeIcons 18px Signal Gold, Arial 15px/600 Chrome Label, active Navy Lift well only — no gold inset bar.
 
 ## Gradient System
 
