@@ -979,6 +979,50 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-dir-cols-guardians {
   grid-template-columns: minmax(0, 1.1fr) 0.8fr minmax(0, 1.15fr) minmax(0, 0.95fr) 0.85fr minmax(11rem, max-content) 64px;
 }
+.staff-dir-cols-sessions {
+  grid-template-columns: minmax(0, 1.05fr) minmax(7.5rem, 0.8fr) minmax(0, 1.05fr) minmax(0, 1.35fr) minmax(9rem, 0.85fr);
+}
+.staff-dir-cols-sessions > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.staff-dir-cols-seats {
+  grid-template-columns: minmax(0, 1.1fr) minmax(4.5rem, 0.55fr) minmax(0, 1fr) minmax(8rem, 0.75fr);
+}
+.staff-dir-cols-seats > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.staff-dir-table .table-row.staff-dir-row-issue {
+  background: #fffbf3;
+}
+.staff-dir-table .table-row.staff-dir-row-issue:hover {
+  background: #fff6e3;
+}
+.design-preview-note {
+  background: var(--gold-soft);
+  border: 1px solid #e8d4a8;
+  padding: 10px 14px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #5c4a1a;
+  border-radius: var(--radius-sm);
+}
+.design-preview-note a {
+  color: var(--navy);
+  font-weight: 800;
+  text-decoration: none;
+}
+.design-preview-note a:hover {
+  text-decoration: underline;
+}
+.design-preview-header-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 .directory-toolbar {
   display: flex;

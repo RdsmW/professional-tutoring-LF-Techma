@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
@@ -294,6 +295,13 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
   return (
     <>
       <PageIntro title="Settings" action={headerAction} />
+
+      <p className="design-preview-note">
+        Design previews:{" "}
+        <Link href="/staff/design-preview/sessions">Sessions merge</Link>
+        {" · "}
+        <Link href="/staff/design-preview/tutor-seats">Tutor seats</Link>
+      </p>
 
       <nav className="settings-tabs" aria-label="Settings sections">
         {TABS.map((item) => (
