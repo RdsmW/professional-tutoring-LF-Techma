@@ -1257,6 +1257,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </Panel>
 
         <StaffRecordIntegrationsCard
+          stackFields
           zohoId={family.zohoCrmId}
           zohoUrl={family.zohoCrmUrl}
           stripeCustomerId={family.stripeCustomerId ?? null}

@@ -25,6 +25,8 @@ export type StaffRecordIntegrationsInput = {
     acuity?: boolean;
     quickbooks?: boolean;
   };
+  /** Family detail: one field per row so long IDs are not cramped side-by-side. */
+  stackFields?: boolean;
 };
 
 type IntegrationField = {
@@ -127,6 +129,9 @@ export function StaffRecordPrimaryRow({
  */
 export function StaffRecordIntegrationsCard(props: StaffRecordIntegrationsInput) {
   const fields = buildIntegrationFields(props);
+  const fieldClass = props.stackFields
+    ? "staff-record-integrations-fields staff-record-integrations-fields--stack"
+    : "family-household-upper staff-record-integrations-fields";
 
   return (
     <Panel className={`${STAFF_RECORD_INFO_CARD_CLASS} staff-record-integrations-card`}>
@@ -135,7 +140,7 @@ export function StaffRecordIntegrationsCard(props: StaffRecordIntegrationsInput)
       </div>
       <div className="family-household-summary">
         <div className="family-household-dense">
-          <div className="family-household-upper staff-record-integrations-fields">
+          <div className={fieldClass}>
             {fields.map((field) => (
               <span key={field.id}>
                 <small>{field.label}</small>
