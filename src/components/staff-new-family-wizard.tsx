@@ -36,10 +36,12 @@ type Draft = {
   billingLastName: string;
   billingEmail: string;
   billingPhone: string;
+  billingIsBillingOwner: boolean;
   secondFirstName: string;
   secondLastName: string;
   secondEmail: string;
   secondPhone: string;
+  secondIsBillingOwner: boolean;
   studentDisplayName: string;
   secondStudentDisplayName: string;
   provenanceNotes: string;
@@ -59,10 +61,12 @@ const emptyDraft: Draft = {
   billingLastName: "",
   billingEmail: "",
   billingPhone: "",
+  billingIsBillingOwner: true,
   secondFirstName: "",
   secondLastName: "",
   secondEmail: "",
   secondPhone: "",
+  secondIsBillingOwner: false,
   studentDisplayName: "",
   secondStudentDisplayName: "",
   provenanceNotes: "",
@@ -102,11 +106,15 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
   const reviewLines = useMemo(() => {
     const lines = [
       `Household → ${draft.displayName.trim() || "(unnamed)"}`,
-      `Guardian → ${draft.billingFirstName.trim()} ${draft.billingLastName.trim()} · ${draft.billingEmail.trim()} · Billing owner`,
+      `Guardian → ${draft.billingFirstName.trim()} ${draft.billingLastName.trim()} · ${draft.billingEmail.trim()}${
+        draft.billingIsBillingOwner ? " · Billing owner" : ""
+      }`,
     ];
     if (draft.secondEmail.trim()) {
       lines.push(
-        `Guardian → ${draft.secondFirstName.trim()} ${draft.secondLastName.trim()} · ${draft.secondEmail.trim()}`,
+        `Guardian → ${draft.secondFirstName.trim()} ${draft.secondLastName.trim()} · ${draft.secondEmail.trim()}${
+          draft.secondIsBillingOwner ? " · Billing owner" : ""
+        }`,
       );
     }
     if (draft.studentDisplayName.trim()) {
@@ -215,10 +223,13 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
           billingLastName: draft.billingLastName,
           billingEmail: draft.billingEmail,
           billingPhone: draft.billingPhone,
+          billingIsBillingOwner: draft.billingIsBillingOwner === true,
           secondFirstName: secondGuardianOpen && secondGuardianComplete ? draft.secondFirstName : "",
           secondLastName: secondGuardianOpen && secondGuardianComplete ? draft.secondLastName : "",
           secondEmail: secondGuardianOpen && secondGuardianComplete ? draft.secondEmail : "",
           secondPhone: secondGuardianOpen && secondGuardianComplete ? draft.secondPhone : "",
+          secondIsBillingOwner:
+            secondGuardianOpen && secondGuardianComplete && draft.secondIsBillingOwner === true,
           studentDisplayName: draft.studentDisplayName,
           secondStudentDisplayName: secondStudentOpen ? draft.secondStudentDisplayName : "",
         }),
@@ -516,6 +527,22 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
               Billing guardian phone
               <input value={draft.billingPhone} onChange={(e) => patch({ billingPhone: e.target.value })} />
             </label>
+            <label>
+              Billing owner
+              <select
+                value={draft.billingIsBillingOwner ? "yes" : "no"}
+                onChange={(e) => {
+                  const next = e.target.value === "yes";
+                  patch({
+                    billingIsBillingOwner: next,
+                    secondIsBillingOwner: next ? false : draft.secondIsBillingOwner,
+                  });
+                }}
+              >
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
           </div>
 
           {!secondGuardianOpen ? (
@@ -574,6 +601,22 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
                     }}
                   />
                 </label>
+                <label>
+                  Billing owner
+                  <select
+                    value={draft.secondIsBillingOwner ? "yes" : "no"}
+                    onChange={(e) => {
+                      const next = e.target.value === "yes";
+                      patch({
+                        secondIsBillingOwner: next,
+                        billingIsBillingOwner: next ? false : draft.billingIsBillingOwner,
+                      });
+                    }}
+                  >
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </label>
               </div>
               <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button type="button" className="secondary-button" onClick={() => void checkSecondGuardianMatch()}>
@@ -591,6 +634,8 @@ export function StaffNewFamilyWizard({ onCancel }: { onCancel: () => void }) {
                       secondLastName: "",
                       secondEmail: "",
                       secondPhone: "",
+                      secondIsBillingOwner: false,
+                      billingIsBillingOwner: draft.billingIsBillingOwner || draft.secondIsBillingOwner,
                     });
                   }}
                 >

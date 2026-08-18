@@ -198,7 +198,10 @@ export function StaffFamiliesClient({
       const response = await fetch(`/api/staff/families/${guardianForm.householdId}/guardians`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(guardianForm),
+        body: JSON.stringify({
+          ...guardianForm,
+          isBillingOwner: guardianForm.isBillingOwner === true,
+        }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
@@ -284,15 +287,20 @@ export function StaffFamiliesClient({
                   onChange={(e) => setGuardianForm({ ...guardianForm, phone: e.target.value })}
                 />
               </label>
-              <label className="staff-edit-billing-check">
+              <label>
                 Billing owner
-                <input
-                  type="checkbox"
-                  checked={guardianForm.isBillingOwner}
+                <select
+                  value={guardianForm.isBillingOwner ? "yes" : "no"}
                   onChange={(e) =>
-                    setGuardianForm({ ...guardianForm, isBillingOwner: e.target.checked })
+                    setGuardianForm({
+                      ...guardianForm,
+                      isBillingOwner: e.target.value === "yes",
+                    })
                   }
-                />
+                >
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
               </label>
             </div>
           </div>
