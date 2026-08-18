@@ -8,7 +8,7 @@ export const AUTH_BRAND_STATS = [
     icon: "years" as const,
   },
   {
-    label: "SAT +150–250 · ACT +5 and more",
+    label: "SAT gains of 150–250 points and more, and ACT gains of 5 points and often more.",
     icon: "trend" as const,
   },
 ];
