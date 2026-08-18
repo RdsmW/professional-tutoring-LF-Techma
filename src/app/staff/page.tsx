@@ -370,7 +370,7 @@ export default async function StaffDashboardPage() {
                   <strong>{priorityRequestTotal}</strong>
                 </span>
               </div>
-              <Link href="/staff/sessions" className="text-button">
+              <Link href="/staff/sessions?tab=issues" className="text-button">
                 Open sessions
               </Link>
             </div>
@@ -408,7 +408,7 @@ export default async function StaffDashboardPage() {
               <span className="eyebrow">Capacity</span>
               <h3>This week</h3>
             </div>
-            <Link href="/staff/scheduling" className="text-button">
+            <Link href="/staff/sessions" className="text-button">
               Open schedule
             </Link>
           </div>
@@ -416,7 +416,7 @@ export default async function StaffDashboardPage() {
             {data.weekBars.map((row) => (
               <Link
                 key={row.day}
-                href="/staff/scheduling"
+                href="/staff/sessions"
                 className="capacity-row"
               >
                 <span>{row.day}</span>

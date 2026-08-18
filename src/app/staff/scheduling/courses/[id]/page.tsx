@@ -234,8 +234,8 @@ export default function StaffCourseRosterPage() {
 
   return (
     <>
-      <Link href="/staff/scheduling" className="page-back" style={{ display: "inline-block", marginBottom: 12 }}>
-        ← Back to Scheduling
+      <Link href="/staff/sessions?tab=classes" className="page-back" style={{ display: "inline-block", marginBottom: 12 }}>
+        ← Sessions
       </Link>
       <PageIntro
         title={course?.name ?? "Course roster"}

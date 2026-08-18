@@ -1,5 +1,5 @@
-import { StaffSchedulingClient } from "@/components/staff-scheduling-client";
+import { redirect } from "next/navigation";
 
 export default function StaffSchedulingPage() {
-  return <StaffSchedulingClient />;
+  redirect("/staff/sessions");
 }

@@ -239,7 +239,7 @@ export function StaffChangeRequestReview({
                 <span>Decline</span>
                 <span>→</span>
               </button>
-              <Link href={relatedHref ?? "/staff/scheduling"} className="staff-request-reschedule">
+              <Link href={relatedHref ?? "/staff/sessions"} className="staff-request-reschedule">
                 <span>Open schedule</span>
                 <span>→</span>
               </Link>

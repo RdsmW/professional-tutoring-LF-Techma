@@ -151,7 +151,9 @@ export function StaffDesignPreviewSessionsClient() {
       </section>
 
       <p className="design-preview-note">
-        Static mock — merged week view for tutoring, classes, and tests.{" "}
+        Static mock — the live table is on{" "}
+        <Link href="/staff/sessions">Sessions</Link>
+        {" · "}
         <Link href="/staff/settings">Back to Settings</Link>
       </p>
 

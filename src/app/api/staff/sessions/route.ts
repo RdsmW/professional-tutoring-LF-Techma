@@ -1,80 +1,132 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, ilike, or, SQL } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { bookings, households, students, tutors } from "@/lib/db/schema";
+import {
+  availabilitySlots,
+  bookings,
+  courseEnrollments,
+  courseOfferings,
+  paymentRecords,
+  students,
+  subjects,
+  tutors,
+} from "@/lib/db/schema";
+import { ACTIVE_ENROLLMENT_STATUSES } from "@/lib/enrollment/status";
 import { getStaffContext } from "@/lib/staff/session";
+import {
+  PAYMENT_ISSUE_STATUSES,
+  buildStaffSessionRows,
+  startOfWeekNy,
+  weekRangeLabel,
+} from "@/lib/staff/sessions-list";
 
-const BOOKING_STATUSES = new Set([
-  "draft",
-  "held",
-  "pending_payment",
-  "pending_staff_review",
-  "confirmed",
-  "cancelled",
-  "failed",
-]);
-
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const context = await getStaffContext();
     if (!context) {
       return NextResponse.json({ ok: false, error: "Staff profile not found" }, { status: 404 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const status = (searchParams.get("status") ?? "").trim();
-    const q = (searchParams.get("q") ?? "").trim();
-
-    if (status && !BOOKING_STATUSES.has(status)) {
-      return NextResponse.json({ ok: false, error: "Invalid status filter." }, { status: 400 });
-    }
-
     const database = requireDb();
-    const filters: SQL[] = [];
-    if (status) {
-      filters.push(eq(bookings.status, status as typeof bookings.$inferSelect.status));
-    }
-    if (q) {
-      const pattern = `%${q}%`;
-      filters.push(
-        or(
-          ilike(students.displayName, pattern),
-          ilike(tutors.displayName, pattern),
-          ilike(households.displayName, pattern),
-        )!,
-      );
+    const weekStart = startOfWeekNy();
+
+    const [bookingRows, slotRows, courseRows, paymentRows] = await Promise.all([
+      database
+        .select({
+          id: bookings.id,
+          status: bookings.status,
+          seatsClaimed: bookings.seatsClaimed,
+          studentName: students.displayName,
+          tutorId: bookings.tutorId,
+          tutorName: tutors.displayName,
+          subjectName: subjects.name,
+          subjectCode: subjects.code,
+          subjectCategory: subjects.category,
+          slotId: bookings.slotId,
+          slotStart: availabilitySlots.startTimeLocal,
+          slotEnd: availabilitySlots.endTimeLocal,
+          slotDay: availabilitySlots.dayOfWeek,
+          slotLabel: availabilitySlots.label,
+        })
+        .from(bookings)
+        .innerJoin(students, eq(bookings.studentId, students.id))
+        .leftJoin(tutors, eq(bookings.tutorId, tutors.id))
+        .leftJoin(subjects, eq(bookings.subjectId, subjects.id))
+        .leftJoin(availabilitySlots, eq(bookings.slotId, availabilitySlots.id)),
+      database
+        .select({
+          id: availabilitySlots.id,
+          tutorId: availabilitySlots.tutorId,
+          tutorName: tutors.displayName,
+          dayOfWeek: availabilitySlots.dayOfWeek,
+          startTimeLocal: availabilitySlots.startTimeLocal,
+          endTimeLocal: availabilitySlots.endTimeLocal,
+          capacitySeats: availabilitySlots.capacitySeats,
+          label: availabilitySlots.label,
+          active: availabilitySlots.active,
+        })
+        .from(availabilitySlots)
+        .innerJoin(tutors, eq(availabilitySlots.tutorId, tutors.id))
+        .where(eq(availabilitySlots.active, true)),
+      database
+        .select({
+          id: courseOfferings.id,
+          name: courseOfferings.name,
+          scheduleSummary: courseOfferings.scheduleSummary,
+          enrolledCount: courseOfferings.enrolledCount,
+          active: courseOfferings.active,
+        })
+        .from(courseOfferings)
+        .where(eq(courseOfferings.active, true)),
+      database
+        .select({
+          relatedEntityType: paymentRecords.relatedEntityType,
+          relatedEntityId: paymentRecords.relatedEntityId,
+          status: paymentRecords.status,
+        })
+        .from(paymentRecords)
+        .where(inArray(paymentRecords.status, [...PAYMENT_ISSUE_STATUSES])),
+    ]);
+
+    const courseIds = courseRows.map((row) => row.id);
+    const enrollmentCountMap = new Map<string, number>();
+    const enrollmentCourseIds = new Map<string, string>();
+    if (courseIds.length > 0) {
+      const enrollmentRows = await database
+        .select({
+          id: courseEnrollments.id,
+          courseOfferingId: courseEnrollments.courseOfferingId,
+          status: courseEnrollments.status,
+        })
+        .from(courseEnrollments)
+        .where(
+          and(
+            inArray(courseEnrollments.courseOfferingId, courseIds),
+            inArray(courseEnrollments.status, [...ACTIVE_ENROLLMENT_STATUSES]),
+          ),
+        );
+      for (const row of enrollmentRows) {
+        enrollmentCourseIds.set(row.id, row.courseOfferingId);
+        enrollmentCountMap.set(row.courseOfferingId, (enrollmentCountMap.get(row.courseOfferingId) ?? 0) + 1);
+      }
     }
 
-    const rows = await database
-      .select({
-        id: bookings.id,
-        status: bookings.status,
-        studentId: bookings.studentId,
-        householdId: bookings.householdId,
-        createdAt: bookings.createdAt,
-        studentName: students.displayName,
-        tutorName: tutors.displayName,
-        householdName: households.displayName,
-      })
-      .from(bookings)
-      .innerJoin(students, eq(bookings.studentId, students.id))
-      .innerJoin(households, eq(bookings.householdId, households.id))
-      .leftJoin(tutors, eq(bookings.tutorId, tutors.id))
-      .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(desc(bookings.createdAt));
+    const rows = buildStaffSessionRows({
+      weekStart,
+      bookings: bookingRows,
+      slots: slotRows,
+      courses: courseRows.map((row) => ({
+        ...row,
+        enrolledCount: enrollmentCountMap.get(row.id) ?? row.enrolledCount,
+      })),
+      payments: paymentRows,
+      enrollmentCourseIds,
+    });
 
     return NextResponse.json({
       ok: true,
-      sessions: rows.map((row) => ({
-        id: row.id,
-        status: row.status,
-        studentName: row.studentName,
-        tutorName: row.tutorName,
-        householdName: row.householdName,
-        householdId: row.householdId,
-        studentId: row.studentId,
-        createdAt: row.createdAt.toISOString(),
-      })),
+      weekLabel: weekRangeLabel(weekStart),
+      rows,
     });
   } catch (error) {
     console.warn("[staff/sessions] GET soft-fail", error);

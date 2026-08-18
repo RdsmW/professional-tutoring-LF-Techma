@@ -297,8 +297,10 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
       <PageIntro title="Settings" action={headerAction} />
 
       <p className="design-preview-note">
-        Design previews:{" "}
-        <Link href="/staff/design-preview/sessions">Sessions merge</Link>
+        Live: <Link href="/staff/sessions">Sessions</Link>
+        {" · "}
+        Preview:{" "}
+        <Link href="/staff/design-preview/sessions">Sessions mock</Link>
         {" · "}
         <Link href="/staff/design-preview/tutor-seats">Tutor seats</Link>
       </p>

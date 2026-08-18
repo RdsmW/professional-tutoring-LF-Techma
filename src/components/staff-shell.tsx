@@ -37,7 +37,11 @@ export function StaffShell({
             const active =
               item.href === "/staff"
                 ? pathname === "/staff"
-                : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                : item.href === "/staff/sessions"
+                  ? pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`) ||
+                    pathname.startsWith("/staff/scheduling")
+                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
