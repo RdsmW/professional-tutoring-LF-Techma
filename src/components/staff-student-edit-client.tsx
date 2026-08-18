@@ -10,7 +10,6 @@ import {
   StaffRecordEditShell,
   StaffWrapSelect,
 } from "@/components/staff-record-edit-shell";
-import { StaffZohoCrmFields } from "@/components/staff-zoho-crm-fields";
 import {
   composeLearningNeeds,
   learningNeedsToEditState,
@@ -76,8 +75,6 @@ type ProfileForm = {
   learningNeedNotes: string;
   availabilityNotes: string;
   description: string;
-  zohoDealId: string;
-  zohoDealUrl: string;
   academicYear: string;
   preferredScheduleIds: string[];
   hoursRatePackage: string;
@@ -137,8 +134,6 @@ function toProfileForm(student: StudentDetail): ProfileForm {
     learningNeedNotes: learningEdit.notes,
     availabilityNotes: student.availabilityNotes ?? "",
     description: student.description ?? "",
-    zohoDealId: student.zohoDealId ?? "",
-    zohoDealUrl: student.zohoDealUrl ?? "",
     academicYear: student.academicYear ?? "",
     preferredScheduleIds: parseScheduleIds(student.preferredSchedule),
     hoursRatePackage: student.hoursRatePackage ?? "",
@@ -639,8 +634,6 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             </div>
           </div>
         </div>
-
-        <StaffZohoCrmFields crmId={profileForm.zohoDealId} crmUrl={profileForm.zohoDealUrl} />
       </StaffRecordEditShell>
     </>
   );

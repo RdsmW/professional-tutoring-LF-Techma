@@ -4,7 +4,7 @@ import { Panel } from "@/components/ui";
 export type StaffRecordIntegrationsInput = {
   /** Zoho CRM contact/account ID, or student deal ID. */
   zohoId?: string | null;
-  /** Zoho CRM record URL from the edit form. */
+  /** Zoho CRM record URL (read-only; filled by integration later). */
   zohoUrl?: string | null;
   /** Stripe customer ID when the record owns one (families). */
   stripeCustomerId?: string | null;
@@ -18,7 +18,7 @@ export type StaffRecordIntegrationsInput = {
   quickbooksUrl?: string | null;
   /**
    * Which extra integrations this entity type stores.
-   * Only filled values render; empty card is omitted.
+   * Stripe / Acuity / QuickBooks render only when filled.
    */
   supports?: {
     stripe?: boolean;
@@ -54,64 +54,50 @@ function buildIntegrationFields({
   acuityUrl = null,
   quickbooksId = null,
   quickbooksUrl = null,
-  supports: supportsProp,
 }: StaffRecordIntegrationsInput): IntegrationField[] {
-  const supports = {
-    stripe: false,
-    acuity: false,
-    quickbooks: false,
-    ...supportsProp,
-  };
-
   const zohoUrlValue = trimmed(zohoUrl);
   const acuityUrlValue = trimmed(acuityUrl);
   const quickbooksUrlValue = trimmed(quickbooksUrl);
   const fields: IntegrationField[] = [];
 
   const zohoIdValue = trimmed(zohoId);
-  if (zohoIdValue) fields.push({ id: "zoho-id", label: "Zoho CRM ID", value: zohoIdValue });
-  if (zohoUrlValue) {
+  fields.push({ id: "zoho-id", label: "Zoho CRM ID", value: zohoIdValue ?? "" });
+  fields.push({
+    id: "zoho-url",
+    label: "Zoho CRM URL",
+    value: zohoUrlValue ?? "",
+    href: zohoUrlValue ? externalHref(zohoUrlValue) : null,
+  });
+
+  const stripeUser = trimmed(stripeCustomerId);
+  const stripePm = trimmed(stripePaymentMethodId);
+  if (stripeUser) fields.push({ id: "stripe-user", label: "Stripe User ID", value: stripeUser });
+  if (stripePm) {
+    fields.push({ id: "stripe-payment-method", label: "Stripe payment method ID", value: stripePm });
+  }
+
+  const acuityIdValue = trimmed(acuityId);
+  if (acuityIdValue) fields.push({ id: "acuity-id", label: "Acuity ID", value: acuityIdValue });
+  if (acuityUrlValue) {
     fields.push({
-      id: "zoho-url",
-      label: "Zoho CRM URL",
-      value: zohoUrlValue,
-      href: externalHref(zohoUrlValue),
+      id: "acuity-url",
+      label: "Acuity URL",
+      value: acuityUrlValue,
+      href: externalHref(acuityUrlValue),
     });
   }
 
-  if (supports.stripe) {
-    const stripeUser = trimmed(stripeCustomerId);
-    const stripePm = trimmed(stripePaymentMethodId);
-    if (stripeUser) fields.push({ id: "stripe-user", label: "Stripe User ID", value: stripeUser });
-    if (stripePm) {
-      fields.push({ id: "stripe-payment-method", label: "Stripe payment method ID", value: stripePm });
-    }
+  const quickbooksIdValue = trimmed(quickbooksId);
+  if (quickbooksIdValue) {
+    fields.push({ id: "quickbooks-id", label: "QuickBooks ID", value: quickbooksIdValue });
   }
-  if (supports.acuity) {
-    const acuityIdValue = trimmed(acuityId);
-    if (acuityIdValue) fields.push({ id: "acuity-id", label: "Acuity ID", value: acuityIdValue });
-    if (acuityUrlValue) {
-      fields.push({
-        id: "acuity-url",
-        label: "Acuity URL",
-        value: acuityUrlValue,
-        href: externalHref(acuityUrlValue),
-      });
-    }
-  }
-  if (supports.quickbooks) {
-    const quickbooksIdValue = trimmed(quickbooksId);
-    if (quickbooksIdValue) {
-      fields.push({ id: "quickbooks-id", label: "QuickBooks ID", value: quickbooksIdValue });
-    }
-    if (quickbooksUrlValue) {
-      fields.push({
-        id: "quickbooks-url",
-        label: "QuickBooks URL",
-        value: quickbooksUrlValue,
-        href: externalHref(quickbooksUrlValue),
-      });
-    }
+  if (quickbooksUrlValue) {
+    fields.push({
+      id: "quickbooks-url",
+      label: "QuickBooks URL",
+      value: quickbooksUrlValue,
+      href: externalHref(quickbooksUrlValue),
+    });
   }
 
   return fields;
@@ -126,11 +112,11 @@ export function StaffRecordPrimaryRow({ children }: { children: ReactNode }) {
 
 /**
  * Field-value Integrations card for Family / Guardian / Student / Tutor detail.
- * Hidden entirely when no IDs/URLs are filled. No live API calls.
+ * Zoho CRM ID and URL always show (empty allowed). Other integrations only when filled.
+ * Read-only — staff do not edit these values.
  */
 export function StaffRecordIntegrationsCard(props: StaffRecordIntegrationsInput) {
   const fields = buildIntegrationFields(props);
-  if (fields.length === 0) return null;
 
   return (
     <Panel className={`${STAFF_RECORD_INFO_CARD_CLASS} staff-record-integrations-card`}>

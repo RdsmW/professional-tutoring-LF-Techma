@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { StaffEditSectionLabel, StaffRecordEditShell } from "@/components/staff-record-edit-shell";
-import { StaffZohoCrmFields } from "@/components/staff-zoho-crm-fields";
 import { isValidPhone } from "@/lib/validation/contact";
 
 type GuardianRow = {
@@ -24,8 +23,6 @@ type FamilyDetail = {
   city: string | null;
   state: string | null;
   postalCode: string | null;
-  zohoCrmId: string | null;
-  zohoCrmUrl: string | null;
   billingOwnerGuardianId: string | null;
   cardOnFile: boolean;
   autoCharge: boolean;
@@ -40,8 +37,6 @@ type HouseholdEdit = {
   city: string;
   state: string;
   postalCode: string;
-  zohoCrmId: string;
-  zohoCrmUrl: string;
   billingOwnerGuardianId: string;
   cardOnFile: boolean;
   autoCharge: boolean;
@@ -56,8 +51,6 @@ function householdFormFromFamily(next: FamilyDetail): HouseholdEdit {
     city: next.city || "",
     state: next.state || "",
     postalCode: next.postalCode || "",
-    zohoCrmId: next.zohoCrmId || "",
-    zohoCrmUrl: next.zohoCrmUrl || "",
     billingOwnerGuardianId: next.billingOwnerGuardianId || "",
     cardOnFile: next.cardOnFile,
     autoCharge: next.autoCharge,
@@ -286,8 +279,6 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
             </select>
           </label>
         </div>
-
-        <StaffZohoCrmFields crmId={householdForm.zohoCrmId} crmUrl={householdForm.zohoCrmUrl} />
       </StaffRecordEditShell>
     </>
   );

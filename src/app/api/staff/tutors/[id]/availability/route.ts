@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { availabilitySlots, tutors } from "@/lib/db/schema";
+import { availabilitySlots, bookings, students, tutors } from "@/lib/db/schema";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -17,6 +17,24 @@ type CreateBody = {
 
 const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
 
+const OCCUPIED_BOOKING_STATUSES = ["held", "pending_payment", "pending_staff_review", "confirmed"] as const;
+
+type SlotOccupant = {
+  studentId: string;
+  studentName: string;
+  bookingId: string;
+  status: string;
+  seatsClaimed: number;
+};
+
+type SlotSeat = {
+  seat: number;
+  studentId: string | null;
+  studentName: string | null;
+  bookingId: string | null;
+  state: string;
+};
+
 /** Accept HH:MM or HH:MM:SS from forms/DB; always store/return HH:MM. */
 function normalizeTime(value: string): string | null {
   const trimmed = value.trim();
@@ -27,7 +45,50 @@ function normalizeTime(value: string): string | null {
   return `${hour}:${minute}`;
 }
 
-function serializeSlot(slot: typeof availabilitySlots.$inferSelect) {
+function buildSlotSeats(capacitySeats: number, occupants: SlotOccupant[]): SlotSeat[] {
+  const expanded: Array<{
+    studentId: string;
+    studentName: string;
+    bookingId: string;
+    status: string;
+  }> = [];
+  for (const occupant of occupants) {
+    const claimed = Math.max(1, Math.floor(Number(occupant.seatsClaimed)) || 1);
+    for (let i = 0; i < claimed; i += 1) {
+      expanded.push({
+        studentId: occupant.studentId,
+        studentName: occupant.studentName,
+        bookingId: occupant.bookingId,
+        status: occupant.status,
+      });
+    }
+  }
+
+  const seats: SlotSeat[] = [];
+  for (let seat = 1; seat <= capacitySeats; seat += 1) {
+    const occupant = expanded[seat - 1];
+    if (occupant) {
+      seats.push({
+        seat,
+        studentId: occupant.studentId,
+        studentName: occupant.studentName,
+        bookingId: occupant.bookingId,
+        state: occupant.status,
+      });
+    } else {
+      seats.push({
+        seat,
+        studentId: null,
+        studentName: null,
+        bookingId: null,
+        state: "open",
+      });
+    }
+  }
+  return seats;
+}
+
+function serializeSlot(slot: typeof availabilitySlots.$inferSelect, seats?: SlotSeat[]) {
   return {
     id: slot.id,
     tutorId: slot.tutorId,
@@ -40,6 +101,7 @@ function serializeSlot(slot: typeof availabilitySlots.$inferSelect) {
     active: slot.active,
     label: slot.label,
     scheduleWindowId: slot.scheduleWindowId,
+    seats: seats ?? buildSlotSeats(slot.capacitySeats, []),
   };
 }
 
@@ -68,9 +130,45 @@ export async function GET(_request: Request, context: RouteContext) {
       .where(and(eq(availabilitySlots.tutorId, tutorId), eq(availabilitySlots.active, true)))
       .orderBy(asc(availabilitySlots.dayOfWeek), asc(availabilitySlots.startTimeLocal));
 
+    const occupancyRows = await database
+      .select({
+        slotId: bookings.slotId,
+        bookingId: bookings.id,
+        status: bookings.status,
+        seatsClaimed: bookings.seatsClaimed,
+        studentId: students.id,
+        studentName: students.displayName,
+      })
+      .from(bookings)
+      .innerJoin(students, eq(bookings.studentId, students.id))
+      .where(
+        and(
+          eq(bookings.tutorId, tutorId),
+          isNotNull(bookings.slotId),
+          inArray(bookings.status, [...OCCUPIED_BOOKING_STATUSES]),
+        ),
+      )
+      .orderBy(asc(bookings.createdAt));
+
+    const occupantsBySlot = new Map<string, SlotOccupant[]>();
+    for (const row of occupancyRows) {
+      if (!row.slotId) continue;
+      const list = occupantsBySlot.get(row.slotId) ?? [];
+      list.push({
+        studentId: row.studentId,
+        studentName: row.studentName,
+        bookingId: row.bookingId,
+        status: row.status,
+        seatsClaimed: row.seatsClaimed,
+      });
+      occupantsBySlot.set(row.slotId, list);
+    }
+
     return NextResponse.json({
       ok: true,
-      slots: slots.map(serializeSlot),
+      slots: slots.map((slot) =>
+        serializeSlot(slot, buildSlotSeats(slot.capacitySeats, occupantsBySlot.get(slot.id) ?? [])),
+      ),
     });
   } catch (error) {
     console.warn("[staff/tutors/availability] GET soft-fail", error);

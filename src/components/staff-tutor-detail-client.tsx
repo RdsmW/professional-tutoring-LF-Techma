@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import {
   IconArchive,
+  IconNote,
   IconPencil,
   IconRestore,
   IconTrash,
@@ -62,6 +63,13 @@ type OpenHourSlot = {
   heldSeats: number;
   bookedSeats: number;
   label: string | null;
+  seats?: Array<{
+    seat: number;
+    studentId: string | null;
+    studentName: string | null;
+    bookingId: string | null;
+    state: string;
+  }>;
 };
 
 type TutorLifecycleConfirm = "archive" | "restore" | "delete";
@@ -77,6 +85,7 @@ const WEEKDAY_OPTIONS = [
 ] as const;
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function formatTimeLabel(value: string) {
   return formatTime12hEnglish(value);
@@ -214,6 +223,7 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
   const [openEnd, setOpenEnd] = useState("17:15");
   const [addingHour, setAddingHour] = useState(false);
   const [removingHourId, setRemovingHourId] = useState<string | null>(null);
+  const [noteComposerOpen, setNoteComposerOpen] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -592,6 +602,13 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           ← Tutors
         </Link>
         <div className="family-detail-topbar-actions">
+          <StaffIconButton
+            label="Add note"
+            title="Add note"
+            onClick={() => setNoteComposerOpen(true)}
+          >
+            <IconNote size={15} />
+          </StaffIconButton>
           <Link
             href={`/staff/tutors/${tutorId}/edit`}
             className="staff-icon-btn staff-icon-btn-edit"
@@ -839,7 +856,77 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
         </div>
       </Panel>
 
+      <Panel className="family-equal-panel tutor-seat-grid-panel">
+        <div className="tutor-seat-grid-heading">
+          <div className="family-panel-heading">
+            <h2>Seat grid</h2>
+          </div>
+          <p className="tutor-seat-grid-helper">
+            Per-window seat assignments for this tutor&apos;s open hours.
+          </p>
+        </div>
+        {openHours.length === 0 ? (
+          <p className="tutor-open-hours-empty tutor-seat-grid-empty">No open hours yet. Add a weekly time above.</p>
+        ) : (
+          <div className="table-panel staff-dir-table">
+            <div className="table-head staff-dir-cols-seats">
+              <span>Window</span>
+              <span>Seat</span>
+              <span>Student</span>
+              <span className="staff-dir-col-status">State</span>
+            </div>
+            {openHours.flatMap((slot) => {
+              const dayShort = DAY_SHORT[slot.dayOfWeek] ?? `D${slot.dayOfWeek}`;
+              const windowLabel = `${dayShort} · ${formatTimeLabel(slot.startTimeLocal)}`;
+              const seats =
+                slot.seats && slot.seats.length > 0
+                  ? slot.seats
+                  : Array.from({ length: slot.capacitySeats }, (_, index) => ({
+                      seat: index + 1,
+                      studentId: null as string | null,
+                      studentName: null as string | null,
+                      bookingId: null as string | null,
+                      state: "open",
+                    }));
+              return seats.map((seat) => {
+                const isOpen = seat.state === "open";
+                const studentLabel = isOpen ? "OPEN" : seat.studentName?.trim() || "Booked";
+                const rowKey = `${slot.id}-${seat.seat}`;
+                const rowClass = `table-row staff-dir-cols-seats${isOpen ? " tutor-seat-row-static" : ""}`;
+                const cells = (
+                  <>
+                    <span>{windowLabel}</span>
+                    <span>{seat.seat}</span>
+                    <span className={isOpen ? "tutor-seat-open" : undefined}>{studentLabel}</span>
+                    <span className="staff-dir-col-status">
+                      <span className={`pill ${isOpen ? "amber" : statusTone(seat.state)}`}>
+                        {isOpen ? "Open" : formatStatusLabel(seat.state)}
+                      </span>
+                    </span>
+                  </>
+                );
+                if (!isOpen && seat.studentId) {
+                  return (
+                    <Link key={rowKey} href={`/staff/students/${seat.studentId}`} className={rowClass}>
+                      {cells}
+                    </Link>
+                  );
+                }
+                return (
+                  <div key={rowKey} className={rowClass}>
+                    {cells}
+                  </div>
+                );
+              });
+            })}
+          </div>
+        )}
+      </Panel>
+
       <StaffNotesSection
+        layout="list"
+        composerOpen={noteComposerOpen}
+        onComposerOpenChange={setNoteComposerOpen}
         notes={tutor.notesList}
         onCreate={createNote}
         onUpdate={updateNote}

@@ -1483,6 +1483,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   margin-top: 14px;
   align-items: stretch;
 }
+.family-notes-layout.family-notes-layout-list {
+  grid-template-columns: minmax(0, 1fr);
+}
 .student-payment-learning-band {
   /* Tutoring | Payment | Learning needs ~48% / 20% / 32% */
   grid-template-columns: minmax(0, 48fr) minmax(0, 20fr) minmax(0, 32fr);
@@ -1744,6 +1747,30 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .tutor-open-hours-remove:disabled {
   opacity: 0.65;
   cursor: wait;
+}
+.tutor-seat-grid-panel {
+  padding: 0;
+}
+.tutor-seat-grid-heading {
+  padding: 18px 18px 0;
+}
+.tutor-seat-grid-helper {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.tutor-seat-grid-empty {
+  padding: 0 18px 18px;
+}
+.tutor-seat-open {
+  font-weight: 800;
+  color: var(--muted);
+}
+.tutor-seat-row-static {
+  cursor: default;
+}
+.staff-dir-table .table-row.tutor-seat-row-static:hover {
+  background: var(--paper);
 }
 .student-payment-learning-band .family-household-summary,
 .student-payment-learning-band .student-learning-needs-body {
@@ -3252,6 +3279,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-record-integrations-fields {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.staff-record-integrations-fields strong {
+  min-height: 1.25em;
+}
 .staff-record-integrations-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3673,6 +3703,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   /* Keep Household ΓåÆ Guardians ΓåÆ Students stacked full-width (do not fall back to 2-col). */
   .family-detail-layout.family-detail-stack{grid-template-columns:minmax(0,1fr)}
   .family-activity-band,.family-notes-layout{grid-template-columns:1fr 1fr}
+  .family-notes-layout.family-notes-layout-list{grid-template-columns:minmax(0,1fr)}
   /* Tablet: Tutoring | Payment on row 1; Learning needs full width below */
   .student-payment-learning-band{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .student-payment-learning-band > .panel:last-child{grid-column:1 / -1}

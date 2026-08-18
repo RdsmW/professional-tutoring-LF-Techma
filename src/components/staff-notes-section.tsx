@@ -158,6 +158,13 @@ export type StaffNotesSectionProps = {
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
   helperText?: string;
+  /**
+   * `split` (default): Add note card + Notes list.
+   * `list`: full-width Notes only; parent opens the composer (e.g. toolbar icon).
+   */
+  layout?: "split" | "list";
+  composerOpen?: boolean;
+  onComposerOpenChange?: (open: boolean) => void;
 };
 
 /**
@@ -172,6 +179,9 @@ export function StaffNotesSection({
   onSuccess,
   onError,
   helperText = "Internal only — not visible in the family portal.",
+  layout = "split",
+  composerOpen = false,
+  onComposerOpenChange,
 }: StaffNotesSectionProps) {
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
@@ -184,6 +194,16 @@ export function StaffNotesSection({
 
   const previewNotes = notes.slice(0, PREVIEW_LIMIT);
   const editingNote = editingNoteId ? notes.find((note) => note.id === editingNoteId) ?? null : null;
+  const showComposerModal = layout === "list" && composerOpen;
+
+  useEffect(() => {
+    if (!showComposerModal) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && !savingNotes) onComposerOpenChange?.(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onComposerOpenChange, savingNotes, showComposerModal]);
 
   function startEditNote(note: StaffNoteItem) {
     setEditingNoteId(note.id);
@@ -202,12 +222,18 @@ export function StaffNotesSection({
     try {
       await onCreate(noteDraft);
       setNoteDraft("");
+      onComposerOpenChange?.(false);
       onSuccess("Note added.");
     } catch (error) {
       onError(errorMessage(error, "Unable to add note."));
     } finally {
       setSavingNotes(false);
     }
+  }
+
+  function closeComposer() {
+    if (savingNotes) return;
+    onComposerOpenChange?.(false);
   }
 
   async function saveNoteEdit(event: FormEvent) {
@@ -312,35 +338,43 @@ export function StaffNotesSection({
 
   return (
     <>
-      <div className="family-notes-layout staff-equal-cards">
-        <Panel className="family-notes-panel family-equal-panel">
-          <div className="family-panel-heading">
-            <h2>Add note</h2>
-          </div>
-          <div className="family-add-note-stretch">
-            <p className="family-add-note-helper">{helperText}</p>
-            <form onSubmit={(event) => void addNote(event)}>
-              <label className="family-add-note-label">
-                <span className="sr-only">Note</span>
-                <textarea
-                  value={noteDraft}
-                  onChange={(event) => setNoteDraft(event.target.value)}
-                  rows={4}
-                  placeholder="Add a staff note…"
-                />
-              </label>
-              <div className="family-add-note-footer">
-                <button
-                  type="submit"
-                  className="primary-button family-add-note-btn"
-                  disabled={savingNotes || !noteDraft.trim()}
-                >
-                  {savingNotes ? "Adding…" : "Add note"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </Panel>
+      <div
+        className={
+          layout === "list"
+            ? "family-notes-layout family-notes-layout-list staff-equal-cards"
+            : "family-notes-layout staff-equal-cards"
+        }
+      >
+        {layout === "split" ? (
+          <Panel className="family-notes-panel family-equal-panel">
+            <div className="family-panel-heading">
+              <h2>Add note</h2>
+            </div>
+            <div className="family-add-note-stretch">
+              <p className="family-add-note-helper">{helperText}</p>
+              <form onSubmit={(event) => void addNote(event)}>
+                <label className="family-add-note-label">
+                  <span className="sr-only">Note</span>
+                  <textarea
+                    value={noteDraft}
+                    onChange={(event) => setNoteDraft(event.target.value)}
+                    rows={4}
+                    placeholder="Add a staff note…"
+                  />
+                </label>
+                <div className="family-add-note-footer">
+                  <button
+                    type="submit"
+                    className="primary-button family-add-note-btn"
+                    disabled={savingNotes || !noteDraft.trim()}
+                  >
+                    {savingNotes ? "Adding…" : "Add note"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Panel>
+        ) : null}
 
         <Panel className="family-notes-panel family-equal-panel">
           <div className="family-panel-heading">
@@ -355,6 +389,55 @@ export function StaffNotesSection({
           </NotesListPreview>
         </Panel>
       </div>
+
+      {showComposerModal ? (
+        <div
+          className="staff-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !savingNotes) closeComposer();
+          }}
+        >
+          <div
+            className="staff-modal family-note-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="staff-note-add-title"
+          >
+            <div className="family-list-modal-header">
+              <h3 id="staff-note-add-title">Add note</h3>
+              <StaffIconButton label="Close" title="Cancel" tone="muted" disabled={savingNotes} onClick={closeComposer}>
+                <IconClose size={18} />
+              </StaffIconButton>
+            </div>
+            <form onSubmit={(event) => void addNote(event)} className="staff-modal-form family-note-edit-form">
+              <p className="family-add-note-helper">{helperText}</p>
+              <label className="family-note-edit-field">
+                Note
+                <textarea
+                  value={noteDraft}
+                  onChange={(event) => setNoteDraft(event.target.value)}
+                  rows={5}
+                  placeholder="Add a staff note…"
+                  autoFocus
+                />
+              </label>
+              <div className="staff-modal-actions">
+                <button type="button" className="secondary-button" disabled={savingNotes} onClick={closeComposer}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={savingNotes || !noteDraft.trim()}
+                >
+                  {savingNotes ? "Adding…" : "Add note"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {listModalOpen ? (
         <NotesListModal title="Notes" onClose={() => setListModalOpen(false)}>
