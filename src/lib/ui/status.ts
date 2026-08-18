@@ -10,7 +10,7 @@ export function formatStatusLabel(status: string | null | undefined) {
     .join(" ");
 }
 
-export type StatusTone = "mint" | "green" | "amber" | "gold" | "rose" | "blue" | "violet" | "";
+export type StatusTone = "mint" | "green" | "amber" | "gold" | "rose" | "blue" | "violet" | "navy" | "";
 
 /** Map domain status strings to pill tone classes. */
 export function statusTone(status: string | null | undefined): StatusTone {
@@ -42,8 +42,6 @@ export function statusTone(status: string | null | undefined): StatusTone {
       "submitted",
       "held",
       "draft",
-      "prospect",
-      "paused",
       "invite_pending",
       "unlinked",
       "unpaid",
@@ -79,6 +77,11 @@ export function statusTone(status: string | null | undefined): StatusTone {
 
   if (["review", "exceptions", "support", "open"].includes(key)) {
     return "blue";
+  }
+
+  /* Student lifecycle Prospect/Paused used gold and collided with card titles. */
+  if (["prospect", "paused"].includes(key)) {
+    return "navy";
   }
 
   return "blue";

@@ -21,7 +21,6 @@ import {
 } from "@/lib/staff/household-display-name";
 import { setHouseholdBillingOwner } from "@/lib/staff/guardians";
 import { getStaffContext, staffAuthErrorPayload } from "@/lib/staff/session";
-import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { isValidPhone, normalizePhone } from "@/lib/validation/contact";
 
 export async function GET(
@@ -357,8 +356,6 @@ export async function PATCH(
       zohoCrmId?: string | null;
       zohoCrmUrl?: string | null;
       billingOwnerGuardianId?: string | null;
-      cardOnFile?: boolean;
-      autoCharge?: boolean;
     };
 
     const database = requireDb();
@@ -460,33 +457,6 @@ export async function PATCH(
         }
         updates.billingOwnerGuardianId = owner.id;
         await setHouseholdBillingOwner(id, owner.id);
-      }
-    }
-
-    if (typeof body.autoCharge === "boolean") {
-      updates.autoCharge = body.autoCharge;
-    }
-
-    if (typeof body.cardOnFile === "boolean") {
-      updates.cardOnFile = body.cardOnFile;
-      if (!body.cardOnFile) {
-        // Clearing staff card flag also clears denormalized Stripe card display fields.
-        updates.stripeDefaultPaymentMethodId = null;
-        updates.cardBrand = null;
-        updates.cardLast4 = null;
-        // Soft-clear Stripe default so the next refreshCardOnFile does not re-promote it.
-        if (existing.stripeCustomerId && isStripeConfigured()) {
-          try {
-            const stripe = getStripe();
-            if (stripe) {
-              await stripe.customers.update(existing.stripeCustomerId, {
-                invoice_settings: { default_payment_method: "" },
-              });
-            }
-          } catch (error) {
-            console.warn("[staff/families/id] clear Stripe default PM soft-fail", error);
-          }
-        }
       }
     }
 

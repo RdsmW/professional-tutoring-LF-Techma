@@ -1014,19 +1014,6 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
               {portalBadge ? (
                 <small className="family-guardian-link-status">{portalBadge}</small>
               ) : null}
-              {!g.linked ? (
-                <button
-                  type="button"
-                  className="family-send-invite"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    void refreshInvite(g.id);
-                  }}
-                >
-                  {g.invitePath ? "Regenerate invite" : "Send invite"}
-                </button>
-              ) : null}
             </span>
             <span>
               <GuardianRelationshipRolePill role={g.relationshipRole} />
@@ -1223,7 +1210,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         </span>
       </section>
 
-      <StaffRecordPrimaryRow>
+      <StaffRecordPrimaryRow className="staff-record-primary-row--household-wide">
         <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Household</h2>

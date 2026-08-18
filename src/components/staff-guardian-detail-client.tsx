@@ -815,13 +815,21 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           <div className="family-household-summary">
             <div className="family-household-dense guardian-identity-dense">
               <StaffDetailFieldGroup className="family-household-upper">
-                <StaffDetailField label="First name">{guardian.firstName}</StaffDetailField>
-                <StaffDetailField label="Last name">{guardian.lastName}</StaffDetailField>
-                <StaffDetailField label="Email">{guardian.email}</StaffDetailField>
-                <StaffDetailField label="Phone">{guardian.phone}</StaffDetailField>
+                <StaffDetailField label="First name" showEmpty>
+                  {guardian.firstName}
+                </StaffDetailField>
+                <StaffDetailField label="Last name" showEmpty>
+                  {guardian.lastName}
+                </StaffDetailField>
+                <StaffDetailField label="Email" showEmpty>
+                  {guardian.email}
+                </StaffDetailField>
+                <StaffDetailField label="Phone" showEmpty>
+                  {guardian.phone}
+                </StaffDetailField>
               </StaffDetailFieldGroup>
               <StaffDetailFieldGroup className="family-household-lower guardian-identity-address-row">
-                <StaffDetailField label="Mailing address" className="family-household-field-address">
+                <StaffDetailField label="Mailing address" className="family-household-field-address" showEmpty>
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (
@@ -830,7 +838,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                     </div>
                   ) : null}
                 </StaffDetailField>
-                <StaffDetailField label="Other information" className="guardian-identity-other-field">
+                <StaffDetailField label="Other information" className="guardian-identity-other-field" showEmpty>
                   {guardian.otherInformation?.trim() ? (
                     <strong className="guardian-other-info-text">{guardian.otherInformation}</strong>
                   ) : null}
@@ -874,8 +882,6 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
             </div>
           </div>
         </Panel>
-
-        <StaffRecordIntegrationsCard zohoId={guardian.zohoCrmId} zohoUrl={guardian.zohoCrmUrl} />
       </StaffRecordPrimaryRow>
 
       {showStudents ? (
@@ -918,6 +924,10 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
           </Panel>
         </div>
       ) : null}
+
+      <StaffRecordPrimaryRow className="staff-record-integrations-band">
+        <StaffRecordIntegrationsCard zohoId={guardian.zohoCrmId} zohoUrl={guardian.zohoCrmUrl} />
+      </StaffRecordPrimaryRow>
 
       {SHOW_STAFF_NOTES ? (
         <StaffNotesSection

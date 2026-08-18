@@ -73,7 +73,6 @@ type ProfileForm = {
   cellPhone: string;
   learningNeedSubjectIds: string[];
   learningNeedNotes: string;
-  availabilityNotes: string;
   description: string;
   academicYear: string;
   preferredScheduleIds: string[];
@@ -132,7 +131,6 @@ function toProfileForm(student: StudentDetail): ProfileForm {
     cellPhone: student.cellPhone ?? "",
     learningNeedSubjectIds: learningEdit.subjectIds,
     learningNeedNotes: learningEdit.notes,
-    availabilityNotes: student.availabilityNotes ?? "",
     description: student.description ?? "",
     academicYear: student.academicYear ?? "",
     preferredScheduleIds: parseScheduleIds(student.preferredSchedule),
@@ -238,7 +236,6 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
           cellPhone: profileForm.cellPhone || null,
           learningNeeds:
             composeLearningNeeds(profileForm.learningNeedSubjectIds, profileForm.learningNeedNotes) || null,
-          availabilityNotes: profileForm.availabilityNotes || null,
           description: profileForm.description || null,
           academicYear: profileForm.academicYear || null,
           preferredSchedule: profileForm.preferredScheduleIds.join(",") || null,
@@ -349,7 +346,7 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             />
           </label>
         </div>
-        <div className="staff-edit-field-row staff-edit-field-row--5">
+        <div className="staff-edit-field-row staff-edit-field-row--4">
           <label>
             Grade
             <select
@@ -383,13 +380,6 @@ export function StaffStudentEditClient({ studentId }: { studentId: string }) {
             <input
               value={profileForm.schoolName}
               onChange={(e) => setProfileForm({ ...profileForm, schoolName: e.target.value })}
-            />
-          </label>
-          <label>
-            Availability
-            <input
-              value={profileForm.availabilityNotes}
-              onChange={(e) => setProfileForm({ ...profileForm, availabilityNotes: e.target.value })}
             />
           </label>
           <label>

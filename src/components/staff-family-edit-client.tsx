@@ -130,8 +130,6 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
           postalCode: householdForm.postalCode,
           country: "United States",
           billingOwnerGuardianId: householdForm.billingOwnerGuardianId || null,
-          cardOnFile: householdForm.cardOnFile,
-          autoCharge: householdForm.autoCharge,
         }),
       });
       const data = await response.json();
@@ -260,23 +258,11 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
           </label>
           <label>
             Card on file
-            <select
-              value={householdForm.cardOnFile ? "yes" : "no"}
-              onChange={(e) => setHouseholdForm({ ...householdForm, cardOnFile: e.target.value === "yes" })}
-            >
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
+            <input value={householdForm.cardOnFile ? "Yes" : "No"} readOnly />
           </label>
           <label>
             Auto-charge
-            <select
-              value={householdForm.autoCharge ? "yes" : "no"}
-              onChange={(e) => setHouseholdForm({ ...householdForm, autoCharge: e.target.value === "yes" })}
-            >
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
+            <input value={householdForm.autoCharge ? "Yes" : "No"} readOnly />
           </label>
         </div>
       </StaffRecordEditShell>

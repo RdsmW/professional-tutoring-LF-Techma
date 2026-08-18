@@ -588,7 +588,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <StaffRecordPrimaryRow>
+      <StaffRecordPrimaryRow className="staff-record-primary-row--profile-wide">
         <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Profile</h2>
@@ -607,14 +607,16 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 <StaffDetailField label="Grade">{formatGradeLabel(student.gradeLabel)}</StaffDetailField>
                 <StaffDetailField label="Grade year">{student.graduationYear}</StaffDetailField>
                 <StaffDetailField label="School">{student.schoolName}</StaffDetailField>
-                <StaffDetailField label="Availability">
-                  {student.availabilityNotes ? (
-                    <strong style={{ whiteSpace: "pre-wrap" }}>{student.availabilityNotes}</strong>
+                <StaffDetailField label="Family">
+                  {student.household ? (
+                    <Link href={`/staff/families/${student.household.id}`} className="family-household-payer-link">
+                      {student.household.displayName}
+                    </Link>
                   ) : null}
                 </StaffDetailField>
               </StaffDetailFieldGroup>
               <StaffDetailFieldGroup className="family-household-lower">
-                <StaffDetailField label="Mailing address" className="family-household-field-address">
+                <StaffDetailField label="Mailing address" className="family-household-field-address" showEmpty>
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (
@@ -624,15 +626,17 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   ) : null}
                 </StaffDetailField>
               </StaffDetailFieldGroup>
-              <StaffDetailFieldGroup className="family-household-lower student-profile-family-description-row">
-                <StaffDetailField label="Family">
-                  {student.household ? (
-                    <Link href={`/staff/families/${student.household.id}`} className="family-household-payer-link">
-                      {student.household.displayName}
-                    </Link>
-                  ) : null}
-                </StaffDetailField>
-                <StaffDetailField label="Description">
+            </div>
+          </div>
+        </Panel>
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
+          <div className="family-panel-heading">
+            <h2>Other information</h2>
+          </div>
+          <div className="family-household-summary">
+            <div className="family-household-dense">
+              <StaffDetailFieldGroup className="family-household-upper student-other-info-row">
+                <StaffDetailField label="Description" showEmpty>
                   {student.description ? (
                     <strong style={{ whiteSpace: "pre-wrap" }}>{student.description}</strong>
                   ) : null}
@@ -641,7 +645,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
             </div>
           </div>
         </Panel>
-        <StaffRecordIntegrationsCard zohoId={student.zohoDealId} zohoUrl={student.zohoDealUrl} />
       </StaffRecordPrimaryRow>
 
       <div className="student-payment-learning-band staff-equal-cards">
@@ -803,6 +806,10 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           </ListPreview>
         </Panel>
       </div>
+
+      <StaffRecordPrimaryRow className="staff-record-integrations-band">
+        <StaffRecordIntegrationsCard zohoId={student.zohoDealId} zohoUrl={student.zohoDealUrl} />
+      </StaffRecordPrimaryRow>
 
       {SHOW_STAFF_NOTES ? (
         <StaffNotesSection
