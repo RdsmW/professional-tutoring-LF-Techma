@@ -155,13 +155,14 @@ button { color: inherit; }
 .brand-lockup {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
   min-width: 0;
 }
 .brand-logo {
-  width: 40px;
+  width: auto;
   height: 40px;
   object-fit: contain;
+  object-position: left center;
   flex: 0 0 auto;
   display: block;
   border-radius: 2px;
@@ -3924,9 +3925,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   flex: 0 0 auto;
 }
 .auth-brand-mark {
-  width: 48px;
+  width: auto;
   height: 48px;
   object-fit: contain;
+  object-position: left center;
   flex: 0 0 auto;
   display: block;
   filter: brightness(0) invert(1);

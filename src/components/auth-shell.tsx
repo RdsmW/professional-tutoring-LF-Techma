@@ -20,9 +20,10 @@ export function AuthBrandPanel({
           <Image
             src="/brand/professional-tutoring-logo.png"
             alt=""
-            width={48}
-            height={48}
+            width={114}
+            height={153}
             className="auth-brand-mark"
+            style={{ width: "auto", height: 48 }}
             priority
           />
           <span className="auth-brand-wordmark">

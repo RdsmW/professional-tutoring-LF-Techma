@@ -15,9 +15,10 @@ export function SidebarBrand({
         <Image
           src="/brand/professional-tutoring-logo.png"
           alt="Professional Tutoring, LLC"
-          width={48}
-          height={48}
+          width={114}
+          height={153}
           className="brand-logo"
+          style={{ width: "auto", height: 40 }}
           priority
         />
         <span className="brand-copy">
