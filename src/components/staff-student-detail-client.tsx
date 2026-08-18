@@ -7,10 +7,12 @@ import { AppToastHost, useAppToast } from "@/components/app-toast";
 import {
   IconArchive,
   IconPencil,
+  IconPlus,
   IconRestore,
   IconTrash,
   StaffIconButton,
 } from "@/components/staff-action-icons";
+import { StaffCreateEnrollmentModal } from "@/components/staff-create-enrollment-modal";
 import { StaffNotesSection, type StaffNoteItem } from "@/components/staff-notes-section";
 import {
   STAFF_RECORD_INFO_CARD_CLASS,
@@ -290,6 +292,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
   const [lifecycleConfirm, setLifecycleConfirm] = useState<StudentLifecycleConfirm | null>(null);
   const [listModal, setListModal] = useState<"enrollments" | "bookings" | null>(null);
   const [learningChipsExpanded, setLearningChipsExpanded] = useState(false);
+  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -764,6 +767,20 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Enrollments</h2>
+            <div className="family-section-plus">
+              <StaffIconButton
+                label="Add"
+                title={
+                  student.household
+                    ? "Add"
+                    : "Link this student to a family before creating an enrollment."
+                }
+                disabled={!student.household}
+                onClick={() => setEnrollModalOpen(true)}
+              >
+                <IconPlus size={16} />
+              </StaffIconButton>
+            </div>
           </div>
           <ListPreview
             total={student.enrollments.length}
@@ -795,6 +812,26 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           onDelete={deleteNote}
           onSuccess={toast.success}
           onError={toast.error}
+        />
+      ) : null}
+
+      {enrollModalOpen && student.household ? (
+        <StaffCreateEnrollmentModal
+          householdId={student.household.id}
+          students={[{ id: student.id, displayName: student.fullName || student.displayName }]}
+          lockedStudentId={student.id}
+          onClose={() => setEnrollModalOpen(false)}
+          onCreated={async () => {
+            setEnrollModalOpen(false);
+            toast.success("Enrollment added.");
+            try {
+              const studentRes = await fetch(`/api/staff/students/${studentId}`);
+              const data = await studentRes.json();
+              if (studentRes.ok && data.ok) setStudent(data.student as StudentDetail);
+            } catch {
+              toast.error("Enrollment saved, but the list could not refresh.");
+            }
+          }}
         />
       ) : null}
 

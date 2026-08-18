@@ -16,6 +16,7 @@ import {
   StaffIconButton,
 } from "@/components/staff-action-icons";
 import { StaffRowActions, lifecycleActions, type StaffRowAction } from "@/components/staff-row-actions";
+import { StaffCreateEnrollmentModal } from "@/components/staff-create-enrollment-modal";
 import { StaffNotesSection } from "@/components/staff-notes-section";
 import {
   STAFF_RECORD_INFO_CARD_CLASS,
@@ -433,6 +434,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
   const [assignSelectedId, setAssignSelectedId] = useState<string | null>(null);
   const [assignBusyId, setAssignBusyId] = useState<string | null>(null);
   const [lifecycleConfirm, setLifecycleConfirm] = useState<HouseholdLifecycleConfirm | null>(null);
+  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
 
   const softReload = useCallback(async () => {
     try {
@@ -1350,6 +1352,20 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <Panel className="family-equal-panel">
           <div className="family-panel-heading">
             <h2>Course enrollments</h2>
+            <div className="family-section-plus">
+              <StaffIconButton
+                label="Add"
+                title={
+                  family.students.length === 0
+                    ? "Add a student before creating an enrollment."
+                    : "Add"
+                }
+                disabled={family.students.length === 0}
+                onClick={() => setEnrollModalOpen(true)}
+              >
+                <IconPlus size={16} />
+              </StaffIconButton>
+            </div>
           </div>
           <FamilyListPreview
             total={family.activity.enrollments.length}
@@ -1403,6 +1419,19 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <FamilyListModal title="Bookings" onClose={() => setListModal(null)}>
           <div className="staff-detail-list">{family.activity.bookings.map(renderBookingRow)}</div>
         </FamilyListModal>
+      ) : null}
+
+      {enrollModalOpen ? (
+        <StaffCreateEnrollmentModal
+          householdId={familyId}
+          students={family.students.map((s) => ({ id: s.id, displayName: s.displayName }))}
+          onClose={() => setEnrollModalOpen(false)}
+          onCreated={async () => {
+            setEnrollModalOpen(false);
+            toast.success("Enrollment added.");
+            await softReload();
+          }}
+        />
       ) : null}
 
       {assignModal ? (
