@@ -60,6 +60,7 @@ export async function GET(request: Request) {
           enrolledCount: live ?? row.enrolledCount,
           active: row.active,
           description: row.description,
+          instructorName: row.instructorName ?? null,
         };
       }),
     });
@@ -77,6 +78,7 @@ type PostBody = {
   scheduleSummary?: string | null;
   capacity?: number;
   active?: boolean;
+  instructorName?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -111,6 +113,8 @@ export async function POST(request: Request) {
         termLabel: body.termLabel == null ? null : String(body.termLabel).trim() || null,
         scheduleSummary:
           body.scheduleSummary == null ? null : String(body.scheduleSummary).trim() || null,
+        instructorName:
+          body.instructorName == null ? null : String(body.instructorName).trim() || null,
         capacity,
         active: body.active !== false,
       })
@@ -124,6 +128,7 @@ export async function POST(request: Request) {
         enrolledCount: courseOfferings.enrolledCount,
         active: courseOfferings.active,
         description: courseOfferings.description,
+        instructorName: courseOfferings.instructorName,
       });
 
     return NextResponse.json({
@@ -138,6 +143,7 @@ export async function POST(request: Request) {
         enrolledCount: course.enrolledCount,
         active: course.active,
         description: course.description,
+        instructorName: course.instructorName ?? null,
       },
     });
   } catch (error) {

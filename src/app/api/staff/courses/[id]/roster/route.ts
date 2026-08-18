@@ -29,6 +29,7 @@ export async function GET(_request: Request, context: RouteContext) {
         capacity: courseOfferings.capacity,
         enrolledCount: courseOfferings.enrolledCount,
         active: courseOfferings.active,
+        instructorName: courseOfferings.instructorName,
       })
       .from(courseOfferings)
       .where(eq(courseOfferings.id, id))
@@ -66,6 +67,7 @@ export async function GET(_request: Request, context: RouteContext) {
         capacity: course.capacity,
         enrolledCount: course.enrolledCount,
         active: course.active,
+        instructorName: course.instructorName ?? null,
       },
       roster: rows.map((row) => ({
         id: row.id,

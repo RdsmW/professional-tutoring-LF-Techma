@@ -90,6 +90,7 @@ export type StaffSessionWhen = {
   sortKey: string;
   dayIndex: number | null;
   timeLabel: string | null;
+  scheduleNote: string | null;
 };
 
 export type StaffSessionListRow = {
@@ -103,6 +104,8 @@ export type StaffSessionListRow = {
   sortKey: string;
   what: string;
   sessionLabel: string;
+  scheduleNote: string | null;
+  familyName: string;
   people: string;
   status: string;
   href: string;
@@ -111,10 +114,13 @@ export type StaffSessionListRow = {
   tabs: StaffSessionTab[];
 };
 
+export const UNTIMED_HOUR_LABEL = "—";
+
 export type SessionBookingInput = {
   id: string;
   status: string;
   studentName: string;
+  familyName: string | null;
   tutorId: string | null;
   tutorName: string | null;
   subjectName: string | null;
@@ -146,7 +152,7 @@ export type SessionCourseInput = {
   scheduleSummary: string | null;
   enrolledCount: number;
   active: boolean;
-  instructorName?: string | null;
+  instructorName: string | null;
 };
 
 export type SessionPaymentInput = {
@@ -222,7 +228,7 @@ export function formatSlotWhen(
   weekStart: Date,
   dayOfWeek: number | null,
   startTime: string | null,
-  fallbackLabel: string | null,
+  _fallbackLabel?: string | null,
 ): StaffSessionWhen {
   const dayIndex =
     dayOfWeek != null && dayOfWeek >= 0 && dayOfWeek <= 6 ? dayOfWeek : null;
@@ -236,15 +242,15 @@ export function formatSlotWhen(
         }).format(new Date(weekStart.getTime() + dayIndex * 24 * 60 * 60 * 1000))
       : null;
   const timeLabel = startTime ? formatTime12hEnglish(startTime) : null;
-  const detail = [dateLabel, timeLabel || fallbackLabel].filter(Boolean).join(" · ") || "Schedule pending";
+  const detail = [dateLabel, timeLabel].filter(Boolean).join(" · ") || "—";
   const sortKey = `${String(dayIndex ?? 9).padStart(2, "0")}-${timeLabel || startTime || "99:99"}`;
-  return { day, detail, sortKey, dayIndex, timeLabel };
+  return { day, detail, sortKey, dayIndex, timeLabel, scheduleNote: null };
 }
 
 export function parseCourseSchedule(summary: string | null, weekStart: Date): StaffSessionWhen {
   const raw = (summary ?? "").trim();
   if (!raw) {
-    return formatSlotWhen(weekStart, null, null, "Schedule pending");
+    return formatSlotWhen(weekStart, null, null);
   }
   const dayMatch = raw.match(
     /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)\b/i,
@@ -257,10 +263,9 @@ export function parseCourseSchedule(summary: string | null, weekStart: Date): St
     const meridiem = timeMatch[2]?.toLowerCase();
     startTime = toTwentyFourHour(clock, meridiem);
   }
-  if (dayIndex == null && !startTime) {
-    return { day: "—", detail: raw, sortKey: `09-${raw}`, dayIndex: null, timeLabel: null };
-  }
-  return formatSlotWhen(weekStart, dayIndex, startTime, raw);
+  const when = formatSlotWhen(weekStart, dayIndex, startTime);
+  const parsedClock = dayIndex != null && startTime != null;
+  return { ...when, scheduleNote: parsedClock ? null : raw };
 }
 
 function toTwentyFourHour(clock: string, meridiem: string | undefined) {
@@ -307,9 +312,37 @@ function sessionLine(kind: StaffSessionKind, what: string) {
 }
 
 function classPeople(instructorName: string | null | undefined, enrolledCount: number) {
-  const enrolled = `${enrolledCount} enrolled`;
-  const instructor = instructorName?.trim();
-  return instructor ? `${instructor} · ${enrolled}` : enrolled;
+  const instructor = instructorName?.trim() || "—";
+  return `${instructor} · ${enrolledCount} enrolled`;
+}
+
+function familyLine(name: string | null | undefined) {
+  return name?.trim() || "—";
+}
+
+export function sessionHourKey(row: Pick<StaffSessionListRow, "timeLabel">) {
+  return row.timeLabel?.trim() || UNTIMED_HOUR_LABEL;
+}
+
+function hourMinutes(label: string) {
+  if (label === UNTIMED_HOUR_LABEL) return -1;
+  const match = label.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return 99 * 60;
+  let hour = Number.parseInt(match[1]!, 10);
+  const minute = Number.parseInt(match[2]!, 10);
+  const meridiem = match[3]!.toUpperCase();
+  if (meridiem === "PM" && hour < 12) hour += 12;
+  if (meridiem === "AM" && hour === 12) hour = 0;
+  return hour * 60 + minute;
+}
+
+export function sessionHourRows(rows: Array<Pick<StaffSessionListRow, "dayIndex" | "timeLabel">>) {
+  const keys = new Set<string>();
+  for (const row of rows) {
+    if (row.dayIndex == null) continue;
+    keys.add(sessionHourKey(row));
+  }
+  return [...keys].sort((a, b) => hourMinutes(a) - hourMinutes(b) || a.localeCompare(b));
 }
 
 function toListRow(
@@ -464,6 +497,8 @@ export function buildStaffSessionRows(input: {
         timeLabel: when.timeLabel,
         sortKey: `${when.sortKey}-${kind}-${booking.id}`,
         what: booking.subjectName || booking.slotLabel || "Tutoring",
+        scheduleNote: when.scheduleNote,
+        familyName: familyLine(booking.familyName),
         people: peopleLine(booking.tutorName, booking.studentName || "Student pending"),
         status: booking.status,
         href: `/staff/sessions/${booking.id}`,
@@ -503,8 +538,10 @@ export function buildStaffSessionRows(input: {
         timeLabel: when.timeLabel,
         sortKey: `${when.sortKey}-seat-${slot.id}`,
         what: onSlot[0]?.subjectName || slot.label || "Tutoring",
+        scheduleNote: null,
+        familyName: "—",
         people: peopleLine(slot.tutorName, seatLabel),
-        status: claimed <= 0 ? "available" : "open",
+        status: "available",
         href: `/staff/tutors/${slot.tutorId}`,
         issue: true,
         issueDetail,
@@ -532,8 +569,10 @@ export function buildStaffSessionRows(input: {
         timeLabel: when.timeLabel,
         sortKey: `${when.sortKey}-class-${course.id}`,
         what: course.name,
+        scheduleNote: when.scheduleNote,
+        familyName: "—",
         people: classPeople(course.instructorName, course.enrolledCount),
-        status: course.enrolledCount > 0 ? "confirmed" : "open",
+        status: course.enrolledCount > 0 ? "confirmed" : "no_students",
         href: `/staff/scheduling/courses/${course.id}`,
         issue: issues.length > 0,
         issueDetail: joinIssues(issues),

@@ -14,6 +14,7 @@ type PatchBody = {
   termLabel?: string | null;
   scheduleSummary?: string | null;
   capacity?: number;
+  instructorName?: string | null;
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -48,6 +49,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       termLabel?: string | null;
       scheduleSummary?: string | null;
       capacity?: number;
+      instructorName?: string | null;
       updatedAt: Date;
     } = { updatedAt: new Date() };
 
@@ -82,6 +84,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
       patch.capacity = Math.floor(body.capacity);
     }
+    if (body.instructorName !== undefined) {
+      patch.instructorName =
+        body.instructorName == null ? null : String(body.instructorName).trim() || null;
+    }
 
     if (Object.keys(patch).length === 1) {
       return NextResponse.json(
@@ -104,6 +110,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         enrolledCount: courseOfferings.enrolledCount,
         active: courseOfferings.active,
         description: courseOfferings.description,
+        instructorName: courseOfferings.instructorName,
       });
 
     return NextResponse.json({
@@ -118,6 +125,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         enrolledCount: course.enrolledCount,
         active: course.active,
         description: course.description,
+        instructorName: course.instructorName ?? null,
       },
     });
   } catch (error) {

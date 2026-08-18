@@ -1,18 +1,21 @@
 "use client";
 
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
 import { Panel } from "@/components/ui";
 import {
   SESSION_CHIP_LABEL,
   SESSION_LAYOUTS,
   SESSION_TYPE_FILTERS,
+  sessionHourKey,
+  sessionHourRows,
   type StaffSessionKind,
   type StaffSessionLayout,
   type StaffSessionTab,
   type StaffSessionTypeFilter,
 } from "@/lib/staff/sessions-list";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
+import "./staff-sessions.css";
 
 type PreviewRow = {
   id: string;
@@ -22,7 +25,9 @@ type PreviewRow = {
   timeLabel: string | null;
   kind: StaffSessionKind;
   sessionLabel: string;
+  scheduleNote: string | null;
   what: string;
+  familyName: string;
   people: string;
   status: string;
   tabs: StaffSessionTab[];
@@ -48,7 +53,9 @@ const SAMPLE_ROWS: PreviewRow[] = [
     timeLabel: "3:15 PM",
     kind: "tutoring",
     sessionLabel: "Tutoring · Algebra II",
+    scheduleNote: null,
     what: "Algebra II",
+    familyName: "Chen",
     people: "Jordan Reed · Maya Chen",
     status: "confirmed",
     tabs: ["week", "tutoring"],
@@ -61,7 +68,9 @@ const SAMPLE_ROWS: PreviewRow[] = [
     timeLabel: "4:30 PM",
     kind: "tutoring",
     sessionLabel: "Tutoring · SAT Math",
+    scheduleNote: null,
     what: "SAT Math",
+    familyName: "Park",
     people: "Jordan Reed · Liam Park",
     status: "pending_payment",
     tabs: ["week", "tutoring", "issues"],
@@ -75,7 +84,9 @@ const SAMPLE_ROWS: PreviewRow[] = [
     timeLabel: "5:00 PM",
     kind: "class",
     sessionLabel: "Class · AP Chemistry Lab",
+    scheduleNote: null,
     what: "AP Chemistry Lab",
+    familyName: "—",
     people: "Dr. Santos · 8 enrolled",
     status: "confirmed",
     tabs: ["week", "classes"],
@@ -88,7 +99,9 @@ const SAMPLE_ROWS: PreviewRow[] = [
     timeLabel: "10:00 AM",
     kind: "test",
     sessionLabel: "Test · Geometry Regents",
+    scheduleNote: null,
     what: "Geometry Regents",
+    familyName: "Torres",
     people: "Jordan Reed · Ava Torres",
     status: "confirmed",
     tabs: ["week", "tutoring"],
@@ -101,23 +114,27 @@ const SAMPLE_ROWS: PreviewRow[] = [
     timeLabel: "11:00 AM",
     kind: "tutoring",
     sessionLabel: "Tutoring · English Literature",
+    scheduleNote: null,
     what: "English Literature",
+    familyName: "—",
     people: "Jordan Reed · 1 of 2 seats",
-    status: "confirmed",
+    status: "available",
     tabs: ["week", "tutoring", "issues"],
     issue: true,
   },
   {
     id: "6",
     whenDay: "Mon",
-    whenDetail: "Aug 18 · 6:00 PM",
+    whenDetail: "Aug 18",
     dayIndex: 1,
-    timeLabel: "6:00 PM",
+    timeLabel: null,
     kind: "class",
-    sessionLabel: "Class · Creative Writing Workshop",
-    what: "Creative Writing Workshop",
-    people: "Ms. Rivera · 12 enrolled",
-    status: "confirmed",
+    sessionLabel: "Class · First Class",
+    scheduleNote: "Monday morning / Wednesday evening sequence",
+    what: "First Class",
+    familyName: "—",
+    people: "— · 0 enrolled",
+    status: "no_students",
     tabs: ["week", "classes"],
   },
   {
@@ -128,7 +145,9 @@ const SAMPLE_ROWS: PreviewRow[] = [
     timeLabel: "3:15 PM",
     kind: "tutoring",
     sessionLabel: "Tutoring · Algebra II",
+    scheduleNote: null,
     what: "Algebra II",
+    familyName: "Chen",
     people: "Jordan Reed · Maya Chen",
     status: "held",
     tabs: ["issues"],
@@ -142,7 +161,9 @@ const SAMPLE_ROWS: PreviewRow[] = [
     timeLabel: "2:00 PM",
     kind: "test",
     sessionLabel: "Test · Physics midterm review",
+    scheduleNote: null,
     what: "Physics midterm review",
+    familyName: "Brooks",
     people: "Jordan Reed · Noah Brooks",
     status: "pending_staff_review",
     tabs: ["week", "tutoring"],
@@ -155,11 +176,28 @@ const SAMPLE_ROWS: PreviewRow[] = [
     timeLabel: "9:00 AM",
     kind: "tutoring",
     sessionLabel: "Tutoring · Geometry",
+    scheduleNote: null,
     what: "Geometry",
+    familyName: "—",
     people: "Jordan Reed · Available",
     status: "available",
     tabs: ["issues"],
     issue: true,
+  },
+  {
+    id: "10",
+    whenDay: "—",
+    whenDetail: "—",
+    dayIndex: null,
+    timeLabel: null,
+    kind: "class",
+    sessionLabel: "Class · Makeup seminar",
+    scheduleNote: "Date pending",
+    what: "Makeup seminar",
+    familyName: "—",
+    people: "Ms. Rivera · 4 enrolled",
+    status: "confirmed",
+    tabs: ["week", "classes"],
   },
 ];
 
@@ -175,9 +213,10 @@ function PreviewTable({ rows, showIssueDetail }: { rows: PreviewRow[]; showIssue
   return (
     <Panel style={{ padding: 0 }}>
       <div className="table-panel staff-dir-table">
-        <div className="table-head staff-dir-cols-sessions">
+        <div className="table-head staff-sessions-cols">
           <span>Date &amp; time</span>
           <span>Session</span>
+          <span>Family</span>
           <span>People</span>
           <span className="staff-dir-col-status">Status</span>
         </div>
@@ -187,23 +226,21 @@ function PreviewTable({ rows, showIssueDetail }: { rows: PreviewRow[]; showIssue
             <a
               key={row.id}
               href="#"
-              className={`table-row staff-dir-cols-sessions${row.issue && showIssueDetail ? " staff-dir-row-issue" : ""}`}
+              className={`table-row staff-sessions-cols${row.issue && showIssueDetail ? " staff-dir-row-issue" : ""}`}
               onClick={(event) => event.preventDefault()}
             >
-              <span>
+              <span className="staff-sessions-when">
                 <strong>{row.whenDay}</strong>
-                <small style={{ display: "block", color: "var(--muted)", marginTop: 2 }}>
-                  {row.whenDetail}
-                </small>
+                <small>{row.whenDetail}</small>
               </span>
-              <span>{row.sessionLabel}</span>
-              <span>
+              <span className="staff-sessions-session">
+                {row.sessionLabel}
+                {row.scheduleNote ? <small>{row.scheduleNote}</small> : null}
+              </span>
+              <span>{row.familyName}</span>
+              <span className="staff-sessions-people">
                 {row.people}
-                {detail ? (
-                  <small style={{ display: "block", color: "#8e661f", marginTop: 4, fontWeight: 700 }}>
-                    {detail}
-                  </small>
-                ) : null}
+                {detail ? <small>{detail}</small> : null}
               </span>
               <span className="staff-dir-col-status">
                 <span className={`pill ${statusTone(row.status)}`}>{formatStatusLabel(row.status)}</span>
@@ -213,6 +250,93 @@ function PreviewTable({ rows, showIssueDetail }: { rows: PreviewRow[]; showIssue
         })}
       </div>
     </Panel>
+  );
+}
+
+function PreviewWeek({ rows }: { rows: PreviewRow[] }) {
+  const { byDay, unscheduled, hours } = useMemo(() => {
+    const grouped = new Map<number, PreviewRow[]>();
+    const leftover: PreviewRow[] = [];
+    for (const row of rows) {
+      if (row.dayIndex == null) {
+        leftover.push(row);
+        continue;
+      }
+      const list = grouped.get(row.dayIndex) ?? [];
+      list.push(row);
+      grouped.set(row.dayIndex, list);
+    }
+    return { byDay: grouped, unscheduled: leftover, hours: sessionHourRows(rows) };
+  }, [rows]);
+
+  return (
+    <>
+      <div className="staff-sessions-week-wrap">
+        <div className="staff-sessions-week" role="grid" aria-label="Week calendar">
+          <div className="staff-sessions-week-gutter" aria-hidden="true" />
+          {WEEK_DAYS.map((day) => {
+            const empty = (byDay.get(day.dayIndex) ?? []).length === 0;
+            return (
+              <div
+                key={day.dayIndex}
+                className={`staff-sessions-week-head${empty ? " is-empty" : ""}`}
+              >
+                <h3>{day.weekday}</h3>
+                <small>{day.dateLabel}</small>
+              </div>
+            );
+          })}
+          {hours.map((hour) => (
+            <Fragment key={hour}>
+              <div className="staff-sessions-week-hour">{hour}</div>
+              {WEEK_DAYS.map((day) => {
+                const cellRows = (byDay.get(day.dayIndex) ?? []).filter(
+                  (row) => sessionHourKey(row) === hour,
+                );
+                return (
+                  <div
+                    key={`${hour}-${day.dayIndex}`}
+                    className={`staff-sessions-week-cell${cellRows.length === 0 ? " is-empty" : ""}`}
+                  >
+                    {cellRows.map((row) => (
+                      <a
+                        key={row.id}
+                        href="#"
+                        className={`staff-sessions-chip ${row.kind}`}
+                        onClick={(event) => event.preventDefault()}
+                      >
+                        <span className="staff-sessions-chip-time">{row.timeLabel || "—"}</span>
+                        {SESSION_CHIP_LABEL[row.kind]}
+                        <small>{row.what}</small>
+                      </a>
+                    ))}
+                  </div>
+                );
+              })}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+      {unscheduled.length > 0 ? (
+        <div className="staff-sessions-unscheduled">
+          <span className="staff-sessions-unscheduled-label">Unscheduled</span>
+          <div className="staff-sessions-unscheduled-chips">
+            {unscheduled.map((row) => (
+              <a
+                key={row.id}
+                href="#"
+                className={`staff-sessions-chip ${row.kind}`}
+                onClick={(event) => event.preventDefault()}
+              >
+                <span className="staff-sessions-chip-time">{row.timeLabel || "—"}</span>
+                {SESSION_CHIP_LABEL[row.kind]}
+                <small>{row.what}</small>
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -252,7 +376,7 @@ export function StaffDesignPreviewSessionsClient() {
         <Link href="/staff/settings">Back to Settings</Link>
       </p>
 
-      <div className="sessions-toolbar">
+      <div className="staff-sessions-toolbar">
         <section className="segmented" aria-label="Session layout">
           {SESSION_LAYOUTS.map((item) => (
             <button
@@ -268,30 +392,28 @@ export function StaffDesignPreviewSessionsClient() {
             </button>
           ))}
         </section>
-        {!issues ? (
-          <section className="filter-row" aria-label="Session type">
-            {SESSION_TYPE_FILTERS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`filter-chip${typeFilter === item.id ? " active" : ""}`}
-                onClick={() => {
-                  setTypeFilter(item.id);
-                  setIssues(false);
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </section>
-        ) : null}
-        <button
-          type="button"
-          className={`filter-chip sessions-issues-chip${issues ? " active" : ""}`}
-          onClick={() => setIssues((value) => !value)}
-        >
-          Issues
-        </button>
+        <section className="filter-row" aria-label="Session type">
+          {SESSION_TYPE_FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`filter-chip${!issues && typeFilter === item.id ? " active" : ""}`}
+              onClick={() => {
+                setTypeFilter(item.id);
+                setIssues(false);
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`filter-chip${issues ? " active" : ""}`}
+            onClick={() => setIssues((value) => !value)}
+          >
+            Issues
+          </button>
+        </section>
       </div>
 
       {visibleRows.length === 0 ? (
@@ -301,29 +423,7 @@ export function StaffDesignPreviewSessionsClient() {
       ) : issues || layout === "list" ? (
         <PreviewTable rows={visibleRows} showIssueDetail={issues} />
       ) : (
-        <div className="sessions-week-wrap">
-          <div className="sessions-week" role="grid" aria-label="Week calendar">
-            {WEEK_DAYS.map((day) => (
-              <section key={day.dayIndex} className="sessions-week-day">
-                <h3 className="sessions-week-day-title">{day.weekday}</h3>
-                <small className="sessions-week-day-date">{day.dateLabel}</small>
-                {visibleRows
-                  .filter((row) => row.dayIndex === day.dayIndex)
-                  .map((row) => (
-                    <a
-                      key={row.id}
-                      href="#"
-                      className={`sessions-week-chip ${row.kind}`}
-                      onClick={(event) => event.preventDefault()}
-                    >
-                      {SESSION_CHIP_LABEL[row.kind]}
-                      <small>{[row.timeLabel, row.what].filter(Boolean).join(" · ")}</small>
-                    </a>
-                  ))}
-              </section>
-            ))}
-          </div>
-        </div>
+        <PreviewWeek rows={visibleRows} />
       )}
     </>
   );

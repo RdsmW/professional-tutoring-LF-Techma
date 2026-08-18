@@ -6,6 +6,7 @@ import {
   bookings,
   courseEnrollments,
   courseOfferings,
+  households,
   paymentRecords,
   students,
   subjects,
@@ -38,6 +39,7 @@ export async function GET() {
           status: bookings.status,
           seatsClaimed: bookings.seatsClaimed,
           studentName: students.displayName,
+          familyName: households.displayName,
           tutorId: bookings.tutorId,
           tutorName: tutors.displayName,
           subjectName: subjects.name,
@@ -51,6 +53,7 @@ export async function GET() {
         })
         .from(bookings)
         .innerJoin(students, eq(bookings.studentId, students.id))
+        .leftJoin(households, eq(bookings.householdId, households.id))
         .leftJoin(tutors, eq(bookings.tutorId, tutors.id))
         .leftJoin(subjects, eq(bookings.subjectId, subjects.id))
         .leftJoin(availabilitySlots, eq(bookings.slotId, availabilitySlots.id)),
@@ -76,13 +79,7 @@ export async function GET() {
           scheduleSummary: courseOfferings.scheduleSummary,
           enrolledCount: courseOfferings.enrolledCount,
           active: courseOfferings.active,
-          ...("instructorName" in courseOfferings
-            ? {
-                instructorName: (courseOfferings as typeof courseOfferings & {
-                  instructorName: typeof courseOfferings.name;
-                }).instructorName,
-              }
-            : {}),
+          instructorName: courseOfferings.instructorName,
         })
         .from(courseOfferings)
         .where(eq(courseOfferings.active, true)),
@@ -126,10 +123,7 @@ export async function GET() {
       courses: courseRows.map((row) => ({
         ...row,
         enrolledCount: enrollmentCountMap.get(row.id) ?? row.enrolledCount,
-        instructorName:
-          "instructorName" in row
-            ? ((row as { instructorName?: string | null }).instructorName ?? null)
-            : null,
+        instructorName: row.instructorName ?? null,
       })),
       payments: paymentRows,
       enrollmentCourseIds,

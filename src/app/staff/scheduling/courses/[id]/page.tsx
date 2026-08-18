@@ -16,6 +16,7 @@ type CourseMeta = {
   capacity: number;
   enrolledCount: number;
   active: boolean;
+  instructorName: string | null;
 };
 
 type RosterRow = {
@@ -64,6 +65,8 @@ export default function StaffCourseRosterPage() {
   const [draftStatus, setDraftStatus] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [togglingActive, setTogglingActive] = useState(false);
+  const [instructorDraft, setInstructorDraft] = useState("");
+  const [savingInstructor, setSavingInstructor] = useState(false);
 
   const reload = useCallback(async () => {
     if (!id) return;
@@ -77,6 +80,7 @@ export default function StaffCourseRosterPage() {
         return;
       }
       setCourse(data.course ?? null);
+      setInstructorDraft(typeof data.course?.instructorName === "string" ? data.course.instructorName : "");
       const rows: RosterRow[] = data.roster ?? [];
       setRoster(rows);
       setDraftStatus(Object.fromEntries(rows.map((row) => [row.id, row.status])));
@@ -170,6 +174,35 @@ export default function StaffCourseRosterPage() {
       setError("Unable to enroll student.");
     } finally {
       setEnrolling(false);
+    }
+  }
+
+  async function saveInstructor() {
+    if (!id || !course || savingInstructor) return;
+    const next = instructorDraft.trim() || null;
+    setSavingInstructor(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/staff/courses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructorName: next }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to update instructor.");
+        return;
+      }
+      setCourse((prev) =>
+        prev ? { ...prev, instructorName: data.course?.instructorName ?? null } : prev,
+      );
+      setInstructorDraft(data.course?.instructorName ?? "");
+      setMessage("Instructor saved.");
+    } catch {
+      setError("Unable to update instructor.");
+    } finally {
+      setSavingInstructor(false);
     }
   }
 
@@ -275,6 +308,23 @@ export default function StaffCourseRosterPage() {
               onClick={() => void toggleCourseActive()}
             >
               {togglingActive ? "Saving…" : course.active ? "Archive" : "Reactivate"}
+            </button>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+              Instructor
+              <input
+                value={instructorDraft}
+                onChange={(event) => setInstructorDraft(event.target.value)}
+                placeholder="—"
+                style={{ minWidth: 160 }}
+              />
+            </label>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={savingInstructor || (instructorDraft.trim() || "") === (course.instructorName ?? "")}
+              onClick={() => void saveInstructor()}
+            >
+              {savingInstructor ? "Saving…" : "Save instructor"}
             </button>
           </div>
         ) : (

@@ -28,6 +28,7 @@ type CatalogCourse = {
   enrolledCount: number;
   active: boolean;
   description: string | null;
+  instructorName: string | null;
 };
 
 const emptySubjectForm = { name: "", code: "", category: "" };
@@ -37,6 +38,7 @@ const emptyCourseForm = {
   termLabel: "",
   scheduleSummary: "",
   capacity: "20",
+  instructorName: "",
 };
 
 export function StaffSettingsCoursesSubjectsPanel() {
@@ -199,6 +201,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
         code,
         termLabel: courseForm.termLabel.trim() || null,
         scheduleSummary: courseForm.scheduleSummary.trim() || null,
+        instructorName: courseForm.instructorName.trim() || null,
         capacity,
       };
       const response = await fetch(
@@ -424,6 +427,16 @@ export function StaffSettingsCoursesSubjectsPanel() {
             />
           </label>
           <label>
+            Instructor
+            <input
+              value={courseForm.instructorName}
+              onChange={(event) =>
+                setCourseForm((prev) => ({ ...prev, instructorName: event.target.value }))
+              }
+              placeholder="Name or —"
+            />
+          </label>
+          <label>
             Capacity
             <input
               value={courseForm.capacity}
@@ -489,6 +502,9 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   {course.scheduleSummary ? (
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>{course.scheduleSummary}</div>
                   ) : null}
+                  <div style={{ color: "var(--muted)", fontSize: 13 }}>
+                    {course.instructorName?.trim() || "—"}
+                  </div>
                 </div>
                 <span>{course.code}</span>
                 <span>{course.termLabel || "—"}</span>
@@ -511,6 +527,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
                         termLabel: course.termLabel ?? "",
                         scheduleSummary: course.scheduleSummary ?? "",
                         capacity: String(course.capacity),
+                        instructorName: course.instructorName ?? "",
                       });
                     }}
                   >

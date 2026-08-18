@@ -2,6 +2,7 @@
 export function formatStatusLabel(status: string | null | undefined) {
   const raw = (status ?? "").trim();
   if (!raw) return "—";
+  if (raw.toLowerCase() === "no_students") return "No students";
   return raw
     .replace(/_/g, " ")
     .split(/\s+/)
@@ -77,6 +78,10 @@ export function statusTone(status: string | null | undefined): StatusTone {
 
   if (["review", "exceptions", "support", "open", "available"].includes(key)) {
     return "blue";
+  }
+
+  if (["no_students", "unscheduled"].includes(key)) {
+    return "quiet";
   }
 
   /* Student lifecycle Prospect/Paused: quieter than navy so they do not compete with titles. */
