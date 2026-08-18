@@ -807,7 +807,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <StaffRecordPrimaryRow>
+      <StaffRecordPrimaryRow className="staff-record-primary-row--identity-wide">
         <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Identity</h2>
@@ -870,7 +870,7 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                 <StaffDetailField label="Parent role">
                   {roleLabel ? <GuardianRelationshipRolePill role={guardian.relationshipRole} /> : null}
                 </StaffDetailField>
-                <StaffDetailField label="Responsible for payment">{yesNo(guardian.isBillingOwner)}</StaffDetailField>
+                <StaffDetailField label="Responsible for payment" className="guardian-household-field-payment">{yesNo(guardian.isBillingOwner)}</StaffDetailField>
               </StaffDetailFieldGroup>
               {!guardian.household ? (
                 <div className="family-household-lower">

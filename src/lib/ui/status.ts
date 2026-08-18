@@ -10,7 +10,7 @@ export function formatStatusLabel(status: string | null | undefined) {
     .join(" ");
 }
 
-export type StatusTone = "mint" | "green" | "amber" | "gold" | "rose" | "blue" | "violet" | "navy" | "";
+export type StatusTone = "mint" | "green" | "amber" | "gold" | "rose" | "blue" | "violet" | "navy" | "quiet" | "";
 
 /** Map domain status strings to pill tone classes. */
 export function statusTone(status: string | null | undefined): StatusTone {
@@ -79,9 +79,9 @@ export function statusTone(status: string | null | undefined): StatusTone {
     return "blue";
   }
 
-  /* Student lifecycle Prospect/Paused used gold and collided with card titles. */
+  /* Student lifecycle Prospect/Paused: quieter than navy so they do not compete with titles. */
   if (["prospect", "paused"].includes(key)) {
-    return "navy";
+    return "quiet";
   }
 
   return "blue";

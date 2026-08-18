@@ -240,7 +240,7 @@ export function StaffFamilyEditClient({ familyId }: { familyId: string }) {
         </div>
 
         <StaffEditSectionLabel>Payment</StaffEditSectionLabel>
-        <div className="staff-edit-field-row staff-edit-field-row--3">
+        <div className="staff-edit-field-row staff-edit-payment-fields">
           <label>
             Responsible for payment
             <select

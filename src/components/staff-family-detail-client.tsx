@@ -1217,7 +1217,7 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense">
-              <StaffDetailFieldGroup className="family-household-upper">
+              <StaffDetailFieldGroup className="family-household-upper family-household-payment-row">
                 <StaffDetailField label="Phone" className="family-household-field-phone">
                   {family.primaryPhone}
                 </StaffDetailField>

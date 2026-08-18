@@ -52,10 +52,17 @@
   --mint-soft: #eaf7f2;
   --gold: #c4922e;
   --gold-soft: #fff6e5;
-  /* Sidebar nav icons on navy ΓÇö idle muted, active brighter. */
+  /* Sidebar nav icons on navy — idle muted, active brighter. */
   --nav-icon: #c4922e;
   --nav-icon-active: #d8a840;
   --nav-accent: #d8a840;
+  /* Card/form section titles — darker than nav-accent; nav icons stay on --nav-icon. */
+  --title-gold: #c4922e;
+  /* Prospect/Paused pills — quieter than navy, still readable. */
+  --status-quiet: #6e7786;
+  --status-quiet-bg: #eceef2;
+  --icon-hover-delete: #a84337;
+  --icon-hover-delete-bg: #f8ecea;
   /* Search/Alerts: labels chrome text; icons match sidebar gold (--nav-icon). */
   --chrome-label: #b8c4d1;
   --chrome-label-hover: #ffffff;
@@ -824,6 +831,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .avatar.navy { background: var(--edit-action-soft); color: var(--navy); }.avatar.coral { background: var(--rose-soft); color: #91455a; }.avatar.blue { background: var(--blue-soft); color: #365f8c; }.avatar.mint { background: var(--mint-soft); color: #397866; }.avatar.gold { background: var(--gold-soft); color: #916724; }.avatar.violet { background: var(--violet-soft); color: #5e508c; }.avatar.rose { background: var(--rose-soft); color: #91455a; }
 .pill { display: inline-flex; align-items: center; width: fit-content; padding: 5px 8px; border-radius: 12px; background: #f0f2ef; color: #606a76; font-size: 12px; font-weight: 800; white-space: nowrap; }
 .pill.coral { background: var(--rose-soft); color: #91455a; }.pill.green,.pill.mint { background: var(--mint-soft); color: #367765; }.pill.blue { background: var(--blue-soft); color: #38658f; }.pill.amber,.pill.gold { background: var(--gold-soft); color: #8e661f; }.pill.violet { background: var(--violet-soft); color: #5e508c; }.pill.rose { background: var(--rose-soft); color: #91455a; }.pill.navy { background: var(--edit-action-soft); color: var(--navy); }
+.pill.quiet { background: var(--status-quiet-bg); color: var(--status-quiet); font-weight: 700; }
 .capacity-bars { padding-top: 5px; }
 .capacity-row {
   display: grid; grid-template-columns: 140px 1fr 48px; align-items: center; gap: 10px; margin: 10px 0;
@@ -2157,7 +2165,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .guardian-edit-section-label,
 .staff-edit-section-label {
   margin: 0;
-  color: var(--nav-accent);
+  color: var(--title-gold);
   font: 700 18px/1.2 Georgia, serif;
   letter-spacing: -0.015em;
   text-transform: none;
@@ -2218,9 +2226,12 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-dense > :empty {
   display: none;
 }
-/* Student Profile: 4 equal columns on identity/school bands; description full width */
-.student-profile-dense .family-household-upper {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+/* Student Profile: Legal name | Gender | Family on one line; remaining fields below */
+.student-profile-dense .student-profile-identity-row {
+  grid-template-columns: minmax(0, 1.7fr) minmax(5.5rem, 0.55fr) minmax(0, 1.25fr);
+}
+.student-profile-dense .student-profile-school-row {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 0.75fr) minmax(0, 1.2fr);
 }
 /* Student Tutoring view: Row1 Academic year|Subjects; Row2 Preferred schedule; Row3 Hours/Rates|Advanced */
 .student-tutoring-dense .student-tutoring-primary-row {
@@ -2369,6 +2380,13 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .staff-edit-field-row--3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.staff-edit-payment-fields {
+  grid-template-columns: minmax(12rem, 1fr) max-content max-content;
+}
+.staff-edit-payment-fields > label:nth-child(2),
+.staff-edit-payment-fields > label:nth-child(3) {
+  width: 7rem;
 }
 .staff-edit-field-row--4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2598,13 +2616,26 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .staff-edit-field-row--2,
   .staff-edit-field-row--3,
   .staff-edit-field-row--4,
-  .staff-edit-field-row--5 {
+  .staff-edit-field-row--5,
+  .staff-edit-payment-fields {
     grid-template-columns: 1fr;
   }
+  .staff-edit-payment-fields > label:nth-child(2),
+  .staff-edit-payment-fields > label:nth-child(3) {
+    width: auto;
+  }
 }
-/* Guardian Household: Family 40% | Parent role 30% | Payment 30% */
+/* Guardian Household: Family | Role on row 1; payment wraps below in the narrow card */
 .guardian-household-dense .family-household-upper {
-  grid-template-columns: minmax(0, 4fr) minmax(0, 3fr) minmax(0, 3fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.guardian-household-dense .guardian-household-field-payment {
+  grid-column: 1 / -1;
+}
+.guardian-household-dense small,
+.guardian-household-dense strong {
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 .family-household-upper,
 .family-household-lower {
@@ -2614,9 +2645,35 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   width: 100%;
   min-width: 0;
 }
-/* Phone compact | Payer (wide) | Card | Auto-charge (short Yes/No) */
+/* Default four-up; Family payment row sets its own tracks so Card/Auto-charge stay narrow. */
 .family-household-upper {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2.8fr) minmax(0, 1fr) minmax(0, 0.7fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.family-household-payment-row.family-household-upper {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 14px 20px;
+}
+.family-household-payment-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.family-household-field-phone {
+  flex: 0 1 7.5rem;
+  max-width: 8.5rem;
+}
+.family-household-field-payer {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.family-household-field-card,
+.family-household-field-autocharge {
+  flex: 0 0 6.25rem;
+  width: 6.25rem;
+  max-width: 6.25rem;
 }
 /* Address full width (Zoho fields live on Integrations) */
 .family-household-lower {
@@ -2636,9 +2693,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-dense small {
   font-size: 12px;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  font-weight: 800;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
 }
 .family-household-dense strong,
 .family-household-dense .family-zoho-url-link {
@@ -2732,7 +2789,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .family-household-upper {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .student-profile-dense .family-household-upper {
+  .student-profile-dense .student-profile-identity-row {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.55fr) minmax(0, 1fr);
+  }
+  .student-profile-dense .student-profile-school-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .student-tutoring-dense .student-tutoring-primary-row,
@@ -2751,8 +2811,12 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .tutor-profile-dense .family-household-upper {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
+  .family-household-payment-row.family-household-upper {
+    flex-wrap: wrap;
+  }
   .family-household-field-payer {
-    grid-column: 1 / -1;
+    flex: 1 1 100%;
+    max-width: none;
   }
   .family-household-payer-line {
     white-space: nowrap;
@@ -2766,6 +2830,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
     grid-template-columns: 1fr;
   }
   .student-profile-dense .family-household-upper,
+  .student-profile-dense .student-profile-identity-row,
+  .student-profile-dense .student-profile-school-row,
   .student-profile-dense .student-profile-description-row,
   .student-profile-dense .student-profile-family-description-row,
   .student-tutoring-dense .student-tutoring-primary-row,
@@ -2777,8 +2843,17 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .tutor-profile-dense .family-household-upper {
     grid-template-columns: 1fr;
   }
-  .family-household-field-payer {
+  .family-household-field-payer,
+  .family-household-field-phone,
+  .family-household-field-card,
+  .family-household-field-autocharge {
     grid-column: auto;
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
+  }
+  .family-household-payment-row.family-household-upper {
+    flex-direction: column;
   }
   .family-household-field-address,
   .family-household-field-zoho-id,
@@ -2865,10 +2940,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .staff-icon-btn:hover:not(:disabled),
 .staff-icon-btn:focus-visible {
-  background: var(--gold-soft);
-  border-color: var(--nav-accent);
+  background: var(--edit-action-soft);
+  border-color: var(--navy);
   color: var(--navy);
-  outline: 2px solid rgba(216, 168, 64, 0.28);
+  outline: 2px solid rgba(1, 3, 69, 0.18);
   outline-offset: 1px;
 }
 .staff-icon-btn:disabled {
@@ -2878,28 +2953,40 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-icon-btn-edit {
   color: var(--navy);
 }
+.staff-icon-btn-edit:hover:not(:disabled),
+.staff-icon-btn-edit:focus-visible {
+  background: var(--edit-action-soft);
+  border-color: var(--navy);
+  color: var(--navy);
+  outline: 2px solid rgba(1, 3, 69, 0.22);
+  outline-offset: 1px;
+}
 .staff-icon-btn-muted {
   border-color: transparent;
   background: transparent;
   color: var(--muted);
 }
 .staff-icon-btn-archive {
-  color: var(--nav-accent);
+  color: var(--navy);
 }
 .staff-icon-btn-archive:hover:not(:disabled),
 .staff-icon-btn-archive:focus-visible {
   background: var(--gold-soft);
-  border-color: var(--nav-accent);
-  color: var(--navy);
+  border-color: var(--gold);
+  color: #916724;
+  outline: 2px solid rgba(196, 146, 46, 0.28);
+  outline-offset: 1px;
 }
 .staff-icon-btn-restore {
   color: var(--navy);
 }
 .staff-icon-btn-restore:hover:not(:disabled),
 .staff-icon-btn-restore:focus-visible {
-  background: var(--gold-soft);
-  border-color: var(--nav-accent);
+  background: var(--edit-action-soft);
+  border-color: var(--navy);
   color: var(--navy);
+  outline: 2px solid rgba(1, 3, 69, 0.18);
+  outline-offset: 1px;
 }
 .staff-icon-btn-danger {
   color: var(--navy);
@@ -2907,10 +2994,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .staff-icon-btn-danger:hover:not(:disabled),
 .staff-icon-btn-danger:focus-visible {
-  background: var(--gold-soft);
-  border-color: var(--nav-accent);
-  color: var(--navy);
-  outline: 2px solid rgba(216, 168, 64, 0.28);
+  background: var(--icon-hover-delete-bg);
+  border-color: var(--icon-hover-delete);
+  color: var(--icon-hover-delete);
+  outline: 2px solid rgba(168, 67, 55, 0.28);
   outline-offset: 1px;
 }
 .staff-row-actions-item-icon {
@@ -3247,6 +3334,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-record-primary-row--profile-wide {
   grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
 }
+.staff-record-primary-row--identity-wide {
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+}
 .staff-record-integrations-band {
   margin-top: 14px;
 }
@@ -3297,9 +3387,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-record-integrations-field small {
   font-size: 12px;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  font-weight: 800;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
 }
 .staff-record-integrations-field strong,
 .staff-record-integrations-field .family-zoho-url-link {
@@ -3317,7 +3407,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .staff-record-primary-row,
   .staff-record-primary-row:has(> :nth-child(3)),
   .staff-record-primary-row--household-wide,
-  .staff-record-primary-row--profile-wide {
+  .staff-record-primary-row--profile-wide,
+  .staff-record-primary-row--identity-wide {
     grid-template-columns: 1fr;
   }
   .capacity-week-summary {
@@ -3472,6 +3563,11 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .family-record-hero-status-pill.pill{
   flex:0 0 auto;
+}
+.family-record-hero .pill.quiet{
+  background:rgba(255,255,255,.1);
+  color:#b8c0cc;
+  font-weight:700;
 }
 .tutor-directory{padding:0;overflow-x:auto}.tutor-directory-head,.tutor-directory-row{display:grid;grid-template-columns:1.2fr 1.4fr 1fr 1.1fr .65fr .65fr .7fr;align-items:center;gap:11px;min-width:1000px}.tutor-directory-head{background:#f1f3f0;padding:11px 15px;color:var(--muted);font-size: 12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.tutor-directory-row{width:100%;border:0;border-top:1px solid var(--line);background:#fff;padding:13px 15px;text-align:left;cursor:pointer;font-size: 12px}.tutor-directory-row:hover{background:var(--blue-soft)}.tutor-directory-row>span>small{display:block;color:var(--muted);font-size: 12px;margin-top:4px}.tutor-directory-row>b{font-size: 12px;color:var(--blue);text-align:right}
 .tutor-progress{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:18px 0}.tutor-progress>div{display:flex;align-items:center;gap:7px;color:#98a0a8}.tutor-progress span{width:25px;height:25px;border-radius:50%;background:#ecefeb;display:grid;place-items:center;font-size: 12px}.tutor-progress small{font-size: 12px;font-weight:800}.tutor-progress .complete{color:var(--ink)}.tutor-progress .complete span{background:var(--navy);color:#fff}.match-directory{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.match-context-head{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px}.match-context-head h3{margin-bottom:3px}.match-context-head p{margin:0;font-size: 12px}.match-rationale{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:15px 0}.match-rationale span{background:var(--mint-soft);padding:9px;color:#376b5f;font-size: 12px}.match-actions{display:flex;gap:8px;flex-wrap:wrap}.best-fit-assist{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start;background:#fff7e9;border:1px solid #f0dfbc;padding:17px;margin-bottom:16px}.best-fit-assist>strong{font:700 30px Georgia,serif;color:var(--gold)}.best-fit-assist>strong small{font: 700 12px Arial}.best-fit-assist p{margin:3px 0}.best-fit-factors{grid-column:1/3;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.best-fit-factors span{background:#fff;padding:9px;font-size: 12px}.best-fit-assist .match-actions{grid-column:1/3}

@@ -595,25 +595,27 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense student-profile-dense">
-              <StaffDetailFieldGroup className="family-household-upper">
-                <StaffDetailField label="Legal name">
+              <StaffDetailFieldGroup className="family-household-upper student-profile-identity-row">
+                <StaffDetailField label="Legal name" className="student-profile-field-legal" showEmpty>
                   {[student.firstName, student.lastName].filter(Boolean).join(" ")}
                 </StaffDetailField>
-                <StaffDetailField label="Gender">{student.gender}</StaffDetailField>
-                <StaffDetailField label="Birthdate">{student.birthdate}</StaffDetailField>
-                <StaffDetailField label="Phone">{student.cellPhone}</StaffDetailField>
-              </StaffDetailFieldGroup>
-              <StaffDetailFieldGroup className="family-household-upper">
-                <StaffDetailField label="Grade">{formatGradeLabel(student.gradeLabel)}</StaffDetailField>
-                <StaffDetailField label="Grade year">{student.graduationYear}</StaffDetailField>
-                <StaffDetailField label="School">{student.schoolName}</StaffDetailField>
-                <StaffDetailField label="Family">
+                <StaffDetailField label="Gender" className="student-profile-field-gender" showEmpty>
+                  {student.gender}
+                </StaffDetailField>
+                <StaffDetailField label="Family" className="student-profile-field-family" showEmpty>
                   {student.household ? (
                     <Link href={`/staff/families/${student.household.id}`} className="family-household-payer-link">
                       {student.household.displayName}
                     </Link>
                   ) : null}
                 </StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-upper student-profile-school-row">
+                <StaffDetailField label="Birthdate">{student.birthdate}</StaffDetailField>
+                <StaffDetailField label="Phone">{student.cellPhone}</StaffDetailField>
+                <StaffDetailField label="Grade">{formatGradeLabel(student.gradeLabel)}</StaffDetailField>
+                <StaffDetailField label="Grade year">{student.graduationYear}</StaffDetailField>
+                <StaffDetailField label="School">{student.schoolName}</StaffDetailField>
               </StaffDetailFieldGroup>
               <StaffDetailFieldGroup className="family-household-lower">
                 <StaffDetailField label="Mailing address" className="family-household-field-address" showEmpty>
@@ -689,7 +691,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           </div>
         </Panel>
 
-        <Panel className="family-equal-panel">
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Payment</h2>
           </div>
