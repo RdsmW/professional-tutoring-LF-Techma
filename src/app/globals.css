@@ -3933,13 +3933,13 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   padding: 16px 0;
 }
 .auth-brand-headline {
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   font: 500 40px/1.2 Georgia, "Times New Roman", serif;
   color: #fff;
   letter-spacing: -0.02em;
 }
 .auth-brand-stats {
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   padding: 0;
   list-style: none;
   display: flex;
@@ -4125,7 +4125,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   }
   .auth-brand-headline {
     font-size: 32px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
   .auth-brand-stats li,
   .auth-brand-close {
@@ -4133,7 +4133,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   }
   .auth-brand-stats {
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
   .auth-form {
     padding: 24px 16px 36px;
