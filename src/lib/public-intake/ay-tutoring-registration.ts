@@ -68,6 +68,8 @@ export type AyTutoringRegistrationInput = {
   householdAddress: AddressInput;
   billing: ContactInput & AddressInput;
   subjectCodes: string[];
+  /** Explicit primary subject for tutor matching; must be one of subjectCodes. */
+  primarySubjectCode: string;
   subjectNotes?: string;
   testPrepInterests?: string[];
   referralSource: string;
@@ -198,6 +200,13 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   if (subjectCodes.some((code) => !isValidOptionId("ACADEMIC_SUBJECTS", code))) {
     throw new PublicIntakeError("Invalid subject selection.");
   }
+  const primarySubjectCode = trim(raw.primarySubjectCode);
+  if (!primarySubjectCode) {
+    throw new PublicIntakeError("Choose a primary subject so we can match a tutor.");
+  }
+  if (!subjectCodes.includes(primarySubjectCode)) {
+    throw new PublicIntakeError("Primary subject must be one of the selected subjects.");
+  }
 
   const referralSource = trim(raw.referralSource);
   if (!isValidOptionId("REFERRAL_SOURCE", referralSource)) {
@@ -224,12 +233,15 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   if (advancedHoursRatePackage && !isValidOptionId("ACADEMIC_ADVANCED_RATE_PACKAGES", advancedHoursRatePackage)) {
     throw new PublicIntakeError("Invalid advanced hours/rate selection.");
   }
+  if (hoursRatePackage && advancedHoursRatePackage) {
+    throw new PublicIntakeError("Choose a standard or advanced hours/rate package, not both.");
+  }
 
   const autoCharge = optional(raw.autoCharge);
   if (autoCharge && !isValidOptionId("YES_NO", autoCharge)) {
     throw new PublicIntakeError("Invalid automatic-charge preference.");
   }
-  const altPaymentMethod = optional(raw.altPaymentMethod);
+  const altPaymentMethod = autoCharge === "no" ? optional(raw.altPaymentMethod) : null;
   if (altPaymentMethod && !isValidOptionId("ALT_PAYMENT_METHODS", altPaymentMethod)) {
     throw new PublicIntakeError("Invalid alternate payment method.");
   }
@@ -262,7 +274,6 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
     if (secondBlock) throw new PublicIntakeError(secondBlock, 400, "staff_email");
   }
 
-  const primarySubjectCode = subjectCodes[0]!;
   const subject = await resolveCatalogSubjectRow(primarySubjectCode);
   if (!subject) {
     throw new PublicIntakeError("That subject is not available yet. Please choose another or contact us.");
@@ -355,7 +366,6 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
     if (otherHousehold) parent2Conflict = true;
   }
 
-  const additionalSubjectCodes = subjectCodes.slice(1);
   const subjectLabels = ACADEMIC_SUBJECTS.options
     .filter((option) => subjectCodes.includes(option.id))
     .map((option) => option.label);
@@ -529,7 +539,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
       source: "public_ay_tutoring",
       schedulingPath,
       catalogSubjectCode: primarySubjectCode,
-      additionalSubjectCodes,
+      additionalSubjectCodes: subjectCodes.filter((code) => code !== primarySubjectCode),
       testPrepInterests,
       preferredWindowIds: schedulingPath === "pt_chooses" ? preferredWindowIds : scheduleWindowId ? [scheduleWindowId] : [],
       hoursRatePackage,

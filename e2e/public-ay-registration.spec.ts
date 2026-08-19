@@ -56,6 +56,7 @@ test.describe("public academic year registration", () => {
         postalCode: "22015",
       },
       subjectCodes: ["algebra_1"],
+      primarySubjectCode: "algebra_1",
       referralSource: "friend",
       schedulingPath: "pt_chooses",
       preferredWindowIds: ["tue_1715_1915"],

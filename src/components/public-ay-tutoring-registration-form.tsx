@@ -21,6 +21,7 @@ import {
   YES_NO,
 } from "@/lib/forms/options";
 import type { AddressSuggestion } from "@/lib/mapbox/geocode";
+import { formatTimeRange12h } from "@/lib/ui/datetime";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 
 const STEPS = [
@@ -73,6 +74,7 @@ type Draft = {
   billingPostalCode: string;
   copyFamilyAddressToBilling: boolean;
   subjectCodes: string[];
+  primarySubjectCode: string;
   subjectNotes: string;
   testPrepInterests: string[];
   referralSource: string;
@@ -132,6 +134,7 @@ const emptyDraft: Draft = {
   billingPostalCode: "",
   copyFamilyAddressToBilling: true,
   subjectCodes: [],
+  primarySubjectCode: "",
   subjectNotes: "",
   testPrepInterests: [],
   referralSource: "",
@@ -265,7 +268,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
 
-  const primarySubject = draft.subjectCodes[0] ?? "";
+  const primarySubject = draft.primarySubjectCode;
 
   function patch(next: Partial<Draft>) {
     setDraft((current) => ({ ...current, ...next }));
@@ -274,9 +277,17 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   function toggleList(key: "subjectCodes" | "testPrepInterests" | "preferredWindowIds", id: string) {
     setDraft((current) => {
       const list = current[key];
+      const nextList = list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
+      if (key !== "subjectCodes") {
+        return { ...current, [key]: nextList };
+      }
+      const primaryStillSelected = nextList.includes(current.primarySubjectCode);
       return {
         ...current,
-        [key]: list.includes(id) ? list.filter((item) => item !== id) : [...list, id],
+        subjectCodes: nextList,
+        primarySubjectCode: primaryStillSelected ? current.primarySubjectCode : "",
+        tutorId: primaryStillSelected ? current.tutorId : "",
+        slotId: primaryStillSelected ? current.slotId : "",
       };
     });
   }
@@ -377,6 +388,10 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
     }
     if (step === 3) {
       if (draft.subjectCodes.length === 0) return "Select at least one subject.";
+      if (!draft.primarySubjectCode) return "Choose a primary subject so we can match a tutor.";
+      if (!draft.subjectCodes.includes(draft.primarySubjectCode)) {
+        return "Primary subject must be one of the selected subjects.";
+      }
       if (!draft.referralSource) return "Please tell us how you heard about us.";
     }
     if (step === 4) {
@@ -392,7 +407,12 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         return "Select at least one preferred time or add a note.";
       }
     }
-    if (step === 5 && !draft.paymentPlanId) return "Select a payment plan.";
+    if (step === 5) {
+      if (!draft.paymentPlanId) return "Select a payment plan.";
+      if (draft.hoursRatePackage && draft.advancedHoursRatePackage) {
+        return "Choose a standard or advanced hours/rate package, not both.";
+      }
+    }
     if (step === 6) {
       if (!draft.policyAck || !draft.agreementAck) return "Please acknowledge the policy and agreement.";
       if (!draft.parentSignature.trim() || !draft.studentSignature.trim()) {
@@ -493,6 +513,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
             ...billingAddress,
           },
           subjectCodes: draft.subjectCodes,
+          primarySubjectCode: draft.primarySubjectCode,
           subjectNotes: draft.subjectNotes,
           testPrepInterests: draft.testPrepInterests,
           referralSource: draft.referralSource,
@@ -747,10 +768,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
 
       {step === 3 ? (
         <div className="public-ay-stack">
-          <p>
-            Select every subject that applies.
-            <RequiredMark /> We’ll use the first checked subject to look for tutors.
-          </p>
+          <p>Select every subject that applies. Then choose one primary subject for tutor matching.</p>
           <div className="public-ay-checks">
             {ACADEMIC_SUBJECTS.options.map((option) => (
               <label key={option.id} className="public-ay-check">
@@ -763,6 +781,26 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               </label>
             ))}
           </div>
+          <Field label="Primary subject" required>
+            <select
+              value={draft.primarySubjectCode}
+              onChange={(event) =>
+                patch({ primarySubjectCode: event.target.value, tutorId: "", slotId: "" })
+              }
+            >
+              <option value="">Select</option>
+              {ACADEMIC_SUBJECTS.options
+                .filter((option) => draft.subjectCodes.includes(option.id))
+                .map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <p className="public-ay-help">
+            We match a tutor to the primary subject. Other checked subjects are additional tutoring needs.
+          </p>
           <label className="public-ay-field">
             <span>Notes (optional)</span>
             <textarea value={draft.subjectNotes} onChange={(event) => patch({ subjectNotes: event.target.value })} rows={3} />
@@ -868,8 +906,12 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                       disabled={slot.openSeats < 1}
                       onClick={() => patch({ slotId: slot.id })}
                     >
-                      {DAY_NAMES[slot.dayOfWeek]} {slot.startTimeLocal}–{slot.endTimeLocal}
-                      <small>{slot.openSeats < 1 ? "Full" : `${slot.openSeats} remaining — preferred, not confirmed`}</small>
+                      {DAY_NAMES[slot.dayOfWeek]} {formatTimeRange12h(slot.startTimeLocal, slot.endTimeLocal)}
+                      <small>
+                        {slot.openSeats < 1
+                          ? "Full"
+                          : `${slot.openSeats} ${slot.openSeats === 1 ? "spot" : "spots"} available`}
+                      </small>
                     </button>
                   ))}
                 </div>
@@ -918,7 +960,12 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
             </select>
           </Field>
           <Field label="Hours / rates (standard, optional)">
-            <select value={draft.hoursRatePackage} onChange={(event) => patch({ hoursRatePackage: event.target.value })}>
+            <select
+              value={draft.hoursRatePackage}
+              onChange={(event) =>
+                patch({ hoursRatePackage: event.target.value, advancedHoursRatePackage: "" })
+              }
+            >
               <option value="">Select</option>
               {ACADEMIC_RATE_PACKAGES.options.map((option) => (
                 <option key={option.id} value={option.id}>
@@ -930,7 +977,9 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
           <Field label="Hours / rates (advanced, optional)">
             <select
               value={draft.advancedHoursRatePackage}
-              onChange={(event) => patch({ advancedHoursRatePackage: event.target.value })}
+              onChange={(event) =>
+                patch({ advancedHoursRatePackage: event.target.value, hoursRatePackage: "" })
+              }
             >
               <option value="">Select</option>
               {ACADEMIC_ADVANCED_RATE_PACKAGES.options.map((option) => (
@@ -940,8 +989,15 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               ))}
             </select>
           </Field>
+          <p className="public-ay-help">Choose a standard or advanced package, not both.</p>
           <Field label="Automatically charge a card for monthly payments? (optional)">
-            <select value={draft.autoCharge} onChange={(event) => patch({ autoCharge: event.target.value })}>
+            <select
+              value={draft.autoCharge}
+              onChange={(event) => {
+                const autoCharge = event.target.value;
+                patch({ autoCharge, altPaymentMethod: autoCharge === "no" ? draft.altPaymentMethod : "" });
+              }}
+            >
               <option value="">Select</option>
               {YES_NO.options.map((option) => (
                 <option key={option.id} value={option.id}>
@@ -950,16 +1006,18 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               ))}
             </select>
           </Field>
-          <Field label="Alternative form of payment (optional)">
-            <select value={draft.altPaymentMethod} onChange={(event) => patch({ altPaymentMethod: event.target.value })}>
-              <option value="">Select</option>
-              {ALT_PAYMENT_METHODS.options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {draft.autoCharge === "no" ? (
+            <Field label="Alternative form of payment (optional)">
+              <select value={draft.altPaymentMethod} onChange={(event) => patch({ altPaymentMethod: event.target.value })}>
+                <option value="">Select</option>
+                {ALT_PAYMENT_METHODS.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
         </div>
       ) : null}
 
@@ -972,7 +1030,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               onChange={(event) => patch({ policyAck: event.target.checked })}
             />
             <span>
-              I acknowledge the tutoring policy and course information.
+              I acknowledge the Academic Year Tutoring policy.
               <RequiredMark />
             </span>
           </label>
@@ -998,21 +1056,101 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
 
       {step === 7 ? (
         <div className="public-ay-stack">
-          <p>
-            {draft.studentFirstName} {draft.studentLastName} · {draft.schoolName}
-          </p>
-          <p>
-            Parent 1: {draft.p1FirstName} {draft.p1LastName}
-          </p>
-          <p>
-            Bill to: {draft.billingFirstName} {draft.billingLastName} ({draft.billingEmail})
-          </p>
-          <p>
-            {draft.schedulingPath === "family_selected"
-              ? `Preferred tutor/time: ${selectedTutorName ?? "Selected tutor"}${selectedSlot ? ` · ${DAY_NAMES[selectedSlot.dayOfWeek]} ${selectedSlot.startTimeLocal}` : ""}. Not a confirmed seat.`
-              : "Professional Tutoring will choose a tutor and time."}
-          </p>
-          <p>You will not be charged today.</p>
+          <section>
+            <h2>Student</h2>
+            <p>
+              {draft.studentFirstName} {draft.studentLastName}
+              {draft.schoolName ? ` · ${draft.schoolName}` : ""}
+              {draft.gradeLabel
+                ? ` · ${GRADE_LABELS.options.find((option) => option.id === draft.gradeLabel)?.label ?? draft.gradeLabel}`
+                : ""}
+            </p>
+            <p>
+              {[draft.studentAddressLine1, draft.studentCity, draft.studentState, draft.studentPostalCode]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          </section>
+          <section>
+            <h2>Parents / Billing</h2>
+            <p>
+              Parent 1: {draft.p1FirstName} {draft.p1LastName} ({draft.p1Email})
+            </p>
+            {draft.p2FirstName || draft.p2LastName || draft.p2Email ? (
+              <p>
+                Parent 2: {draft.p2FirstName} {draft.p2LastName}
+                {draft.p2Email ? ` (${draft.p2Email})` : ""}
+              </p>
+            ) : (
+              <p>Parent 2: not provided</p>
+            )}
+            <p>
+              Bill to: {draft.billingFirstName} {draft.billingLastName} ({draft.billingEmail})
+            </p>
+          </section>
+          <section>
+            <h2>Tutoring needs</h2>
+            <p>
+              Primary:{" "}
+              {ACADEMIC_SUBJECTS.options.find((option) => option.id === draft.primarySubjectCode)?.label ??
+                draft.primarySubjectCode}
+            </p>
+            {draft.subjectCodes.filter((code) => code !== draft.primarySubjectCode).length > 0 ? (
+              <p>
+                Additional:{" "}
+                {ACADEMIC_SUBJECTS.options
+                  .filter((option) => draft.subjectCodes.includes(option.id) && option.id !== draft.primarySubjectCode)
+                  .map((option) => option.label)
+                  .join(", ")}
+              </p>
+            ) : null}
+          </section>
+          <section>
+            <h2>Schedule</h2>
+            <p>
+              {draft.schedulingPath === "family_selected"
+                ? `Preferred tutor: ${selectedTutorName ?? "Selected tutor"}${
+                    selectedSlot
+                      ? ` · ${DAY_NAMES[selectedSlot.dayOfWeek]} ${formatTimeRange12h(selectedSlot.startTimeLocal, selectedSlot.endTimeLocal)}`
+                      : ""
+                  }. This is a preference, not a confirmed seat.`
+                : "Professional Tutoring will choose a tutor and time."}
+            </p>
+          </section>
+          <section>
+            <h2>Plan</h2>
+            <p>
+              {ACADEMIC_PAYMENT_PLANS.options.find((option) => option.id === draft.paymentPlanId)?.label ??
+                draft.paymentPlanId}
+            </p>
+            {draft.hoursRatePackage ? (
+              <p>
+                {ACADEMIC_RATE_PACKAGES.options.find((option) => option.id === draft.hoursRatePackage)?.label}
+              </p>
+            ) : null}
+            {draft.advancedHoursRatePackage ? (
+              <p>
+                {
+                  ACADEMIC_ADVANCED_RATE_PACKAGES.options.find(
+                    (option) => option.id === draft.advancedHoursRatePackage,
+                  )?.label
+                }
+              </p>
+            ) : null}
+            {draft.autoCharge === "no" && draft.altPaymentMethod ? (
+              <p>
+                Alternative payment:{" "}
+                {ALT_PAYMENT_METHODS.options.find((option) => option.id === draft.altPaymentMethod)?.label ??
+                  draft.altPaymentMethod}
+              </p>
+            ) : null}
+            <p>You will not be charged today.</p>
+          </section>
+          <section>
+            <h2>Agreement</h2>
+            <p>Parent signature: {draft.parentSignature}</p>
+            <p>Student signature: {draft.studentSignature}</p>
+          </section>
         </div>
       ) : null}
 

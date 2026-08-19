@@ -53,3 +53,15 @@ export function formatTime12hEnglish(value: string): string {
   const date = new Date(2000, 0, 1, hour, minute);
   return date.toLocaleTimeString(EN, { hour: "numeric", minute: "2-digit" });
 }
+
+/** Compact family-friendly range, e.g. `3:00–5:00 PM`. */
+export function formatTimeRange12h(start: string, end: string): string {
+  const startLabel = formatTime12hEnglish(start);
+  const endLabel = formatTime12hEnglish(end);
+  const startPeriod = startLabel.match(/\s*([AP]M)$/i)?.[1];
+  const endPeriod = endLabel.match(/\s*([AP]M)$/i)?.[1];
+  if (startPeriod && endPeriod && startPeriod.toUpperCase() === endPeriod.toUpperCase()) {
+    return `${startLabel.replace(/\s*[AP]M$/i, "")}–${endLabel}`;
+  }
+  return `${startLabel}–${endLabel}`;
+}
