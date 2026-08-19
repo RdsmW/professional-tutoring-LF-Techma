@@ -57,6 +57,11 @@ export type AyTutoringRegistrationInput = {
     cellPhone?: string;
     email?: string;
     supportNotes?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
   };
   parent1: ContactInput;
   parent2?: ContactInput | null;
@@ -162,9 +167,18 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
     throw new PublicIntakeError("Birthdate must be YYYY-MM-DD.");
   }
   if (studentEmail && !isValidEmail(studentEmail)) throw new PublicIntakeError("Student email is not valid.");
-  if (studentCell && !isValidPhone(studentCell)) throw new PublicIntakeError("Student phone is not valid.");
+  if (!studentCell) throw new PublicIntakeError("Student phone is required.");
+  if (!isValidPhone(studentCell)) throw new PublicIntakeError("Student phone is not valid.");
 
-  const parent1 = requireContact("Parent 1", raw.parent1);
+  const studentAddress = requireAddress("Student address", {
+    addressLine1: raw.student?.addressLine1 ?? "",
+    addressLine2: raw.student?.addressLine2,
+    city: raw.student?.city ?? "",
+    state: raw.student?.state ?? "",
+    postalCode: raw.student?.postalCode ?? "",
+  });
+
+  const parent1 = requireContact("Parent 1", raw.parent1, true);
   const parent2Raw = raw.parent2;
   const parent2Present = Boolean(
     parent2Raw && (trim(parent2Raw.firstName) || trim(parent2Raw.lastName) || trim(parent2Raw.email)),
@@ -501,11 +515,11 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
         advancedHoursRatePackage,
         paymentPlan: paymentPlanId,
         lifecycle: "prospect",
-        addressLine1: householdAddress.addressLine1,
-        addressLine2: householdAddress.addressLine2,
-        city: householdAddress.city,
-        state: householdAddress.state,
-        postalCode: householdAddress.postalCode,
+        addressLine1: studentAddress.addressLine1,
+        addressLine2: studentAddress.addressLine2,
+        city: studentAddress.city,
+        state: studentAddress.state,
+        postalCode: studentAddress.postalCode,
         country: HOUSEHOLD_COUNTRY_US,
         updatedAt: now,
       })

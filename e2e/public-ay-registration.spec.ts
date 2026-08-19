@@ -26,6 +26,11 @@ test.describe("public academic year registration", () => {
         graduationYear: String(new Date().getFullYear() + 3),
         gender: "M",
         birthdate: "2010-04-12",
+        cellPhone: "7035550199",
+        addressLine1: "1 Student Ln",
+        city: "Burke",
+        state: "VA",
+        postalCode: "22015",
         supportNotes: "504 extended time",
       },
       parent1: {
