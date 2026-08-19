@@ -18,6 +18,7 @@ import {
   studentSubjects,
   subjects,
 } from "@/lib/db/schema";
+import { listTutoringAssignmentQueue } from "@/lib/staff/tutoring-assignment-queue";
 import { buildStudentListLabel } from "@/lib/staff/students";
 import { formatGradeLabelDisplay } from "@/lib/ui/grade";
 import { formatDirectoryCreatedAt } from "@/lib/ui/directory-sort";
@@ -26,8 +27,6 @@ import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 import {
   formatQueueDate,
   PRIORITY_QUEUE_RECENT_LIMIT,
-  PREVIEW_REQUEST_TOTAL,
-  previewQueueRows,
   type PreviewQueueRow,
 } from "@/lib/staff/preview-requests";
 
@@ -87,6 +86,7 @@ async function loadDashboardData() {
     billingExceptionsLive: false,
     familyRequests: [] as PreviewQueueRow[],
     familyRequestsTotal: 0,
+    assignmentQueue: [] as Awaited<ReturnType<typeof listTutoringAssignmentQueue>>,
     recentStudents: [] as StaffStudentDirectoryTableRow[],
     weekBars: WEEK_DAYS.map((day) => ({
       day: formatCapacityDay(weekStart, day),
@@ -125,6 +125,7 @@ async function loadDashboardData() {
       exceptionRows,
       paymentAttentionRows,
       recentStudentRows,
+      assignmentQueue,
     ] = await Promise.all([
       db
         .select({ id: households.id })
@@ -184,6 +185,7 @@ async function loadDashboardData() {
         .where(ne(students.lifecycle, "archived"))
         .orderBy(desc(students.createdAt))
         .limit(8),
+      listTutoringAssignmentQueue(),
     ]);
 
     const openSeats = slotRows.reduce((sum, slot) => {
@@ -312,6 +314,7 @@ async function loadDashboardData() {
       billingExceptionsLive: true,
       familyRequests,
       familyRequestsTotal: exceptionRows.length,
+      assignmentQueue,
       recentStudents,
       weekBars,
       weekBarsLive: slotRows.length > 0,
@@ -340,9 +343,8 @@ export default async function StaffDashboardPage() {
     day: "numeric",
   }).format(new Date());
   const greeting = greetingForHour(nowNy.getHours());
-  const usingPreviewRequests = data.familyRequests.length === 0 && !data.loadError;
-  const priorityRequests = usingPreviewRequests ? previewQueueRows() : data.familyRequests;
-  const priorityRequestTotal = usingPreviewRequests ? PREVIEW_REQUEST_TOTAL : data.familyRequestsTotal;
+  const priorityRequests = data.familyRequests;
+  const priorityRequestTotal = data.familyRequestsTotal;
 
   return (
     <>
@@ -379,6 +381,39 @@ export default async function StaffDashboardPage() {
           <p>Payments needing attention</p>
           <strong>{data.billingExceptions}</strong>
         </article>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">Needs attention</span>
+            <h3 className="staff-section-title dashboard-queue-title">
+              <span className="dashboard-count-badge">{data.assignmentQueue.length}</span>
+              Tutor assignment
+            </h3>
+          </div>
+          <Link href="/staff/tutoring-requests" className="text-button">
+            Open queue
+          </Link>
+        </div>
+        {data.assignmentQueue.length === 0 ? (
+          <p className="dashboard-empty">No tutoring registrations need a tutor assignment.</p>
+        ) : (
+          <div className="attention-list">
+            {data.assignmentQueue.map((item) => (
+              <Link key={item.id} href={`/staff/tutoring-requests/${item.id}`} className="attention-row">
+                <span className="attention-row-name">
+                  <strong>{item.studentName}</strong>
+                  <small>{item.reason}</small>
+                </span>
+                <span className="attention-row-student">{item.subjectName}</span>
+                <span className="attention-row-amount">
+                  {item.schedulingPath === "family_selected" ? "Preferred time — not booked" : "Choose tutor"}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="dashboard-main-row staff-equal-cards">
@@ -428,11 +463,7 @@ export default async function StaffDashboardPage() {
               Open sessions
             </Link>
           </div>
-          {usingPreviewRequests ? (
-            <p className="dashboard-preview-note">
-              Sample preview — {priorityRequests.length} recent of {priorityRequestTotal} (not live).
-            </p>
-          ) : priorityRequestTotal > priorityRequests.length ? (
+          {priorityRequestTotal > priorityRequests.length ? (
             <p className="dashboard-preview-note">
               Showing {priorityRequests.length} recent of {priorityRequestTotal}.
             </p>

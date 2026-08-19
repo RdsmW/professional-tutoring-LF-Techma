@@ -79,7 +79,7 @@ export async function queryWaitlistReport(
       period: periodLabelForInstant(row.createdAt, range),
       group: ageGroup(days),
       value: `${days} day${days === 1 ? "" : "s"}`,
-      href: `/staff/students/${row.studentId}`,
+      href: `/staff/tutoring-requests/${row.id}`,
     });
   }
 

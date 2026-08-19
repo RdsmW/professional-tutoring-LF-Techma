@@ -10,7 +10,6 @@ export default function SignUpPage() {
         path="/sign-up"
         signInUrl="/sign-in"
         fallbackRedirectUrl="/post-login"
-        forceRedirectUrl="/post-login"
         appearance={authClerkAppearance()}
       />
     </AuthShell>
