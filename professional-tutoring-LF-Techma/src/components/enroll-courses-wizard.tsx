@@ -1,0 +1,658 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  StripeCardSaver,
+  type CollectedCard,
+  type StripeCardSaverHandle,
+} from "@/components/stripe-card-saver";
+import type { EnrollFormId } from "@/lib/enrollment/course-map";
+import { REFERRAL_SOURCE } from "@/lib/forms/options";
+import { formatGradeLabel } from "@/lib/ui/grade";
+
+type Option = { id: string; label: string };
+type Student = { id: string; displayName: string; gradeLabel: string | null; schoolName: string | null };
+type Course = {
+  id: string;
+  code: string;
+  formId: EnrollFormId;
+  name: string;
+  title: string;
+  termLabel: string | null;
+  scheduleSummary: string | null;
+  description: string | null;
+  seatsRemaining: number;
+  tuitionLabel: string;
+  registrationFeeLabel: string;
+  materialsFeeLabel: string;
+  paymentPlans: Option[];
+  slotOptions: Option[];
+};
+type SavedCard = { brand: string | null; last4: string | null };
+
+type Draft = {
+  studentId: string;
+  courseOfferingId: string;
+  formId: EnrollFormId | "";
+  paymentPlanId: string;
+  slotPreference: string[];
+  policyAck: boolean;
+  saveCardForFuture: boolean;
+  cardReady: boolean;
+  paymentMethodId: string | null;
+  referralSource: string;
+};
+
+const steps = ["Student", "Course", "Program", "Billing", "Policy", "Review"];
+
+const emptyDraft: Draft = {
+  studentId: "",
+  courseOfferingId: "",
+  formId: "",
+  paymentPlanId: "",
+  slotPreference: [],
+  policyAck: false,
+  saveCardForFuture: false,
+  cardReady: false,
+  paymentMethodId: null,
+  referralSource: "",
+};
+
+export function EnrollCoursesWizard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const cardRef = useRef<StripeCardSaverHandle>(null);
+  const [step, setStep] = useState(1);
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
+  const [displayCard, setDisplayCard] = useState<SavedCard | null>(null);
+  const [stripeConfigured, setStripeConfigured] = useState(true);
+  const [householdStatus, setHouseholdStatus] = useState("pending");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [confirmingCard, setConfirmingCard] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<{
+    courseName: string;
+    studentName: string;
+    scheduleLabel: string;
+    savedForFuture: boolean;
+    cardLabel: string;
+  } | null>(null);
+
+  const selectedStudent = students.find((student) => student.id === draft.studentId);
+  const selectedCourse = courses.find((course) => course.id === draft.courseOfferingId);
+  const paymentPlans = selectedCourse?.paymentPlans ?? [];
+  const slotOptions = selectedCourse?.slotOptions ?? [];
+  const selectedPlan = paymentPlans.find((plan) => plan.id === draft.paymentPlanId);
+
+  useEffect(() => {
+    const presetStudent = searchParams.get("studentId");
+    void (async () => {
+      try {
+        const response = await fetch("/api/family/enroll-courses/options");
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          setError(data.error || "Unable to load enrollment options.");
+          return;
+        }
+        setStudents(data.students ?? []);
+        setCourses(data.courses ?? []);
+        setStripeConfigured(Boolean(data.stripeConfigured));
+        setHouseholdStatus(data.householdStatus);
+        if (data.savedCard?.last4) {
+          const card = { brand: data.savedCard.brand, last4: data.savedCard.last4 };
+          setSavedCard(card);
+          setDisplayCard(card);
+          setDraft((prev) => ({
+            ...prev,
+            cardReady: true,
+            paymentMethodId: null,
+            saveCardForFuture: Boolean(data.savedCard.consentAt),
+          }));
+        }
+        if (presetStudent && (data.students ?? []).some((s: Student) => s.id === presetStudent)) {
+          setDraft((prev) => ({ ...prev, studentId: presetStudent }));
+          setStep(2);
+        }
+      } catch {
+        setError("Unable to load enrollment options.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [searchParams]);
+
+  const stepValid = useMemo(() => {
+    if (step === 1) return Boolean(draft.studentId);
+    if (step === 2) return Boolean(draft.courseOfferingId && draft.formId);
+    if (step === 3) {
+      if (!selectedCourse) return false;
+      if (draft.formId === "first_class") return draft.slotPreference.length === 1;
+      if (draft.formId === "summer_master_class") return draft.slotPreference.length > 0;
+      return draft.formId === "express";
+    }
+    if (step === 4) return Boolean(draft.paymentPlanId);
+    if (step === 5) {
+      return Boolean(draft.policyAck && stripeConfigured);
+    }
+    return true;
+  }, [draft, selectedCourse, step, stripeConfigured]);
+
+  function selectCourse(course: Course) {
+    setDraft({
+      ...draft,
+      courseOfferingId: course.id,
+      formId: course.formId,
+      paymentPlanId: "",
+      slotPreference: [],
+    });
+  }
+
+  function toggleMasterSession(optionId: string) {
+    setDraft((prev) => {
+      const exists = prev.slotPreference.includes(optionId);
+      return {
+        ...prev,
+        slotPreference: exists
+          ? prev.slotPreference.filter((id) => id !== optionId)
+          : [...prev.slotPreference, optionId],
+      };
+    });
+  }
+
+  function applyCollectedCard(card: CollectedCard) {
+    setDisplayCard({ brand: card.brand, last4: card.last4 });
+    if (card.savedForFuture && card.last4) {
+      setSavedCard({ brand: card.brand, last4: card.last4 });
+    }
+    setDraft((prev) => ({
+      ...prev,
+      cardReady: true,
+      paymentMethodId: card.id,
+      saveCardForFuture: card.savedForFuture ? true : prev.saveCardForFuture,
+    }));
+  }
+
+  async function handleContinue() {
+    if (step !== 5) {
+      setStep((value) => value + 1);
+      return;
+    }
+    if (displayCard?.last4 && draft.cardReady) {
+      setStep(6);
+      return;
+    }
+    setConfirmingCard(true);
+    setError(null);
+    try {
+      const collected = await cardRef.current?.confirm();
+      if (!collected?.last4) return;
+      applyCollectedCard(collected);
+      setStep(6);
+    } catch {
+      setError("Unable to confirm card.");
+    } finally {
+      setConfirmingCard(false);
+    }
+  }
+
+  async function confirmEnrollment() {
+    if (saving) return;
+    if (!displayCard?.last4) {
+      setError("Confirm a payment method before submitting.");
+      setStep(5);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/family/enroll-courses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: draft.studentId,
+          courseOfferingId: draft.courseOfferingId,
+          formId: draft.formId,
+          paymentPlanId: draft.paymentPlanId,
+          slotPreference:
+            draft.formId === "summer_master_class"
+              ? draft.slotPreference
+              : draft.slotPreference[0] ?? "",
+          policyAck: draft.policyAck,
+          saveCardForFuture: draft.saveCardForFuture,
+          paymentMethodId: draft.paymentMethodId || undefined,
+          referralSource: draft.referralSource || undefined,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(data.error || "Unable to confirm enrollment.");
+        return;
+      }
+      const savedForFuture =
+        draft.saveCardForFuture || Boolean(savedCard?.last4 && !draft.paymentMethodId);
+      setConfirmed({
+        courseName: data.enrollment.courseName,
+        studentName: data.enrollment.studentName,
+        scheduleLabel: data.enrollment.scheduleLabel,
+        savedForFuture,
+        cardLabel: `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4}`,
+      });
+      setStep(7);
+    } catch {
+      setError("Unable to confirm enrollment.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="panel">Loading enrollment options…</div>;
+  }
+
+  if (householdStatus !== "active") {
+    return (
+      <div className="panel">
+        <h3>Onboarding required</h3>
+        <p>Complete your family profile before enrolling in a course.</p>
+        <button type="button" className="family-primary" onClick={() => router.push("/family/onboarding")}>
+          Complete onboarding
+        </button>
+      </div>
+    );
+  }
+
+  if (students.length === 0) {
+    return (
+      <div className="panel">
+        <h3>Add a student first</h3>
+        <p>Course enrollment needs at least one student on the household.</p>
+        <button type="button" className="family-primary" onClick={() => router.push("/family/students?add=1")}>
+          Add student
+        </button>
+      </div>
+    );
+  }
+
+  if (confirmed) {
+    return (
+      <div className="panel success-state">
+        <span>✓</span>
+        <h3>Enrollment submitted</h3>
+        <div className="success-facts">
+          <p>
+            <small>Enrollment</small>
+            <strong>
+              {confirmed.courseName} · {confirmed.studentName}
+            </strong>
+          </p>
+          <p>
+            <small>Schedule</small>
+            <strong>{confirmed.scheduleLabel}</strong>
+          </p>
+          <p>
+            <small>Payment</small>
+            <strong>
+              {confirmed.cardLabel} ·{" "}
+              {confirmed.savedForFuture ? "Saved for future charges" : "This enrollment only"}
+            </strong>
+          </p>
+        </div>
+        <div className="success-actions-stack">
+          <button type="button" className="family-primary" onClick={() => router.push("/family")}>
+            Back to home
+          </button>
+          <div className="success-secondary-links">
+            <button type="button" onClick={() => router.push("/family/students")}>
+              View students
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmed(null);
+                setDraft({
+                  ...emptyDraft,
+                  studentId: draft.studentId,
+                  cardReady: Boolean(displayCard?.last4),
+                  paymentMethodId: draft.paymentMethodId,
+                  saveCardForFuture: draft.saveCardForFuture,
+                });
+                setStep(draft.studentId ? 2 : 1);
+              }}
+            >
+              Enroll another
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <section className="wizard-shell panel">
+      <div className="wizard-progress">
+        {steps.map((label, index) => (
+          <div
+            key={label}
+            className={index + 1 < step ? "complete" : index + 1 === step ? "complete" : undefined}
+          >
+            <span>{index + 1}</span>
+            <small>{label}</small>
+          </div>
+        ))}
+      </div>
+
+      {step === 1 ? (
+        <div className="wizard-stage">
+          <h3>Choose a student</h3>
+          <div className="choice-grid two">
+            {students.map((student) => (
+              <button
+                key={student.id}
+                type="button"
+                className={`choice-card${draft.studentId === student.id ? " selected" : ""}`}
+                onClick={() => setDraft({ ...draft, studentId: student.id })}
+              >
+                <strong>{student.displayName}</strong>
+                <p>{formatGradeLabel(student.gradeLabel) || "Grade TBD"}</p>
+                <small>{student.schoolName || "School TBD"}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {step === 2 ? (
+        <div className="wizard-stage">
+          <h3>Select a defined cohort course</h3>
+          {courses.length === 0 ? (
+            <div className="validation-hint">No active course offerings are available yet.</div>
+          ) : (
+            <div className="choice-grid">
+              {courses.map((course) => (
+                <button
+                  key={course.id}
+                  type="button"
+                  className={`choice-card${draft.courseOfferingId === course.id ? " selected" : ""}`}
+                  onClick={() => selectCourse(course)}
+                  disabled={course.seatsRemaining <= 0}
+                >
+                  <strong>{course.title}</strong>
+                  <p>{course.termLabel || "Cohort term"}</p>
+                  <small>
+                    {course.scheduleSummary || "Schedule TBD"} · {course.seatsRemaining} seat(s) left
+                  </small>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {step === 3 && selectedCourse ? (
+        <div className="wizard-stage">
+          <h3>{selectedCourse.title} program details</h3>
+          <div className="program-detail">
+            <div>
+              <small>Program</small>
+              <strong>{selectedCourse.title}</strong>
+            </div>
+            <div>
+              <small>Term</small>
+              <strong>{selectedCourse.termLabel || "TBD"}</strong>
+            </div>
+            <div>
+              <small>Meeting pattern</small>
+              <strong>{selectedCourse.scheduleSummary || "Pending confirmation"}</strong>
+            </div>
+            <div>
+              <small>Fees (catalog)</small>
+              <strong>
+                Reg {selectedCourse.registrationFeeLabel} · Tuition {selectedCourse.tuitionLabel} · Materials{" "}
+                {selectedCourse.materialsFeeLabel}
+              </strong>
+            </div>
+          </div>
+
+          {draft.formId === "express" ? (
+            <div className="validation-hint persistent">
+              Open decision: Express class-time preference is pending client confirmation. No times are offered
+              here.
+            </div>
+          ) : null}
+          {draft.formId === "summer_master_class" ? (
+            <div className="validation-hint persistent">
+              Evidence gate: Summer Master Class agreement mapping remains pending correction; enrollment still
+              uses the standard policy acknowledgement.
+            </div>
+          ) : null}
+
+          {draft.formId === "first_class" ? (
+            <div className="select-block">
+              <strong>Class time preference</strong>
+              <div className="field-choice-row">
+                {slotOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={draft.slotPreference[0] === option.id ? "selected" : ""}
+                    onClick={() => setDraft({ ...draft, slotPreference: [option.id] })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {draft.formId === "summer_master_class" ? (
+            <div className="select-block">
+              <strong>Session preferences</strong>
+              <div className="field-choice-row">
+                {slotOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={draft.slotPreference.includes(option.id) ? "selected" : ""}
+                    onClick={() => toggleMasterSession(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {step === 4 ? (
+        <div className="wizard-stage">
+          <h3>Registration and billing preview</h3>
+          <p>
+            Choose the course-specific plan. Amounts are catalog labels only — no charge is taken in this step.
+          </p>
+          <div className="choice-grid two">
+            {paymentPlans.map((plan) => (
+              <button
+                key={plan.id}
+                type="button"
+                className={`choice-card${draft.paymentPlanId === plan.id ? " selected" : ""}`}
+                onClick={() => setDraft({ ...draft, paymentPlanId: plan.id })}
+              >
+                <strong>{plan.id === "pay_in_full" ? "Paid in full" : "Monthly plan"}</strong>
+                <p>{plan.label}</p>
+                <small>Hosted Stripe card on file · No charge</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {step === 5 ? (
+        <div className="wizard-stage">
+          <h3>Policy and payment method</h3>
+          {!stripeConfigured ? (
+            <div className="validation-hint">
+              Stripe keys are missing. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY to .env.local,
+              then restart the server.
+            </div>
+          ) : null}
+          <label className="merge-confirm">
+            <input
+              type="checkbox"
+              checked={draft.policyAck}
+              onChange={(event) => setDraft({ ...draft, policyAck: event.target.checked })}
+            />
+            I acknowledge the course agreement and cancellation policy for this enrollment.
+          </label>
+          <div className="input-grid" style={{ marginTop: 12 }}>
+            <label>
+              How did you hear about us? (optional)
+              <select
+                value={draft.referralSource}
+                onChange={(event) => setDraft({ ...draft, referralSource: event.target.value })}
+              >
+                <option value="">Prefer not to say</option>
+                {REFERRAL_SOURCE.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <StripeCardSaver
+            ref={cardRef}
+            saveForFuture={draft.saveCardForFuture}
+            savedCard={savedCard}
+            onCollected={applyCollectedCard}
+            onUseSaved={() => {
+              setDisplayCard(savedCard);
+              setDraft((prev) => ({
+                ...prev,
+                cardReady: true,
+                paymentMethodId: null,
+                saveCardForFuture: true,
+              }));
+            }}
+            onStartReplace={() =>
+              setDraft((prev) => ({
+                ...prev,
+                cardReady: false,
+                paymentMethodId: null,
+              }))
+            }
+          />
+          <label className="merge-confirm">
+            <input
+              type="checkbox"
+              checked={draft.saveCardForFuture}
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  saveCardForFuture: event.target.checked,
+                })
+              }
+            />
+            Save this card for future Professional Tutoring charges.
+          </label>
+        </div>
+      ) : null}
+
+      {step === 6 ? (
+        <div className="wizard-stage">
+          <h3>Review enrollment</h3>
+          <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--muted)" }}>
+            You’re about to submit this enrollment.
+          </p>
+          <div className="review-groups">
+            <section className="review-group">
+              <div className="review-group-title">Enrollment</div>
+              <div className="review-group-grid">
+                <div>
+                  <small>Student</small>
+                  <strong>{selectedStudent?.displayName}</strong>
+                </div>
+                <div>
+                  <small>Course</small>
+                  <strong>{selectedCourse?.title}</strong>
+                </div>
+                <div>
+                  <small>Term</small>
+                  <strong>{selectedCourse?.termLabel || "TBD"}</strong>
+                </div>
+                <div>
+                  <small>Schedule</small>
+                  <strong>
+                    {draft.formId === "express"
+                      ? selectedCourse?.scheduleSummary || "Schedule pending"
+                      : draft.slotPreference
+                          .map((id) => slotOptions.find((option) => option.id === id)?.label || id)
+                          .join("; ") || selectedCourse?.scheduleSummary}
+                  </strong>
+                </div>
+              </div>
+            </section>
+            <section className="review-group">
+              <div className="review-group-title">Billing</div>
+              <div className="review-group-line">
+                <small>Payment plan</small>
+                <strong>{selectedPlan?.label}</strong>
+              </div>
+              <div className="review-group-line" style={{ borderTop: "1px solid var(--line)" }}>
+                <small>Card</small>
+                <strong>
+                  {displayCard?.last4
+                    ? `${(displayCard.brand || "Card").toUpperCase()} ···· ${displayCard.last4} · ${
+                        draft.saveCardForFuture || (savedCard?.last4 && !draft.paymentMethodId)
+                          ? "Saved for future charges"
+                          : "This enrollment only"
+                      }`
+                    : "Confirm a card on the previous step"}
+                </strong>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {error ? <div className="validation-hint">{error}</div> : null}
+
+      <div className="wizard-footer">
+        <button
+          type="button"
+          className="wizard-back"
+          onClick={() => {
+            if (step === 1) router.push("/family");
+            else setStep((value) => value - 1);
+          }}
+        >
+          ← Back
+        </button>
+        {step < 6 ? (
+          <button
+            type="button"
+            className="family-primary"
+            disabled={!stepValid || confirmingCard}
+            onClick={() => void handleContinue()}
+          >
+            {confirmingCard ? "Confirming card…" : "Continue"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="family-primary"
+            disabled={!stepValid || saving || !displayCard?.last4}
+            onClick={() => void confirmEnrollment()}
+          >
+            {saving ? "Confirming…" : "Confirm enrollment"}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}

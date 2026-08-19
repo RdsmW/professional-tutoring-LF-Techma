@@ -1,0 +1,129 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+
+export type AppToastTone = "success" | "error" | "info";
+
+export type AppToastAction = {
+  label: string;
+  onClick: () => void;
+};
+
+export type AppToast = {
+  id: string;
+  message: string;
+  tone: AppToastTone;
+  action?: AppToastAction;
+};
+
+export type AppToastOptions = {
+  /** Auto-dismiss delay. Use 0 to keep until manually dismissed. */
+  durationMs?: number;
+  action?: AppToastAction;
+};
+
+const DEFAULT_DURATION_MS = 4200;
+const UNDO_DURATION_MS = 6000;
+
+export function useAppToast(durationMs = DEFAULT_DURATION_MS) {
+  const [toasts, setToasts] = useState<AppToast[]>([]);
+  const timers = useRef<Map<string, number>>(new Map());
+
+  const dismiss = useCallback((id: string) => {
+    const timer = timers.current.get(id);
+    if (timer) {
+      window.clearTimeout(timer);
+      timers.current.delete(id);
+    }
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  const push = useCallback(
+    (message: string, tone: AppToastTone = "info", options?: AppToastOptions) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const action = options?.action;
+      setToasts((prev) => [...prev.slice(-4), { id, message, tone, action }]);
+      const defaultMs = action ? UNDO_DURATION_MS : durationMs;
+      const ms = options?.durationMs ?? defaultMs;
+      if (ms > 0) {
+        const timer = window.setTimeout(() => dismiss(id), ms);
+        timers.current.set(id, timer);
+      }
+      return id;
+    },
+    [dismiss, durationMs],
+  );
+
+  const success = useCallback(
+    (message: string, options?: AppToastOptions) => push(message, "success", options),
+    [push],
+  );
+  const error = useCallback(
+    (message: string, options?: AppToastOptions) => push(message, "error", options),
+    [push],
+  );
+  const info = useCallback(
+    (message: string, options?: AppToastOptions) => push(message, "info", options),
+    [push],
+  );
+
+  useEffect(() => {
+    return () => {
+      timers.current.forEach((timer) => window.clearTimeout(timer));
+      timers.current.clear();
+    };
+  }, []);
+
+  return {
+    toasts,
+    dismiss,
+    push,
+    success,
+    error,
+    info,
+  };
+}
+
+export function AppToastHost({
+  toasts,
+  onDismiss,
+}: {
+  toasts: AppToast[];
+  onDismiss: (id: string) => void;
+}) {
+  if (!toasts.length) return null;
+
+  return (
+    <div className="app-toast-stack" aria-live="polite" aria-relevant="additions">
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className={`app-toast app-toast--${toast.tone}${toast.action ? " app-toast--with-action" : ""}`}
+          role={toast.tone === "error" ? "alert" : "status"}
+        >
+          <p className="app-toast-message">{toast.message}</p>
+          {toast.action ? (
+            <button
+              type="button"
+              className="app-toast-action"
+              onClick={() => {
+                onDismiss(toast.id);
+                toast.action?.onClick();
+              }}
+            >
+              {toast.action.label}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="app-toast-dismiss"
+            aria-label="Dismiss notification"
+            onClick={() => onDismiss(toast.id)}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
