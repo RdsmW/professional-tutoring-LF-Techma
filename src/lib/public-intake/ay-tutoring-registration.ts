@@ -35,6 +35,12 @@ type ContactInput = {
   lastName: string;
   email: string;
   phone?: string;
+  sameAsStudentAddress?: boolean;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
 };
 
 type AddressInput = {
@@ -57,6 +63,7 @@ export type AyTutoringRegistrationInput = {
     cellPhone?: string;
     email?: string;
     supportNotes?: string;
+    otherInformation?: string;
     addressLine1?: string;
     addressLine2?: string;
     city?: string;
@@ -65,7 +72,8 @@ export type AyTutoringRegistrationInput = {
   };
   parent1: ContactInput;
   parent2?: ContactInput | null;
-  householdAddress: AddressInput;
+  /** Parent 1 mailing fallback for older clients; household billing still uses `billing`. */
+  householdAddress?: AddressInput;
   billing: ContactInput & AddressInput;
   subjectCodes: string[];
   /** Explicit primary subject for tutor matching; must be one of subjectCodes. */
@@ -127,11 +135,11 @@ function requireContact(label: string, contact: ContactInput, requirePhone = fal
   return { firstName, lastName, email, phone: phone || undefined };
 }
 
-function requireAddress(label: string, address: AddressInput) {
-  const addressLine1 = trim(address.addressLine1);
-  const city = trim(address.city);
-  const state = trim(address.state);
-  const postalCode = trim(address.postalCode);
+function requireAddress(label: string, address: Partial<AddressInput> | undefined) {
+  const addressLine1 = trim(address?.addressLine1);
+  const city = trim(address?.city);
+  const state = trim(address?.state);
+  const postalCode = trim(address?.postalCode);
   if (!addressLine1 || !city || !state || !postalCode) {
     throw new PublicIntakeError(`${label} street, city, state, and ZIP are required.`);
   }
@@ -140,10 +148,32 @@ function requireAddress(label: string, address: AddressInput) {
   }
   return {
     addressLine1,
-    addressLine2: optional(address.addressLine2),
+    addressLine2: optional(address?.addressLine2) || undefined,
     city,
     state,
     postalCode,
+  };
+}
+
+function resolveMailingAddress(
+  label: string,
+  contact: ContactInput | null | undefined,
+  studentAddress: AddressInput,
+  fallback?: Partial<AddressInput>,
+) {
+  if (contact?.sameAsStudentAddress) return studentAddress;
+  const hasOwnStreet = Boolean(trim(contact?.addressLine1));
+  return requireAddress(label, hasOwnStreet ? contact : fallback ?? contact);
+}
+
+function guardianAddressValues(address: AddressInput) {
+  return {
+    addressLine1: address.addressLine1,
+    addressLine2: address.addressLine2,
+    city: address.city,
+    state: address.state,
+    postalCode: address.postalCode,
+    country: HOUSEHOLD_COUNTRY_US,
   };
 }
 
@@ -156,6 +186,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   const gender = trim(raw.student?.gender);
   const birthdate = trim(raw.student?.birthdate);
   const supportNotes = optional(raw.student?.supportNotes);
+  const otherInformation = optional(raw.student?.otherInformation);
   const studentCell = optional(raw.student?.cellPhone);
   const studentEmail = optional(raw.student?.email);
 
@@ -187,10 +218,19 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   );
   const parent2 = parent2Present ? requireContact("Parent 2", parent2Raw as ContactInput) : null;
 
-  const householdAddress = requireAddress("Family address", raw.householdAddress);
+  const parent1Mailing = resolveMailingAddress(
+    "Parent 1 mailing address",
+    raw.parent1,
+    studentAddress,
+    raw.householdAddress,
+  );
+  const parent2Mailing = parent2
+    ? resolveMailingAddress("Parent 2 mailing address", parent2Raw as ContactInput, studentAddress)
+    : null;
+  const billingSameAsStudent = Boolean(raw.billing?.sameAsStudentAddress);
   const billingContact = {
     ...requireContact("Billing", raw.billing),
-    ...requireAddress("Billing", raw.billing),
+    ...(billingSameAsStudent ? studentAddress : requireAddress("Billing", raw.billing)),
   };
 
   const subjectCodes = Array.isArray(raw.subjectCodes)
@@ -415,6 +455,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
             firstName: parent2.firstName,
             lastName: parent2.lastName,
             phone: parent2.phone ?? null,
+            ...(parent2Mailing ? guardianAddressValues(parent2Mailing) : {}),
             relationshipRole: "parent_2",
             isBillingOwner: billingMatchesParent2,
             inviteToken: token,
@@ -459,12 +500,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
           firstName: parent1.firstName,
           lastName: parent1.lastName,
           phone: parent1.phone ?? null,
-          addressLine1: householdAddress.addressLine1,
-          addressLine2: householdAddress.addressLine2,
-          city: householdAddress.city,
-          state: householdAddress.state,
-          postalCode: householdAddress.postalCode,
-          country: HOUSEHOLD_COUNTRY_US,
+          ...guardianAddressValues(parent1Mailing),
           relationshipRole: "parent_1",
           isBillingOwner: parent1IsBilling,
           inviteToken: parent1Token,
@@ -485,6 +521,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
             firstName: parent2.firstName,
             lastName: parent2.lastName,
             phone: parent2.phone ?? null,
+            ...(parent2Mailing ? guardianAddressValues(parent2Mailing) : {}),
             relationshipRole: "parent_2",
             isBillingOwner: billingMatchesParent2,
             inviteToken: parent2Token,
@@ -520,6 +557,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
         cellPhone: studentCell,
         email: studentEmail,
         supportNotesRestricted: supportNotes,
+        description: otherInformation,
         learningNeeds: learningNeeds || null,
         hoursRatePackage,
         advancedHoursRatePackage,
@@ -558,7 +596,10 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
         postalCode: billingContact.postalCode,
       },
       billingContactIsSeparate: billingIsSeparate,
-      householdAddress,
+      householdAddress: parent1Mailing,
+      parent1Mailing,
+      parent2Mailing,
+      otherInformation,
       signatures: {
         parentTypedName: parentSignature,
         studentTypedName: studentSignature,

@@ -50,6 +50,7 @@ type Draft = {
   studentState: string;
   studentPostalCode: string;
   supportNotes: string;
+  otherInformation: string;
   p1FirstName: string;
   p1LastName: string;
   p1Email: string;
@@ -58,11 +59,16 @@ type Draft = {
   p2LastName: string;
   p2Email: string;
   p2Phone: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
+  p1SameAsStudentAddress: boolean;
+  p1AddressLine1: string;
+  p1City: string;
+  p1State: string;
+  p1PostalCode: string;
+  p2SameAsStudentAddress: boolean;
+  p2AddressLine1: string;
+  p2City: string;
+  p2State: string;
+  p2PostalCode: string;
   billingFirstName: string;
   billingLastName: string;
   billingEmail: string;
@@ -72,7 +78,7 @@ type Draft = {
   billingCity: string;
   billingState: string;
   billingPostalCode: string;
-  copyFamilyAddressToBilling: boolean;
+  copyStudentAddressToBilling: boolean;
   subjectCodes: string[];
   primarySubjectCode: string;
   subjectNotes: string;
@@ -110,6 +116,7 @@ const emptyDraft: Draft = {
   studentState: "",
   studentPostalCode: "",
   supportNotes: "",
+  otherInformation: "",
   p1FirstName: "",
   p1LastName: "",
   p1Email: "",
@@ -118,11 +125,16 @@ const emptyDraft: Draft = {
   p2LastName: "",
   p2Email: "",
   p2Phone: "",
-  addressLine1: "",
-  addressLine2: "",
-  city: "",
-  state: "",
-  postalCode: "",
+  p1SameAsStudentAddress: false,
+  p1AddressLine1: "",
+  p1City: "",
+  p1State: "",
+  p1PostalCode: "",
+  p2SameAsStudentAddress: false,
+  p2AddressLine1: "",
+  p2City: "",
+  p2State: "",
+  p2PostalCode: "",
   billingFirstName: "",
   billingLastName: "",
   billingEmail: "",
@@ -132,7 +144,7 @@ const emptyDraft: Draft = {
   billingCity: "",
   billingState: "",
   billingPostalCode: "",
-  copyFamilyAddressToBilling: true,
+  copyStudentAddressToBilling: true,
   subjectCodes: [],
   primarySubjectCode: "",
   subjectNotes: "",
@@ -178,14 +190,16 @@ function RequiredMark() {
 function Field({
   label,
   required,
+  invalid,
   children,
 }: {
   label: string;
   required?: boolean;
+  invalid?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <label className="public-ay-field">
+    <label className={invalid ? "public-ay-field is-invalid" : "public-ay-field"}>
       <span>
         {label}
         {required ? <RequiredMark /> : null}
@@ -201,6 +215,7 @@ function AddressFields({
   state,
   postalCode,
   required,
+  showErrors,
   onChange,
 }: {
   street: string;
@@ -208,6 +223,7 @@ function AddressFields({
   state: string;
   postalCode: string;
   required?: boolean;
+  showErrors?: boolean;
   onChange: (next: { street?: string; city?: string; state?: string; postalCode?: string }) => void;
 }) {
   function applySuggestion(suggestion: AddressSuggestion) {
@@ -219,33 +235,79 @@ function AddressFields({
     });
   }
 
+  const streetInvalid = Boolean(required && showErrors && !street.trim());
+  const cityInvalid = Boolean(required && showErrors && !city.trim());
+  const stateInvalid = Boolean(required && showErrors && !state);
+  const zipInvalid = Boolean(required && showErrors && !postalCode.trim());
+
   return (
-    <div className="public-ay-grid">
-      <Field label="Street" required={required}>
-        <AddressAutocompleteInput
-          value={street}
-          onChange={(value) => onChange({ street: value })}
-          onSelect={applySuggestion}
-        />
-      </Field>
-      <Field label="City" required={required}>
-        <input value={city} onChange={(event) => onChange({ city: event.target.value })} autoComplete="address-level2" />
-      </Field>
-      <Field label="State" required={required}>
-        <select value={state} onChange={(event) => onChange({ state: event.target.value })} autoComplete="address-level1">
-          <option value="">Select</option>
-          {US_STATES.options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="ZIP" required={required}>
-        <input value={postalCode} onChange={(event) => onChange({ postalCode: event.target.value })} autoComplete="postal-code" />
-      </Field>
+    <div className="public-ay-address">
+      <div className="public-ay-grid">
+        <Field label="Street" required={required} invalid={streetInvalid}>
+          <AddressAutocompleteInput
+            value={street}
+            invalid={streetInvalid}
+            onChange={(value) => onChange({ street: value })}
+            onSelect={applySuggestion}
+          />
+        </Field>
+        <Field label="City" required={required} invalid={cityInvalid}>
+          <input
+            value={city}
+            className={cityInvalid ? "is-invalid" : undefined}
+            onChange={(event) => onChange({ city: event.target.value })}
+            autoComplete="address-level2"
+          />
+        </Field>
+      </div>
+      <div className="public-ay-grid">
+        <Field label="State" required={required} invalid={stateInvalid}>
+          <select
+            value={state}
+            className={stateInvalid ? "is-invalid" : undefined}
+            onChange={(event) => onChange({ state: event.target.value })}
+            autoComplete="address-level1"
+          >
+            <option value="">Select</option>
+            {US_STATES.options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="ZIP" required={required} invalid={zipInvalid}>
+          <input
+            value={postalCode}
+            className={zipInvalid ? "is-invalid" : undefined}
+            onChange={(event) => onChange({ postalCode: event.target.value })}
+            autoComplete="postal-code"
+          />
+        </Field>
+      </div>
     </div>
   );
+}
+
+function studentAddressFrom(draft: Draft) {
+  return {
+    addressLine1: draft.studentAddressLine1,
+    city: draft.studentCity,
+    state: draft.studentState,
+    postalCode: draft.studentPostalCode,
+  };
+}
+
+function mailingFrom(
+  sameAsStudent: boolean,
+  own: { addressLine1: string; city: string; state: string; postalCode: string },
+  student: { addressLine1: string; city: string; state: string; postalCode: string },
+) {
+  return sameAsStudent ? student : own;
+}
+
+function mailingIncomplete(address: { addressLine1: string; city: string; state: string; postalCode: string }) {
+  return !address.addressLine1.trim() || !address.city.trim() || !address.state || !address.postalCode.trim();
 }
 
 function filledEmailInvalid(value: string) {
@@ -264,6 +326,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [saving, setSaving] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
   const [tutors, setTutors] = useState<TutorOption[]>([]);
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
@@ -355,21 +418,46 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
       }
     }
     if (step === 2) {
+      const studentMailing = studentAddressFrom(draft);
+      const parent2Started = Boolean(
+        draft.p2FirstName.trim() || draft.p2LastName.trim() || draft.p2Email.trim() || draft.p2Phone.trim(),
+      );
       if (!draft.p1FirstName.trim() || !draft.p1LastName.trim() || !draft.p1Email.trim()) {
         return "Parent 1 name and email are required.";
       }
       if (!isValidEmail(draft.p1Email)) return "Enter a valid Parent 1 email.";
       if (!draft.p1Phone.trim()) return "Parent 1 phone is required.";
       if (!isValidPhone(draft.p1Phone)) return "Enter a valid Parent 1 phone number.";
-      if (draft.p2FirstName.trim() || draft.p2LastName.trim() || draft.p2Email.trim() || draft.p2Phone.trim()) {
+      if (
+        mailingIncomplete(
+          mailingFrom(draft.p1SameAsStudentAddress, {
+            addressLine1: draft.p1AddressLine1,
+            city: draft.p1City,
+            state: draft.p1State,
+            postalCode: draft.p1PostalCode,
+          }, studentMailing),
+        )
+      ) {
+        return "Parent 1 mailing address is required.";
+      }
+      if (parent2Started) {
         if (!draft.p2FirstName.trim() || !draft.p2LastName.trim() || !draft.p2Email.trim()) {
           return "Parent 2 name and email are required when Parent 2 is provided.";
         }
         if (!isValidEmail(draft.p2Email)) return "Enter a valid Parent 2 email.";
         if (filledPhoneInvalid(draft.p2Phone)) return "Enter a valid Parent 2 phone number.";
-      }
-      if (!draft.addressLine1.trim() || !draft.city.trim() || !draft.state || !draft.postalCode.trim()) {
-        return "Family address is required.";
+        if (
+          mailingIncomplete(
+            mailingFrom(draft.p2SameAsStudentAddress, {
+              addressLine1: draft.p2AddressLine1,
+              city: draft.p2City,
+              state: draft.p2State,
+              postalCode: draft.p2PostalCode,
+            }, studentMailing),
+          )
+        ) {
+          return "Parent 2 mailing address is required.";
+        }
       }
       if (!draft.billingFirstName.trim() || !draft.billingLastName.trim() || !draft.billingEmail.trim()) {
         return "Billing name, email, and address are required.";
@@ -377,11 +465,13 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
       if (!isValidEmail(draft.billingEmail)) return "Enter a valid billing email.";
       if (filledPhoneInvalid(draft.billingPhone)) return "Enter a valid billing phone number.";
       if (
-        !draft.copyFamilyAddressToBilling &&
-        (!draft.billingAddressLine1.trim() ||
-          !draft.billingCity.trim() ||
-          !draft.billingState ||
-          !draft.billingPostalCode.trim())
+        !draft.copyStudentAddressToBilling &&
+        mailingIncomplete({
+          addressLine1: draft.billingAddressLine1,
+          city: draft.billingCity,
+          state: draft.billingState,
+          postalCode: draft.billingPostalCode,
+        })
       ) {
         return "Billing name, email, and address are required.";
       }
@@ -425,9 +515,11 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   function next() {
     const problem = validateStep();
     if (problem) {
+      setShowErrors(true);
       toast.error(problem);
       return;
     }
+    setShowErrors(false);
     setStep((value) => Math.min(value + 1, STEPS.length - 1));
   }
 
@@ -443,21 +535,36 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   async function submit() {
     const problem = validateStep();
     if (problem) {
+      setShowErrors(true);
       toast.error(problem);
       return;
     }
     setSaving(true);
-    const billingAddress = draft.copyFamilyAddressToBilling
-      ? {
-          addressLine1: draft.addressLine1,
-          addressLine2: draft.addressLine2,
-          city: draft.city,
-          state: draft.state,
-          postalCode: draft.postalCode,
-        }
+    const studentMailing = studentAddressFrom(draft);
+    const parent1Mailing = mailingFrom(
+      draft.p1SameAsStudentAddress,
+      {
+        addressLine1: draft.p1AddressLine1,
+        city: draft.p1City,
+        state: draft.p1State,
+        postalCode: draft.p1PostalCode,
+      },
+      studentMailing,
+    );
+    const parent2Mailing = mailingFrom(
+      draft.p2SameAsStudentAddress,
+      {
+        addressLine1: draft.p2AddressLine1,
+        city: draft.p2City,
+        state: draft.p2State,
+        postalCode: draft.p2PostalCode,
+      },
+      studentMailing,
+    );
+    const billingAddress = draft.copyStudentAddressToBilling
+      ? studentMailing
       : {
           addressLine1: draft.billingAddressLine1,
-          addressLine2: draft.billingAddressLine2,
           city: draft.billingCity,
           state: draft.billingState,
           postalCode: draft.billingPostalCode,
@@ -478,6 +585,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
             cellPhone: draft.studentCell,
             email: draft.studentEmail,
             supportNotes: draft.supportNotes,
+            otherInformation: draft.otherInformation,
             addressLine1: draft.studentAddressLine1,
             city: draft.studentCity,
             state: draft.studentState,
@@ -488,6 +596,8 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
             lastName: draft.p1LastName,
             email: draft.p1Email,
             phone: draft.p1Phone,
+            sameAsStudentAddress: draft.p1SameAsStudentAddress,
+            ...parent1Mailing,
           },
           parent2:
             draft.p2FirstName || draft.p2LastName || draft.p2Email
@@ -496,20 +606,17 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                   lastName: draft.p2LastName,
                   email: draft.p2Email,
                   phone: draft.p2Phone,
+                  sameAsStudentAddress: draft.p2SameAsStudentAddress,
+                  ...parent2Mailing,
                 }
               : null,
-          householdAddress: {
-            addressLine1: draft.addressLine1,
-            addressLine2: draft.addressLine2,
-            city: draft.city,
-            state: draft.state,
-            postalCode: draft.postalCode,
-          },
+          householdAddress: parent1Mailing,
           billing: {
             firstName: draft.billingFirstName,
             lastName: draft.billingLastName,
             email: draft.billingEmail,
             phone: draft.billingPhone,
+            sameAsStudentAddress: draft.copyStudentAddressToBilling,
             ...billingAddress,
           },
           subjectCodes: draft.subjectCodes,
@@ -582,16 +689,16 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
       {step === 1 ? (
         <div className="public-ay-stack">
           <div className="public-ay-grid">
-            <Field label="Student first name" required>
+            <Field label="Student first name" required invalid={showErrors && !draft.studentFirstName.trim()}>
               <input value={draft.studentFirstName} onChange={(event) => patch({ studentFirstName: event.target.value })} />
             </Field>
-            <Field label="Student last name" required>
+            <Field label="Student last name" required invalid={showErrors && !draft.studentLastName.trim()}>
               <input value={draft.studentLastName} onChange={(event) => patch({ studentLastName: event.target.value })} />
             </Field>
-            <Field label="School" required>
+            <Field label="School" required invalid={showErrors && !draft.schoolName.trim()}>
               <input value={draft.schoolName} onChange={(event) => patch({ schoolName: event.target.value })} />
             </Field>
-            <Field label="Grade" required>
+            <Field label="Grade" required invalid={showErrors && !draft.gradeLabel}>
               <select value={draft.gradeLabel} onChange={(event) => patch({ gradeLabel: event.target.value })}>
                 <option value="">Select</option>
                 {GRADE_LABELS.options.map((option) => (
@@ -601,7 +708,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                 ))}
               </select>
             </Field>
-            <Field label="Graduation year" required>
+            <Field label="Graduation year" required invalid={showErrors && !draft.graduationYear}>
               <select value={draft.graduationYear} onChange={(event) => patch({ graduationYear: event.target.value })}>
                 <option value="">Select</option>
                 {GRADUATION_YEARS.options.map((option) => (
@@ -611,7 +718,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                 ))}
               </select>
             </Field>
-            <Field label="Gender" required>
+            <Field label="Gender" required invalid={showErrors && !draft.gender}>
               <select value={draft.gender} onChange={(event) => patch({ gender: event.target.value })}>
                 <option value="">Select</option>
                 {GENDER.options.map((option) => (
@@ -621,13 +728,22 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                 ))}
               </select>
             </Field>
-            <Field label="Birthdate" required>
+            <Field label="Birthdate" required invalid={showErrors && !draft.birthdate}>
               <input type="date" value={draft.birthdate} onChange={(event) => patch({ birthdate: event.target.value })} />
             </Field>
-            <Field label="Student cell" required>
-              <PhoneInput value={draft.studentCell} onChange={(studentCell) => patch({ studentCell })} autoComplete="tel" />
+            <Field
+              label="Student cell"
+              required
+              invalid={showErrors && (!draft.studentCell.trim() || filledPhoneInvalid(draft.studentCell))}
+            >
+              <PhoneInput
+                value={draft.studentCell}
+                invalid={showErrors && (!draft.studentCell.trim() || filledPhoneInvalid(draft.studentCell))}
+                onChange={(studentCell) => patch({ studentCell })}
+                autoComplete="tel"
+              />
             </Field>
-            <Field label="Student email">
+            <Field label="Student email" invalid={showErrors && filledEmailInvalid(draft.studentEmail)}>
               <input
                 type="email"
                 value={draft.studentEmail}
@@ -636,16 +752,14 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               />
             </Field>
           </div>
-          <h2>
-            Student address
-            <RequiredMark />
-          </h2>
+          <h2>Student address</h2>
           <AddressFields
             street={draft.studentAddressLine1}
             city={draft.studentCity}
             state={draft.studentState}
             postalCode={draft.studentPostalCode}
             required
+            showErrors={showErrors}
             onChange={(next) =>
               patch({
                 ...(next.street !== undefined ? { studentAddressLine1: next.street } : {}),
@@ -663,6 +777,14 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               rows={4}
             />
           </label>
+          <label className="public-ay-field public-ay-span-field">
+            <span>Other information</span>
+            <textarea
+              value={draft.otherInformation}
+              onChange={(event) => patch({ otherInformation: event.target.value })}
+              rows={4}
+            />
+          </label>
         </div>
       ) : null}
 
@@ -670,19 +792,67 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         <div className="public-ay-stack">
           <h2>Parent 1</h2>
           <div className="public-ay-grid">
-            <Field label="First name" required>
+            <Field label="First name" required invalid={showErrors && !draft.p1FirstName.trim()}>
               <input value={draft.p1FirstName} onChange={(event) => patch({ p1FirstName: event.target.value })} />
             </Field>
-            <Field label="Last name" required>
+            <Field label="Last name" required invalid={showErrors && !draft.p1LastName.trim()}>
               <input value={draft.p1LastName} onChange={(event) => patch({ p1LastName: event.target.value })} />
             </Field>
-            <Field label="Email" required>
+            <Field label="Email" required invalid={showErrors && (!draft.p1Email.trim() || filledEmailInvalid(draft.p1Email))}>
               <input type="email" value={draft.p1Email} onChange={(event) => patch({ p1Email: event.target.value })} autoComplete="email" />
             </Field>
-            <Field label="Phone" required>
-              <PhoneInput value={draft.p1Phone} onChange={(p1Phone) => patch({ p1Phone })} />
+            <Field
+              label="Phone"
+              required
+              invalid={showErrors && (!draft.p1Phone.trim() || filledPhoneInvalid(draft.p1Phone))}
+            >
+              <PhoneInput
+                value={draft.p1Phone}
+                invalid={showErrors && (!draft.p1Phone.trim() || filledPhoneInvalid(draft.p1Phone))}
+                onChange={(p1Phone) => patch({ p1Phone })}
+              />
             </Field>
           </div>
+          <h2>Parent 1 mailing address</h2>
+          <label className="public-ay-check">
+            <input
+              type="checkbox"
+              checked={draft.p1SameAsStudentAddress}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                patch({
+                  p1SameAsStudentAddress: checked,
+                  ...(checked
+                    ? {
+                        p1AddressLine1: draft.studentAddressLine1,
+                        p1City: draft.studentCity,
+                        p1State: draft.studentState,
+                        p1PostalCode: draft.studentPostalCode,
+                      }
+                    : {}),
+                });
+              }}
+            />
+            Same as student address
+          </label>
+          {!draft.p1SameAsStudentAddress ? (
+            <AddressFields
+              street={draft.p1AddressLine1}
+              city={draft.p1City}
+              state={draft.p1State}
+              postalCode={draft.p1PostalCode}
+              required
+              showErrors={showErrors}
+              onChange={(next) =>
+                patch({
+                  ...(next.street !== undefined ? { p1AddressLine1: next.street } : {}),
+                  ...(next.city !== undefined ? { p1City: next.city } : {}),
+                  ...(next.state !== undefined ? { p1State: next.state } : {}),
+                  ...(next.postalCode !== undefined ? { p1PostalCode: next.postalCode } : {}),
+                })
+              }
+            />
+          ) : null}
           <h2>Parent 2 (optional)</h2>
           <div className="public-ay-grid">
             <Field label="First name">
@@ -691,42 +861,73 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
             <Field label="Last name">
               <input value={draft.p2LastName} onChange={(event) => patch({ p2LastName: event.target.value })} />
             </Field>
-            <Field label="Email">
+            <Field label="Email" invalid={showErrors && filledEmailInvalid(draft.p2Email)}>
               <input type="email" value={draft.p2Email} onChange={(event) => patch({ p2Email: event.target.value })} autoComplete="email" />
             </Field>
-            <Field label="Phone">
-              <PhoneInput value={draft.p2Phone} onChange={(p2Phone) => patch({ p2Phone })} />
+            <Field label="Phone" invalid={showErrors && filledPhoneInvalid(draft.p2Phone)}>
+              <PhoneInput
+                value={draft.p2Phone}
+                invalid={showErrors && filledPhoneInvalid(draft.p2Phone)}
+                onChange={(p2Phone) => patch({ p2Phone })}
+              />
             </Field>
           </div>
-          <h2>
-            Family address
-            <RequiredMark />
-          </h2>
-          <AddressFields
-            street={draft.addressLine1}
-            city={draft.city}
-            state={draft.state}
-            postalCode={draft.postalCode}
-            required
-            onChange={(next) =>
-              patch({
-                ...(next.street !== undefined ? { addressLine1: next.street } : {}),
-                ...(next.city !== undefined ? { city: next.city } : {}),
-                ...(next.state !== undefined ? { state: next.state } : {}),
-                ...(next.postalCode !== undefined ? { postalCode: next.postalCode } : {}),
-              })
-            }
-          />
+          <h2>Parent 2 mailing address</h2>
+          <label className="public-ay-check">
+            <input
+              type="checkbox"
+              checked={draft.p2SameAsStudentAddress}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                patch({
+                  p2SameAsStudentAddress: checked,
+                  ...(checked
+                    ? {
+                        p2AddressLine1: draft.studentAddressLine1,
+                        p2City: draft.studentCity,
+                        p2State: draft.studentState,
+                        p2PostalCode: draft.studentPostalCode,
+                      }
+                    : {}),
+                });
+              }}
+            />
+            Same as student address
+          </label>
+          {!draft.p2SameAsStudentAddress ? (
+            <AddressFields
+              street={draft.p2AddressLine1}
+              city={draft.p2City}
+              state={draft.p2State}
+              postalCode={draft.p2PostalCode}
+              required={Boolean(
+                draft.p2FirstName.trim() || draft.p2LastName.trim() || draft.p2Email.trim() || draft.p2Phone.trim(),
+              )}
+              showErrors={showErrors}
+              onChange={(next) =>
+                patch({
+                  ...(next.street !== undefined ? { p2AddressLine1: next.street } : {}),
+                  ...(next.city !== undefined ? { p2City: next.city } : {}),
+                  ...(next.state !== undefined ? { p2State: next.state } : {}),
+                  ...(next.postalCode !== undefined ? { p2PostalCode: next.postalCode } : {}),
+                })
+              }
+            />
+          ) : null}
           <h2>Billing information</h2>
           <p className="public-ay-help">Who should we bill? This can be different from Parent 1 or Parent 2.</p>
           <div className="public-ay-grid">
-            <Field label="Billing first name" required>
+            <Field label="Billing first name" required invalid={showErrors && !draft.billingFirstName.trim()}>
               <input value={draft.billingFirstName} onChange={(event) => patch({ billingFirstName: event.target.value })} />
             </Field>
-            <Field label="Billing last name" required>
+            <Field label="Billing last name" required invalid={showErrors && !draft.billingLastName.trim()}>
               <input value={draft.billingLastName} onChange={(event) => patch({ billingLastName: event.target.value })} />
             </Field>
-            <Field label="Billing email" required>
+            <Field
+              label="Billing email"
+              required
+              invalid={showErrors && (!draft.billingEmail.trim() || filledEmailInvalid(draft.billingEmail))}
+            >
               <input
                 type="email"
                 value={draft.billingEmail}
@@ -734,25 +935,43 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                 autoComplete="email"
               />
             </Field>
-            <Field label="Billing phone">
-              <PhoneInput value={draft.billingPhone} onChange={(billingPhone) => patch({ billingPhone })} />
+            <Field label="Billing phone" invalid={showErrors && filledPhoneInvalid(draft.billingPhone)}>
+              <PhoneInput
+                value={draft.billingPhone}
+                invalid={showErrors && filledPhoneInvalid(draft.billingPhone)}
+                onChange={(billingPhone) => patch({ billingPhone })}
+              />
             </Field>
           </div>
           <label className="public-ay-check">
             <input
               type="checkbox"
-              checked={draft.copyFamilyAddressToBilling}
-              onChange={(event) => patch({ copyFamilyAddressToBilling: event.target.checked })}
+              checked={draft.copyStudentAddressToBilling}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                patch({
+                  copyStudentAddressToBilling: checked,
+                  ...(checked
+                    ? {
+                        billingAddressLine1: draft.studentAddressLine1,
+                        billingCity: draft.studentCity,
+                        billingState: draft.studentState,
+                        billingPostalCode: draft.studentPostalCode,
+                      }
+                    : {}),
+                });
+              }}
             />
-            Same as family address
+            Same as student address
           </label>
-          {!draft.copyFamilyAddressToBilling ? (
+          {!draft.copyStudentAddressToBilling ? (
             <AddressFields
               street={draft.billingAddressLine1}
               city={draft.billingCity}
               state={draft.billingState}
               postalCode={draft.billingPostalCode}
               required
+              showErrors={showErrors}
               onChange={(next) =>
                 patch({
                   ...(next.street !== undefined ? { billingAddressLine1: next.street } : {}),
@@ -781,7 +1000,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               </label>
             ))}
           </div>
-          <Field label="Primary subject" required>
+          <Field label="Primary subject" required invalid={showErrors && !draft.primarySubjectCode}>
             <select
               value={draft.primarySubjectCode}
               onChange={(event) =>
@@ -818,7 +1037,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               </label>
             ))}
           </div>
-          <Field label="How did you hear about us?" required>
+          <Field label="How did you hear about us?" required invalid={showErrors && !draft.referralSource}>
             <select value={draft.referralSource} onChange={(event) => patch({ referralSource: event.target.value })}>
               <option value="">Select</option>
               {REFERRAL_SOURCE.options.map((option) => (
@@ -855,7 +1074,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                 We’ll save your preferred time. Your place is confirmed after payment in a later step. This does not
                 hold a seat.
               </p>
-              <Field label="Preferred day and time" required>
+              <Field label="Preferred day and time" required invalid={showErrors && !draft.windowId}>
                 <select
                   value={draft.windowId}
                   onChange={(event) => {
@@ -949,7 +1168,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
       {step === 5 ? (
         <div className="public-ay-stack">
           <p>These are billing preferences only. You will not be charged today, and we are not collecting a card.</p>
-          <Field label="Payment plan" required>
+          <Field label="Payment plan" required invalid={showErrors && !draft.paymentPlanId}>
             <select value={draft.paymentPlanId} onChange={(event) => patch({ paymentPlanId: event.target.value })}>
               <option value="">Select</option>
               {ACADEMIC_PAYMENT_PLANS.options.map((option) => (
@@ -1045,10 +1264,10 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               <RequiredMark />
             </span>
           </label>
-          <Field label="Parent signature (type your full name)" required>
+          <Field label="Parent signature (type your full name)" required invalid={showErrors && !draft.parentSignature.trim()}>
             <input value={draft.parentSignature} onChange={(event) => patch({ parentSignature: event.target.value })} />
           </Field>
-          <Field label="Student signature (type full name)" required>
+          <Field label="Student signature (type full name)" required invalid={showErrors && !draft.studentSignature.trim()}>
             <input value={draft.studentSignature} onChange={(event) => patch({ studentSignature: event.target.value })} />
           </Field>
         </div>
@@ -1070,11 +1289,24 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                 .filter(Boolean)
                 .join(", ")}
             </p>
+            {draft.otherInformation.trim() ? <p>Other information: {draft.otherInformation}</p> : null}
           </section>
           <section>
             <h2>Parents / Billing</h2>
             <p>
               Parent 1: {draft.p1FirstName} {draft.p1LastName} ({draft.p1Email})
+              {` · ${
+                mailingFrom(
+                  draft.p1SameAsStudentAddress,
+                  {
+                    addressLine1: draft.p1AddressLine1,
+                    city: draft.p1City,
+                    state: draft.p1State,
+                    postalCode: draft.p1PostalCode,
+                  },
+                  studentAddressFrom(draft),
+                ).addressLine1
+              }`}
             </p>
             {draft.p2FirstName || draft.p2LastName || draft.p2Email ? (
               <p>
@@ -1156,7 +1388,10 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
 
       <div className="public-ay-actions">
         {step > 0 ? (
-          <button type="button" className="public-ay-secondary" onClick={() => setStep((value) => value - 1)}>
+          <button type="button" className="public-ay-secondary" onClick={() => {
+            setShowErrors(false);
+            setStep((value) => value - 1);
+          }}>
             Back
           </button>
         ) : (

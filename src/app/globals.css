@@ -15,13 +15,14 @@
   --radius-md: var(--radius);
   --radius-lg: var(--radius);
   /*
-   * Type: labels 12, body 16, titles 20/24/32/40. All sizes on the 4-grid.
+   * Type: labels 16, values 12, titles 20/24/32. All sizes on the 4-grid.
    */
-  --text-label: 12px;
-  --text-content: 16px;
+  --text-label: 16px;
+  --text-content: 12px;
   --text-ui: 12px;
-  --text-title: 16px;
-  --text-display: 20px;
+  --text-title: 20px;
+  --text-display: 24px;
+  --text-page: 32px;
   --navy: #010345;
   --navy-2: #1a2068;
   /* Detail heroes: brand navy, quieter than --navy. */
@@ -78,7 +79,7 @@ body {
   background: var(--canvas);
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
-  font-size: var(--text-content);
+  font-size: 16px;
   scrollbar-width: none;
 }
 .content,
@@ -487,8 +488,8 @@ button { color: inherit; }
 }
 .eyebrow { display: block; color: var(--nav-accent); text-transform: uppercase; letter-spacing: .13em; font-size: 12px; font-weight: 800; margin-bottom: 8px; }
 h2, h3, h4, p { margin-top: 0; }
-h2 { font: 700 32px/1.12 Georgia, serif; letter-spacing: -.025em; margin-bottom: 8px; }
-h3 { font: 700 16px/1.2 Georgia, serif; letter-spacing: -.015em; margin-bottom: 8px; }
+h2 { font: 700 24px/1.12 Georgia, serif; letter-spacing: -.025em; margin-bottom: 8px; color: var(--navy); }
+h3 { font: 700 20px/1.2 Georgia, serif; letter-spacing: -.015em; margin-bottom: 8px; color: var(--title-gold); }
 p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .view-intro,
 .page-header-band {
@@ -505,9 +506,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .page-header-copy { min-width: 0; }
 .page-header-band h1 {
   margin: 0;
-  font: 700 24px/1.2 Georgia, serif;
+  font: 700 32px/1.2 Georgia, serif;
   letter-spacing: -.02em;
-  color: var(--ink);
+  color: var(--navy);
 }
 .page-header-band .eyebrow { margin-bottom: 4px; }
 .page-header-band p {
@@ -929,8 +930,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .filter-chip.active { background: var(--navy); color: #fff; border-color: var(--navy); }
 .table-panel { padding: 0; overflow: hidden; margin-bottom: 16px; border-radius: var(--radius); }
 .table-head,.table-row { display: grid; align-items: center; gap: 12px; }
-.table-head { background: #f1f3f0; min-height: 40px; padding: 0 16px; color: #747d88; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; font-weight: 800; }
-.table-row { width: 100%; min-height: 60px; border: 0; border-top: 1px solid #edf0ec; background: var(--paper); padding: 12px 16px; text-align: left; cursor: pointer; font-size: var(--text-content); }
+.table-head { background: #f1f3f0; min-height: 40px; padding: 0 16px; color: var(--navy); text-transform: uppercase; letter-spacing: .08em; font-size: var(--text-label); font-weight: 700; }
+.table-row { width: 100%; min-height: 60px; border: 0; border-top: 1px solid #edf0ec; background: var(--paper); padding: 12px 16px; text-align: left; cursor: pointer; font-size: var(--text-content); font-weight: 400; }
 .table-row:hover { background: #fbfcfa; }
 .compact-table .table-head { min-height: 32px; padding: 0 16px; }
 .compact-table .table-row {
@@ -960,7 +961,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   min-width: 720px;
 }
 .staff-dir-table .table-head {
-  font-size: 12px;
+  font-size: var(--text-label);
 }
 .staff-dir-table .table-row {
   cursor: pointer;
@@ -2197,7 +2198,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-edit-section-label {
   margin: 0;
   color: var(--title-gold);
-  font: 700 16px/1.2 Georgia, serif;
+  font: 700 20px/1.2 Georgia, serif;
   letter-spacing: -0.015em;
   text-transform: none;
 }
@@ -2355,8 +2356,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .staff-record-edit-header h1 {
   margin: 0;
-  font: 700 24px Georgia, serif;
-  color: var(--ink);
+  font: 700 32px Georgia, serif;
+  color: var(--navy);
 }
 .staff-record-edit-panel {
   margin-bottom: 24px;
@@ -2392,6 +2393,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-record-edit-shell .staff-edit-inline-label {
   text-transform: none;
   letter-spacing: 0;
+  font-size: var(--text-label);
   font-weight: 700;
   color: var(--navy);
 }
@@ -4257,8 +4259,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 700;
+  color: var(--navy);
 }
 .public-ay-req {
   color: var(--red-action);
@@ -4266,20 +4269,36 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   font-weight: 700;
   margin-left: 4px;
 }
+.public-ay-address {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .public-ay-field .address-autocomplete,
 .public-ay-field .address-autocomplete input {
   width: 100%;
 }
 .public-ay-field input,
 .public-ay-field select,
-.public-ay-field textarea {
+.public-ay-field textarea,
+.address-autocomplete input {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 16px;
+  font-size: var(--text-content);
+  font-weight: 400;
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 8px 12px;
   background: #fff;
+}
+.public-ay-field.is-invalid input,
+.public-ay-field.is-invalid select,
+.public-ay-field.is-invalid textarea,
+.public-ay-field.is-invalid .address-autocomplete input,
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+  border-color: var(--red-action);
 }
 .public-ay-stack { display: flex; flex-direction: column; gap: 16px; }
 .public-ay-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
@@ -4360,4 +4379,85 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .public-ay-checks,
   .public-ay-choices { grid-template-columns: 1fr; }
 }
+
+/* Shared hierarchy: labels 16 > values 12; titles 20/24/32; filters change color, not weight. */
+.input-grid label,
+.full-input,
+.staff-modal-fields label {
+  font-size: var(--text-label);
+}
+.input-grid input,
+.input-grid select,
+.full-input textarea,
+.staff-modal-fields input,
+.staff-record-edit-shell .input-grid input,
+.staff-record-edit-shell .input-grid select,
+.staff-record-edit-shell .input-grid textarea.staff-multiline-input {
+  font-size: var(--text-content);
+  font-weight: 400;
+}
+.student-filter-panel label,
+.session-filter-bar label {
+  font-size: var(--text-label);
+  font-weight: 700;
+}
+.student-filter-panel input,
+.student-filter-panel select,
+.session-filter-bar input,
+.session-filter-bar select,
+.report-filter-panel input,
+.report-filter-panel select {
+  font-weight: 400;
+  color: var(--muted);
+}
+.student-filter-panel input::placeholder,
+.session-filter-bar input::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+  opacity: 1;
+}
+.student-filter-panel input:not(:placeholder-shown),
+.session-filter-bar input:not(:placeholder-shown),
+.student-filter-panel select,
+.session-filter-bar select,
+.report-filter-panel select {
+  color: var(--navy);
+  font-weight: 400;
+}
+.student-filter-panel input:focus,
+.student-filter-panel select:focus,
+.session-filter-bar input:focus,
+.session-filter-bar select:focus,
+.report-filter-panel input:focus,
+.report-filter-panel select:focus {
+  color: var(--gold);
+  font-weight: 400;
+}
+.panel-heading h3,
+.filtered-report-table .panel-heading h3,
+.tutor-directory-head,
+.student-table-head,
+.report-definition-head,
+.open-block-head,
+.family-notes-table th {
+  font-size: var(--text-label);
+  font-weight: 700;
+}
+.tutor-directory-row,
+.student-table-row,
+.student-table-row strong,
+.tutor-directory-row > span > small,
+.family-notes-table td,
+.table-row strong,
+.staff-dir-table .table-row,
+.compact-table .table-row strong {
+  font-size: var(--text-content);
+}
+.family-detail-table .table-head {
+  font-size: var(--text-label);
+}
+.family-detail-table .table-row {
+  font-size: var(--text-content);
+}
+
 

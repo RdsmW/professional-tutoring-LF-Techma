@@ -75,7 +75,7 @@ export function Panel({
       }}
     >
       {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
-      {title ? <h2 style={{ margin: "4px 0 12px", font: "700 18px Georgia, serif" }}>{title}</h2> : null}
+      {title ? <h2 className="staff-section-title" style={{ margin: "4px 0 12px" }}>{title}</h2> : null}
       {children}
     </section>
   );

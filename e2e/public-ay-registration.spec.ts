@@ -11,6 +11,15 @@ test.describe("public academic year registration", () => {
     await expect(page.getByText(/tutoring_request/i)).toHaveCount(0);
   });
 
+  test("student step shows other information and required stars on labels only", async ({ page }) => {
+    await page.goto("/register/academic-year-tutoring");
+    await page.getByRole("button", { name: /Start registration/i }).click();
+    await expect(page.getByRole("heading", { name: /^Student address$/ })).toBeVisible();
+    await expect(page.getByText("Other information")).toBeVisible();
+    await page.getByRole("button", { name: /Continue/i }).click();
+    await expect(page.locator(".public-ay-field.is-invalid").first()).toBeVisible();
+  });
+
   test("family portal remains protected", async ({ page }) => {
     await page.goto("/family");
     await expect(page).toHaveURL(/sign-in/);

@@ -7,6 +7,7 @@ type PhoneInputProps = {
   onChange: (value: string) => void;
   required?: boolean;
   autoComplete?: string;
+  invalid?: boolean;
 };
 
 export function PhoneInput({
@@ -14,6 +15,7 @@ export function PhoneInput({
   onChange,
   required,
   autoComplete = "tel",
+  invalid,
 }: PhoneInputProps) {
   return (
     <input
@@ -23,6 +25,8 @@ export function PhoneInput({
       value={value}
       required={required}
       placeholder="(703) 555-0123"
+      aria-invalid={invalid || undefined}
+      className={invalid ? "is-invalid" : undefined}
       onChange={(event) => onChange(formatUsPhone(event.target.value))}
     />
   );
