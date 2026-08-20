@@ -28,3 +28,31 @@ mtime_ms = 1787236515739
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/7af93fee-e69e-4da9-9956-a69949fc4a29/2bfd0edb-ebba-4c71-8f00-8b6d84b7d493"
 storage_version_token = "1787236521981098"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "eUzZxrmTnZd2TPQpj2rqO"
+uri = "file://professional-tutoring-LF-Techma/docs/WORK-REPORT-SAME-APP-BILLING-SCHEDULER.md"
+type = "text"
+title = "Work Report — Same-App Billing Scheduler"
+description = "Implementation details, Reserved VM run command, preserved boundaries, and the remaining Publishing action."
+logical_id = "5de8820d-0476-478c-92a6-ca18161865da"
+content_hash = "sha256:6d49a4cefe8c3c8fb3ce38d4bfaf584247c32522a69b588cccb7825b35fc1beb"
+size = 2256
+mtime_ms = 1787238110531
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/5de8820d-0476-478c-92a6-ca18161865da/b16609d3-031d-4866-a276-d4a5c9be641e"
+storage_version_token = "1787238146575257"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "FTpEhCV5k_KKd3hKAYEbG"
+uri = "file://professional-tutoring-LF-Techma/docs/VERIFICATION-SAME-APP-BILLING-SCHEDULER.md"
+type = "text"
+title = "Verification — Same-App Billing Scheduler"
+description = "Static, Stripe test-mode, collector, webhook, supervisor, and regression verification results."
+logical_id = "af168161-f5f0-4221-ad81-0695b92c3558"
+content_hash = "sha256:3e51d3cedc066dfdf330dac49c4355c618785c56916c567c7f51b5aa7560f945"
+size = 1776
+mtime_ms = 1787238114431
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/af168161-f5f0-4221-ad81-0695b92c3558/1bded4f0-ad86-449c-9bd9-3d48429b1e95"
+storage_version_token = "1787238147301658"
+content_type = "text/markdown"

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { collectDueAcademicYearInstallments } from "@/lib/stripe/collect-due-ay-installments";
+import { collectDuePayments } from "@/lib/stripe/collect-due-payments";
 
 export async function POST(request: Request) {
   const secret = process.env.BILLING_JOB_SECRET;
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => ({}))) as { limit?: unknown };
     const limit = typeof body.limit === "number" && Number.isInteger(body.limit) ? body.limit : undefined;
-    return NextResponse.json({ ok: true, ...(await collectDueAcademicYearInstallments({ limit })) });
+    return NextResponse.json({ ok: true, ...(await collectDuePayments({ limit })) });
   } catch (error) {
     console.warn("[billing/collect-due] fail", error);
     return NextResponse.json({ ok: false, error: "Unable to collect due payments." }, { status: 500 });

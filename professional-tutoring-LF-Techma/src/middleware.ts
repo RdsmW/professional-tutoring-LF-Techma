@@ -11,6 +11,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/public/ay-tutoring-availability(.*)",
   "/api/public/ay-tutoring-payment(.*)",
   "/api/stripe/webhook(.*)",
+  // The same-app scheduler authenticates this endpoint with BILLING_JOB_SECRET.
+  "/api/internal/billing/collect-due(.*)",
 ]);
 
 /** Bootstrap authenticates inside the route so unauth clients get JSON 401, not a Clerk rewrite. */

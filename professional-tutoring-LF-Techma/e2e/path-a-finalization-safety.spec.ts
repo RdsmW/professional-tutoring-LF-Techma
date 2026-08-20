@@ -82,6 +82,7 @@ async function registerManualPathA(
 ) {
   const suffix = `${Date.now()}${Math.floor(Math.random() * 10_000)}`;
   const phoneSuffix = suffix.slice(-4);
+  const emailToken = randomUUID();
   const formVersionToken = await currentFormVersionToken(request);
   const response = await request.post("/api/public/ay-tutoring-registration", {
     data: {
@@ -103,7 +104,7 @@ async function registerManualPathA(
       parent1: {
         firstName: "Path",
         lastName: "Safety",
-        email: `path-a-safety-${label}-${suffix}@example.com`,
+        email: `path-a-safety-${label}-${emailToken}@example.com`,
         phone: `571222${phoneSuffix}`,
       },
       householdAddress: {
@@ -115,7 +116,7 @@ async function registerManualPathA(
       billing: {
         firstName: "Path",
         lastName: "Safety",
-        email: `path-a-billing-${label}-${suffix}@example.com`,
+        email: `path-a-billing-${label}-${emailToken}@example.com`,
         phone: `540222${phoneSuffix}`,
         addressLine1: "3 Billing Rd",
         city: "Burke",

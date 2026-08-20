@@ -4,8 +4,8 @@ config({ path: ".env.local" });
 config();
 
 async function main() {
-  const { collectDueAcademicYearInstallments } = await import("@/lib/stripe/collect-due-ay-installments");
-  console.log(await collectDueAcademicYearInstallments());
+  const { collectDuePayments } = await import("@/lib/stripe/collect-due-payments");
+  console.log(await collectDuePayments());
 }
 
 main().catch((error) => {
