@@ -2,6 +2,7 @@ modules = ["nodejs-24"]
 
 [nix]
 channel = "stable-25_05"
+packages = ["glib", "nspr", "nss", "atk", "at-spi2-atk", "at-spi2-core", "dbus", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "mesa", "xorg.libxcb", "libxkbcommon", "alsa-lib", "libgbm"]
 
 [workflows]
 runButton = "Project"
