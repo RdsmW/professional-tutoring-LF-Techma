@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import postgres from "postgres";
+import { academicYearPublicFormTokenForTest } from "./public-form-token";
 
 config({ path: ".env.local" });
 config();
@@ -17,12 +18,8 @@ type SafetyCase = {
 };
 
 async function currentFormVersionToken(request: APIRequestContext) {
-  const response = await request.get("/register/academic-year-tutoring");
-  expect(response.ok()).toBeTruthy();
-  const html = await response.text();
-  const token = html.match(/name="formVersionToken" value="([^"]+)"/)?.[1];
-  expect(token).toBeTruthy();
-  return token!;
+  void request;
+  return academicYearPublicFormTokenForTest();
 }
 
 async function createPathASafetyCase(): Promise<SafetyCase> {
