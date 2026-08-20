@@ -419,15 +419,12 @@ export default async function StaffDashboardPage() {
 
         <section className="panel dashboard-priority-panel">
           <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Priority queue</span>
-              <h3 className="staff-section-title dashboard-queue-title">
-                <span className="dashboard-count-badge dashboard-count-badge--total">
-                  {data.assignmentQueue.length + priorityRequestTotal}
-                </span>
-                Needs action
-              </h3>
-            </div>
+            <h3 className="staff-section-title dashboard-queue-title">
+              <span className="dashboard-count-badge dashboard-count-badge--total">
+                {data.assignmentQueue.length + priorityRequestTotal}
+              </span>
+              Priority queue
+            </h3>
             <Link href="/staff/tutoring-requests" className="text-button">
               Open queue
             </Link>

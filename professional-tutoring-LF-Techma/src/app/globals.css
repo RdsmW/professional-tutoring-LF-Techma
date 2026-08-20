@@ -731,7 +731,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .dashboard-main-row {
   display: grid;
-  grid-template-columns: minmax(280px, .9fr) minmax(0, 1.6fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
   margin-bottom: 16px;
   align-items: stretch;
@@ -888,6 +888,13 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   overflow-x: hidden;
   padding-right: 4px;
   scrollbar-gutter: stable;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior: contain;
+}
+.dashboard-priority-scroll::-webkit-scrollbar,
+.dashboard-recent-students .staff-dir-table::-webkit-scrollbar {
+  display: none;
 }
 .dashboard-priority-panel .attention-row {
   grid-template-columns: minmax(0, 1fr) minmax(0, 132px);
@@ -993,6 +1000,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   max-height: 360px;
   overflow: auto;
   scrollbar-gutter: stable;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior: contain;
 }
 .dashboard-recent-students .staff-dir-table .table-head {
   position: sticky;
