@@ -29,8 +29,8 @@ test.describe("Academic Year Clerk portal invitations", () => {
       RETURNING id
     `;
     const [guardian] = await sql`
-      INSERT INTO guardians (household_id, email, first_name, last_name, invite_token)
-      VALUES (${household.id}::uuid, ${email}, 'Portal', 'Guardian', ${token})
+      INSERT INTO guardians (household_id, email, first_name, last_name, relationship_role, invite_token)
+      VALUES (${household.id}::uuid, ${email}, 'Portal', 'Guardian', 'parent_1', ${token})
       RETURNING id
     `;
     const calls: Array<Record<string, unknown>> = [];
@@ -45,8 +45,9 @@ test.describe("Academic Year Clerk portal invitations", () => {
     };
 
     try {
-      const first = await sendAcademicYearPortalInvitations({ householdId: household.id, clerk });
-      const second = await sendAcademicYearPortalInvitations({ householdId: household.id, clerk });
+      const redirectOrigin = "https://portal.example.test";
+      const first = await sendAcademicYearPortalInvitations({ householdId: household.id, redirectOrigin, clerk });
+      const second = await sendAcademicYearPortalInvitations({ householdId: household.id, redirectOrigin, clerk });
 
       expect(first).toMatchObject({ emailSent: true, emailAlreadySent: false, failed: false });
       expect(second).toMatchObject({ emailSent: false, emailAlreadySent: true, failed: false });
@@ -54,7 +55,7 @@ test.describe("Academic Year Clerk portal invitations", () => {
       expect(calls[0]).toMatchObject({
         emailAddress: email,
         notify: true,
-        redirectUrl: `/invite/${token}`,
+        redirectUrl: `${redirectOrigin}/sign-in?redirect_url=%2Finvite%2F${token}`,
         publicMetadata: {
           portalGuardianId: guardian.id,
           portalHouseholdId: household.id,
@@ -76,6 +77,74 @@ test.describe("Academic Year Clerk portal invitations", () => {
     }
   });
 
+  test("sends one direct-authentication invitation for each parent and never duplicates either", async () => {
+    const sql = database;
+    if (!sql) throw new Error("DATABASE_URL missing");
+
+    const marker = randomUUID();
+    const [household] = await sql`
+      INSERT INTO households (display_name)
+      VALUES (${`Two parents ${marker}`})
+      RETURNING id
+    `;
+    const parents = await sql`
+      INSERT INTO guardians (household_id, email, first_name, last_name, relationship_role, invite_token)
+      VALUES
+        (${household.id}::uuid, ${`parent-1-${marker}@example.com`}, 'Parent', 'One', 'parent_1', ${`token-1-${marker}`}),
+        (${household.id}::uuid, ${`parent-2-${marker}@example.com`}, 'Parent', 'Two', 'parent_2', ${`token-2-${marker}`})
+      RETURNING id, email, invite_token
+    `;
+    const calls: Array<Record<string, unknown>> = [];
+    const clerk = {
+      invitations: {
+        createInvitation: async (input: Record<string, unknown>) => {
+          calls.push(input);
+          return { id: `inv_${calls.length}` };
+        },
+        getInvitationList: async () => ({ data: [] }),
+      },
+    };
+
+    try {
+      const first = await sendAcademicYearPortalInvitations({
+        householdId: household.id,
+        redirectOrigin: "https://portal.example.test",
+        clerk,
+      });
+      const replay = await sendAcademicYearPortalInvitations({
+        householdId: household.id,
+        redirectOrigin: "https://portal.example.test",
+        clerk,
+      });
+
+      expect(first).toMatchObject({ emailSent: true, emailAlreadySent: false, failed: false });
+      expect(replay).toMatchObject({ emailSent: false, emailAlreadySent: true, failed: false });
+      expect(calls).toHaveLength(2);
+      for (const parent of parents) {
+        expect(calls).toContainEqual(expect.objectContaining({
+          emailAddress: parent.email,
+          redirectUrl: `https://portal.example.test/sign-in?redirect_url=%2Finvite%2F${parent.invite_token}`,
+          publicMetadata: {
+            portalGuardianId: parent.id,
+            portalHouseholdId: household.id,
+          },
+        }));
+      }
+
+      const linked = await sql`
+        SELECT household_id, clerk_invitation_id, clerk_invitation_sent_at
+        FROM guardians
+        WHERE household_id = ${household.id}::uuid
+        ORDER BY email
+      `;
+      expect(linked).toHaveLength(2);
+      expect(linked.every((row) => row.household_id === household.id && row.clerk_invitation_id && row.clerk_invitation_sent_at)).toBe(true);
+    } finally {
+      await sql`DELETE FROM guardians WHERE household_id = ${household.id}::uuid`;
+      await sql`DELETE FROM households WHERE id = ${household.id}::uuid`;
+    }
+  });
+
   test("recovers an interrupted send without creating another Clerk invitation", async () => {
     const sql = database;
     if (!sql) throw new Error("DATABASE_URL missing");
@@ -88,11 +157,11 @@ test.describe("Academic Year Clerk portal invitations", () => {
     `;
     const [guardian] = await sql`
       INSERT INTO guardians (
-        household_id, email, first_name, last_name, invite_token,
+        household_id, email, first_name, last_name, relationship_role, invite_token,
         clerk_invitation_id, clerk_invitation_reserved_at
       )
       VALUES (
-        ${household.id}::uuid, ${`interrupted-${token}@example.com`}, 'Interrupted', 'Guardian', ${token},
+        ${household.id}::uuid, ${`interrupted-${token}@example.com`}, 'Interrupted', 'Guardian', 'parent_1', ${token},
         'sending:interrupted', now() - interval '6 minutes'
       )
       RETURNING id
@@ -117,7 +186,11 @@ test.describe("Academic Year Clerk portal invitations", () => {
     };
 
     try {
-      const result = await sendAcademicYearPortalInvitations({ householdId: household.id, clerk });
+      const result = await sendAcademicYearPortalInvitations({
+        householdId: household.id,
+        redirectOrigin: "https://portal.example.test",
+        clerk,
+      });
       expect(result).toMatchObject({ emailSent: false, emailAlreadySent: true, failed: false });
       expect(createCalls).toBe(0);
       const [row] = await sql`

@@ -186,6 +186,21 @@ test.describe("public academic year registration", () => {
     expect(missingParent2.status()).toBe(400);
     expect((await missingParent2.json()).error).toMatch(/Parent 2 first name, last name, and email are required/i);
 
+    const duplicateParentEmail = await request.post("/api/public/ay-tutoring-registration", {
+      data: {
+        ...payload,
+        parent2: {
+          ...payload.parent2,
+          email: ` ${payload.parent1.email.toUpperCase()} `,
+        },
+      },
+    });
+    expect(duplicateParentEmail.status()).toBe(400);
+    expect(await duplicateParentEmail.json()).toMatchObject({
+      code: "duplicate_guardian_email",
+      error: expect.stringMatching(/must use different email addresses/i),
+    });
+
     const invalidParent2Phone = await request.post("/api/public/ay-tutoring-registration", {
       data: { ...payload, parent2: { ...payload.parent2, phone: "not-a-phone" } },
     });
@@ -239,7 +254,7 @@ test.describe("public academic year registration", () => {
       },
     });
     expect(parent2ConflictResponse.status()).toBe(409);
-    expect((await parent2ConflictResponse.json()).code).toBe("parent2_conflict");
+    expect((await parent2ConflictResponse.json()).code).toBe("parent2_household_conflict");
 
     const hourlyUnique = unique + 50;
     const hourlyPhoneSuffix = String(hourlyUnique).slice(-4);

@@ -6,6 +6,10 @@ import { guardians, households } from "@/lib/db/schema";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 export async function GET(
   _request: Request,
   contextParams: { params: Promise<{ token: string }> },
@@ -69,8 +73,13 @@ export async function POST(
     const user = await safeCurrentUser();
     const email =
       user?.primaryEmailAddress?.emailAddress ??
-      user?.emailAddresses?.[0]?.emailAddress ??
-      guardian.email;
+      user?.emailAddresses?.[0]?.emailAddress;
+    if (!email || normalizeEmail(email) !== normalizeEmail(guardian.email)) {
+      return NextResponse.json(
+        { ok: false, error: "Sign in with the email address that received this invitation." },
+        { status: 403 },
+      );
+    }
 
     const staffBlock = await assertNotStaffAsGuardian({
       email,

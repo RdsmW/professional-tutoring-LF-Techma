@@ -229,16 +229,25 @@ async function confirmPendingBookingIdempotently(context: PaymentContext, bookin
   }
 }
 
-async function withPortalInvitation<T extends object>(context: PaymentContext, result: T) {
+async function withPortalInvitation<T extends object>(
+  context: PaymentContext,
+  result: T,
+  invitationOrigin: string,
+) {
   let portalInvitation: PortalInvitationDelivery = {
     emailSent: false,
     emailAlreadySent: false,
     pending: false,
     failed: false,
+      sentCount: 0,
+      alreadySentCount: 0,
   };
   if (context.notes.autoCharge === "yes") {
     try {
-      portalInvitation = await sendAcademicYearPortalInvitations({ householdId: context.household.id });
+      portalInvitation = await sendAcademicYearPortalInvitations({
+        householdId: context.household.id,
+        redirectOrigin: invitationOrigin,
+      });
     } catch (error) {
       console.warn("[academic-year-payment] Clerk invitation dispatch soft-fail", error);
       portalInvitation = { ...portalInvitation, failed: true };
@@ -358,19 +367,27 @@ export async function prepareAyPublicPayment(token: string) {
   };
 }
 
-export async function finalizeAyPublicPayment(input: { token: string; intentId?: string | null }) {
+export async function finalizeAyPublicPayment(input: {
+  token: string;
+  intentId?: string | null;
+  invitationOrigin: string;
+}) {
   const context = await loadContext(input.token);
   const existingBooking = await findActiveBooking(context.request.id);
   if (
     (context.notes.schedulingPath === "pt_chooses" && context.payment.paymentSetupCompletedAt) ||
     (context.notes.schedulingPath === "family_selected" && existingBooking?.status === "confirmed")
   ) {
-    return withPortalInvitation(context, {
-      schedulingPath: context.notes.schedulingPath,
-      bookingId: existingBooking?.id ?? null,
-      paymentStatus: context.payment.status,
-      alreadyCompleted: true,
-    });
+    return withPortalInvitation(
+      context,
+      {
+        schedulingPath: context.notes.schedulingPath,
+        bookingId: existingBooking?.id ?? null,
+        paymentStatus: context.payment.status,
+        alreadyCompleted: true,
+      },
+      input.invitationOrigin,
+    );
   }
   if (
     context.notes.schedulingPath === "family_selected" &&
@@ -442,17 +459,25 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
       .where(eq(paymentRecords.id, context.payment.id));
     if (context.notes.schedulingPath === "family_selected") {
       const assignment = await assignPreferredSlot(context, "confirmed");
-      return withPortalInvitation(context, {
-        schedulingPath: context.notes.schedulingPath,
-        bookingId: assignment.booking.id,
-        paymentStatus: "pending",
-      });
+      return withPortalInvitation(
+        context,
+        {
+          schedulingPath: context.notes.schedulingPath,
+          bookingId: assignment.booking.id,
+          paymentStatus: "pending",
+        },
+        input.invitationOrigin,
+      );
     }
-    return withPortalInvitation(context, {
-      schedulingPath: context.notes.schedulingPath,
-      bookingId: null,
-      paymentStatus: "pending",
-    });
+    return withPortalInvitation(
+      context,
+      {
+        schedulingPath: context.notes.schedulingPath,
+        bookingId: null,
+        paymentStatus: "pending",
+      },
+      input.invitationOrigin,
+    );
   }
 
   if (context.payment.stripePaymentIntentId !== input.intentId) {
@@ -491,11 +516,15 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
         updatedAt: new Date(),
       })
       .where(eq(paymentRecords.id, context.payment.id));
-    return withPortalInvitation(context, {
-      schedulingPath: context.notes.schedulingPath,
-      bookingId: null,
-      paymentStatus: "paid",
-    });
+    return withPortalInvitation(
+      context,
+      {
+        schedulingPath: context.notes.schedulingPath,
+        bookingId: null,
+        paymentStatus: "paid",
+      },
+      input.invitationOrigin,
+    );
   }
 
   let assignment;
@@ -534,11 +563,15 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
       updatedAt: new Date(),
     })
     .where(eq(paymentRecords.id, context.payment.id));
-  return withPortalInvitation(context, {
-    schedulingPath: context.notes.schedulingPath,
-    bookingId: finalized.booking.id,
-    paymentStatus: "paid",
-  });
+  return withPortalInvitation(
+    context,
+    {
+      schedulingPath: context.notes.schedulingPath,
+      bookingId: finalized.booking.id,
+      paymentStatus: "paid",
+    },
+    input.invitationOrigin,
+  );
 }
 
 export function isAyPublicPaymentError(error: unknown): error is AyPublicPaymentError | AssignTutoringRequestError {

@@ -689,6 +689,9 @@ export function PublicAyTutoringRegistrationForm({
         return "Parent 2 name and email are required.";
       }
       if (!isValidEmail(draft.p2Email)) return "Enter a valid Parent 2 email.";
+      if (draft.p1Email.trim().toLowerCase() === draft.p2Email.trim().toLowerCase()) {
+        return "Parent 1 and Parent 2 must use different email addresses.";
+      }
       if (!draft.p2Phone.trim()) return "Parent 2 phone is required.";
       if (!isValidPhone(draft.p2Phone)) return "Enter a valid Parent 2 phone number.";
       if (

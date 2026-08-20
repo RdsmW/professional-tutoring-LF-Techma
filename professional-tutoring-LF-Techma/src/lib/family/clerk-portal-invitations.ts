@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { clerkClient } from "@clerk/nextjs/server";
 import { requireDb } from "@/lib/db";
 import { guardians } from "@/lib/db/schema";
@@ -24,6 +24,8 @@ export type PortalInvitationDelivery = {
   emailAlreadySent: boolean;
   pending: boolean;
   failed: boolean;
+  sentCount: number;
+  alreadySentCount: number;
 };
 
 function isReservation(value: string | null) {
@@ -34,6 +36,16 @@ function isStaleReservation(reservedAt: Date | null) {
   return !reservedAt || reservedAt.getTime() < Date.now() - 5 * 60 * 1000;
 }
 
+function invitationRedirectUrl(origin: string, token: string) {
+  const base = new URL(origin);
+  if (base.protocol !== "https:" && base.protocol !== "http:") {
+    throw new Error("Invitation redirect origin must use HTTP or HTTPS.");
+  }
+  const signIn = new URL("/sign-in", base);
+  signIn.searchParams.set("redirect_url", `/invite/${token}`);
+  return signIn.toString();
+}
+
 /**
  * Sends Clerk application invitations only for the existing, unlinked guardians
  * of a household. The reservation is stored before calling Clerk, so a replayed
@@ -41,6 +53,7 @@ function isStaleReservation(reservedAt: Date | null) {
  */
 export async function sendAcademicYearPortalInvitations(input: {
   householdId: string;
+  redirectOrigin: string;
   clerk?: ClerkInvitationClient;
 }): Promise<PortalInvitationDelivery> {
   const database = requireDb();
@@ -56,7 +69,12 @@ export async function sendAcademicYearPortalInvitations(input: {
       clerkInvitationReservedAt: guardians.clerkInvitationReservedAt,
     })
     .from(guardians)
-    .where(eq(guardians.householdId, input.householdId));
+    .where(
+      and(
+        eq(guardians.householdId, input.householdId),
+        inArray(guardians.relationshipRole, ["parent_1", "parent_2"]),
+      ),
+    );
 
   let sent = 0;
   let alreadySent = 0;
@@ -145,9 +163,9 @@ export async function sendAcademicYearPortalInvitations(input: {
       const invitation = await invitationClient.invitations.createInvitation({
         emailAddress: claimed.email,
         notify: true,
-        // Preserve the app's guardian/household acceptance check after Clerk
-        // completes sign-up or sign-in.
-        redirectUrl: `/invite/${claimed.inviteToken}`,
+        // Begin with Clerk authentication, then return to the guardian-specific
+        // app invite token for the household/linking check.
+        redirectUrl: invitationRedirectUrl(input.redirectOrigin, claimed.inviteToken),
         ignoreExisting: true,
         publicMetadata: {
           portalGuardianId: claimed.id,
@@ -188,6 +206,8 @@ export async function sendAcademicYearPortalInvitations(input: {
     emailAlreadySent: alreadySent > 0,
     pending: pending > 0,
     failed: failed > 0,
+    sentCount: sent,
+    alreadySentCount: alreadySent,
   };
 }
 

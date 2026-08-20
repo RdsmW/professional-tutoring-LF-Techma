@@ -197,7 +197,7 @@ export async function reconcilePaymentIntentSucceeded(intent: Stripe.PaymentInte
   return payment;
 }
 
-export async function reconcileStripeWebhookEvent(event: Stripe.Event) {
+export async function reconcileStripeWebhookEvent(event: Stripe.Event, invitationOrigin: string) {
   const database = requireDb();
   let completedBookingFor: ReconciledPayment | null = null;
   let setupPayment: ReconciledPayment | null = null;
@@ -228,7 +228,10 @@ export async function reconcileStripeWebhookEvent(event: Stripe.Event) {
   if (reconciledPayment) {
     await reconcilePendingBooking(reconciledPayment);
     if (isAcademicYearRegistrationPayment(reconciledPayment)) {
-      await sendAcademicYearPortalInvitations({ householdId: reconciledPayment.householdId }).catch((error) => {
+      await sendAcademicYearPortalInvitations({
+        householdId: reconciledPayment.householdId,
+        redirectOrigin: invitationOrigin,
+      }).catch((error) => {
         console.warn("[stripe-reconcile] Clerk Academic Year invitation soft-fail", error);
       });
     }
@@ -241,7 +244,10 @@ export async function reconcileStripeWebhookEvent(event: Stripe.Event) {
       paymentMethodId: stripeId(setupIntent.payment_method),
     });
     if (isAcademicYearRegistrationPayment(reconciledSetup)) {
-      await sendAcademicYearPortalInvitations({ householdId: reconciledSetup.householdId }).catch((error) => {
+      await sendAcademicYearPortalInvitations({
+        householdId: reconciledSetup.householdId,
+        redirectOrigin: invitationOrigin,
+      }).catch((error) => {
         console.warn("[stripe-reconcile] Clerk Academic Year invitation soft-fail", error);
       });
     }

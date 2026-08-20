@@ -1,0 +1,59 @@
+Continue from the existing controlled #22 registration. Do not create a second registration or invitation.
+
+The SetupIntent is expected because the first Monthly installment is future-dated. The live invitation verification is therefore incomplete, not failed.
+
+Before continuing the invitation acceptance test, address only the two concrete runtime issues discovered by #22.
+
+1. Public formVersionToken
+
+The real public Academic Year page currently renders with:
+
+formVersionToken: null
+
+while the Playwright helper can generate a valid signed token from the same published form version.
+
+Verify why the actual public page is not receiving/embedding its published form-version token.
+
+Fix the smallest concrete defect so a real browser registration can submit through the normal public flow without a test helper manufacturing the token.
+
+Do not weaken or bypass form-version validation.
+
+Add one regression test proving the real public page receives a valid form-version token and can submit normally.
+
+2. Clerk runtime key consistency
+
+Investigate the observed runtime warning:
+
+Refreshing the session token resulted in an infinite redirect loop
+
+Verify that the browser/frontend Clerk publishable key and server/backend Clerk secret belong to the same non-production Clerk instance.
+
+Do not rotate or replace keys unless a mismatch is actually confirmed.
+
+If the keys are consistent and the warning is unrelated to the invitation flow, document that evidence and continue.
+
+3. Resume the SAME #22 registration
+
+After those two checks:
+
+reuse the existing household, guardian, tutoring request, payment records, continuation, and SetupIntent;
+do not create another registration;
+confirm the existing SetupIntent once through the normal Stripe test-mode payment UI;
+complete the normal finalization path once;
+verify exactly one Clerk invitation is created and sent;
+verify receipt in the designated test mailbox;
+open the received invitation and confirm it reaches the existing /invite/[token] flow;
+accept it through the normal Clerk flow;
+verify the existing guardian receives the Clerk identity and remains attached to the original household;
+verify no duplicate household, guardian, or invitation;
+exercise only the supported replay/finalization retry and verify it creates nothing additional.
+
+Update:
+
+docs/VERIFICATION-LIVE-CLERK-INVITATION-E2E.md
+
+with observed results only.
+
+Do not start Zoho, QuickBooks, Acuity, Summer Tutoring, or Courses in this task.
+
+Stop when #22 is either fully verified or blocked by one concrete remaining defect.

@@ -124,7 +124,7 @@ function inviteToken() {
 function requireContact(label: string, contact: ContactInput | null | undefined, requirePhone = false) {
   const firstName = trim(contact?.firstName);
   const lastName = trim(contact?.lastName);
-  const email = normalizeEmail(trim(contact?.email));
+  const email = normalizeEmail(contact?.email ?? "");
   const phone = trim(contact?.phone ?? "");
   if (!firstName || !lastName || !email) {
     throw new PublicIntakeError(`${label} first name, last name, and email are required.`);
@@ -221,6 +221,9 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   const parent1 = requireContact("Parent 1", raw.parent1, true);
   const parent2Raw = raw.parent2;
   const parent2 = requireContact("Parent 2", parent2Raw, true);
+  if (parent1.email === parent2.email) {
+    throw new PublicIntakeError("Parent 1 and Parent 2 must use different email addresses.", 400, "duplicate_guardian_email");
+  }
 
   const parent1Mailing = resolveMailingAddress(
     "Parent 1 mailing address",
@@ -344,8 +347,10 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
 
   const staffBlock = await assertNotStaffAsGuardian({ email: parent1.email });
   if (staffBlock) throw new PublicIntakeError(staffBlock, 400, "staff_email");
-  const secondBlock = await assertNotStaffAsGuardian({ email: parent2.email });
-  if (secondBlock) throw new PublicIntakeError(secondBlock, 400, "staff_email");
+  if (parent2) {
+    const secondBlock = await assertNotStaffAsGuardian({ email: parent2.email });
+    if (secondBlock) throw new PublicIntakeError(secondBlock, 400, "staff_email");
+  }
 
   const subject = await resolveCatalogSubjectRow(primarySubjectCode);
   if (!subject) {
@@ -436,12 +441,11 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   );
   if (otherHousehold) {
     throw new PublicIntakeError(
-      "Parent 2 is already linked to another family. Please contact Professional Tutoring so we can safely place this registration.",
+      "Parent 2 is already linked to another family. Please contact Professional Tutoring before submitting.",
       409,
-      "parent2_conflict",
+      "parent2_household_conflict",
     );
   }
-  const parent2Conflict = false;
 
   const subjectLabels = ACADEMIC_SUBJECTS.options
     .filter((option) => subjectCodes.includes(option.id))
@@ -450,7 +454,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
 
   const billingEmailNorm = billingContact.email;
   const billingMatchesParent1 = billingEmailNorm === parent1.email;
-  const billingMatchesParent2 = Boolean(parent2 && !parent2Conflict && billingEmailNorm === parent2.email);
+  const billingMatchesParent2 = billingEmailNorm === parent2.email;
   const billingIsSeparate = !billingMatchesParent1 && !billingMatchesParent2;
 
   const agreementAcceptedAt = new Date();
@@ -487,7 +491,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
         invitePaths.push({ label: "Parent 1", path: `/invite/${matchedGuardian.inviteToken}` });
       }
 
-      if (parent2 && !parent2Conflict && existingGuardians.length < MAX_GUARDIANS_PER_HOUSEHOLD) {
+       if (existingGuardians.length < MAX_GUARDIANS_PER_HOUSEHOLD) {
         const already = existingGuardians.some(
           (row) => normalizeEmail(row.email) === parent2.email,
         );
@@ -555,7 +559,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
       invitePaths.push({ label: "Parent 1", path: `/invite/${parent1Token}` });
 
       let billingOwnerId = parent1IsBilling ? requesterId : null;
-      if (parent2 && !parent2Conflict) {
+      {
         const parent2Token = inviteToken();
         const [createdParent2] = await tx
           .insert(guardians)
@@ -583,8 +587,6 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
           .where(eq(households.id, householdId));
       }
     }
-
-    if (parent2Conflict) identityReview = identityReview ? `${identityReview},second_guardian_conflict` : "second_guardian_conflict";
 
     const [student] = await tx
       .insert(students)
@@ -662,7 +664,6 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
       birthdate,
       ...(identityReview ? { identityReview } : {}),
       ...(emailMatches.length === 1 ? { matchOn: ["email"], reusedHouseholdId: householdId } : {}),
-      ...(parent2Conflict ? { omittedParent2: true } : {}),
       ...slotSnapshot,
     };
 

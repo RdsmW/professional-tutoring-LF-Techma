@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 export default function InviteAcceptPage() {
   const params = useParams<{ token: string }>();
   const token = params.token;
   const { isSignedIn } = useAuth();
-  const router = useRouter();
   const [invite, setInvite] = useState<{
     guardianName: string;
     email: string;
@@ -18,6 +17,9 @@ export default function InviteAcceptPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const authenticationReturnPath = `/invite/${token}`;
+  const signInHref = `/sign-in?redirect_url=${encodeURIComponent(authenticationReturnPath)}`;
+  const signUpHref = `/sign-up?redirect_url=${encodeURIComponent(authenticationReturnPath)}`;
 
   useEffect(() => {
     void (async () => {
@@ -35,11 +37,8 @@ export default function InviteAcceptPage() {
     })();
   }, [token]);
 
-  async function accept() {
-    if (!isSignedIn) {
-      router.push(`/sign-in?redirect_url=${encodeURIComponent(`/invite/${token}`)}`);
-      return;
-    }
+  const accept = useCallback(async () => {
+    if (!isSignedIn) return;
     setSaving(true);
     setError(null);
     try {
@@ -55,7 +54,13 @@ export default function InviteAcceptPage() {
     } finally {
       setSaving(false);
     }
-  }
+  }, [isSignedIn, token]);
+
+  useEffect(() => {
+    if (invite && isSignedIn && !saving && !done) {
+      void accept();
+    }
+  }, [accept, done, invite, isSignedIn, saving]);
 
   if (done) {
     return (
@@ -77,11 +82,18 @@ export default function InviteAcceptPage() {
             {invite.email}).
           </p>
           <p style={{ fontSize: 12, color: "#666" }}>
-            Sign in with the matching email, then accept. Credentials are never shared between guardians.
+            Sign in with the matching email. Credentials are never shared between guardians.
           </p>
-          <button type="button" onClick={() => void accept()} disabled={saving}>
-            {saving ? "Accepting…" : isSignedIn ? "Accept invite" : "Sign in to accept"}
-          </button>
+          {isSignedIn ? (
+            <p>{saving ? "Linking your guardian account…" : "Preparing your family portal…"}</p>
+          ) : (
+            <p>
+              <Link href={signInHref}>Sign in to accept</Link>
+              {" or "}
+              <Link href={signUpHref}>create an account</Link>
+              {"."}
+            </p>
+          )}
         </>
       ) : (
         <p>{error || "Loading invite…"}</p>
