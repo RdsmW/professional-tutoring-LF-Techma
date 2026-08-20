@@ -184,7 +184,7 @@ async function loadDashboardData() {
         .innerJoin(households, eq(students.householdId, households.id))
         .where(ne(students.lifecycle, "archived"))
         .orderBy(desc(students.createdAt))
-        .limit(8),
+        .limit(10),
       listTutoringAssignmentQueue(),
     ]);
 
@@ -383,39 +383,6 @@ export default async function StaffDashboardPage() {
         </article>
       </section>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <span className="eyebrow">Needs attention</span>
-            <h3 className="staff-section-title dashboard-queue-title">
-              <span className="dashboard-count-badge">{data.assignmentQueue.length}</span>
-              Tutor assignment
-            </h3>
-          </div>
-          <Link href="/staff/tutoring-requests" className="text-button">
-            Open queue
-          </Link>
-        </div>
-        {data.assignmentQueue.length === 0 ? (
-          <p className="dashboard-empty">No tutoring registrations need a tutor assignment.</p>
-        ) : (
-          <div className="attention-list">
-            {data.assignmentQueue.map((item) => (
-              <Link key={item.id} href={`/staff/tutoring-requests/${item.id}`} className="attention-row">
-                <span className="attention-row-name">
-                  <strong>{item.studentName}</strong>
-                  <small>{item.reason}</small>
-                </span>
-                <span className="attention-row-student">{item.subjectName}</span>
-                <span className="attention-row-amount">
-                  {item.schedulingPath === "family_selected" ? "Preferred time — not booked" : "Choose tutor"}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
       <div className="dashboard-main-row staff-equal-cards">
         <section className="panel">
           <div className="panel-heading">
@@ -450,39 +417,90 @@ export default async function StaffDashboardPage() {
           ) : null}
         </section>
 
-        <section className="panel">
+        <section className="panel dashboard-priority-panel">
           <div className="panel-heading">
             <div>
               <span className="eyebrow">Priority queue</span>
               <h3 className="staff-section-title dashboard-queue-title">
-                <span className="dashboard-count-badge">{priorityRequestTotal}</span>
-                Payment issues
+                <span className="dashboard-count-badge dashboard-count-badge--total">
+                  {data.assignmentQueue.length + priorityRequestTotal}
+                </span>
+                Needs action
               </h3>
             </div>
-            <Link href="/staff/sessions?tab=issues" className="text-button">
-              Open sessions
+            <Link href="/staff/tutoring-requests" className="text-button">
+              Open queue
             </Link>
           </div>
-          {priorityRequestTotal > priorityRequests.length ? (
-            <p className="dashboard-preview-note">
-              Showing {priorityRequests.length} recent of {priorityRequestTotal}.
-            </p>
-          ) : null}
-          <div className="attention-list">
-            {priorityRequests.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="attention-row"
-              >
-                <span className="attention-row-name">
-                  <strong>{item.name}</strong>
-                  <small>{item.dateLabel}</small>
-                </span>
-                <span className="attention-row-student">{item.studentName || "—"}</span>
-                <span className="attention-row-amount">{item.amountLabel}</span>
-              </Link>
-            ))}
+          <div className="dashboard-priority-columns">
+            <section className="dashboard-priority-group dashboard-priority-group--assignment">
+              <div className="dashboard-priority-group-heading">
+                <h4 className="dashboard-queue-title">
+                  <span className="dashboard-count-badge dashboard-count-badge--assignment">
+                    {data.assignmentQueue.length}
+                  </span>
+                  New assignments
+                </h4>
+                <Link href="/staff/tutoring-requests" className="text-button">
+                  View all
+                </Link>
+              </div>
+              {data.assignmentQueue.length === 0 ? (
+                <p className="dashboard-empty">No new assignments.</p>
+              ) : (
+                <div className="dashboard-priority-scroll">
+                  <div className="attention-list">
+                    {data.assignmentQueue.map((item) => (
+                      <Link key={item.id} href={`/staff/tutoring-requests/${item.id}`} className="attention-row">
+                        <span className="attention-row-name">
+                          <strong>{item.studentName}</strong>
+                          <small>
+                            {item.reason} · {item.subjectName}
+                          </small>
+                        </span>
+                        <span className="attention-row-amount">
+                          {item.schedulingPath === "family_selected" ? "Preferred time — not booked" : "Choose tutor"}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <section className="dashboard-priority-group dashboard-priority-group--payment">
+              <div className="dashboard-priority-group-heading">
+                <h4 className="dashboard-queue-title">
+                  <span className="dashboard-count-badge dashboard-count-badge--payment">
+                    {priorityRequestTotal}
+                  </span>
+                  Payment issues
+                </h4>
+                <Link href="/staff/billing" className="text-button">
+                  View all
+                </Link>
+              </div>
+              {priorityRequests.length === 0 ? (
+                <p className="dashboard-empty">No payment issues.</p>
+              ) : (
+                <div className="dashboard-priority-scroll">
+                  <div className="attention-list">
+                    {priorityRequests.map((item) => (
+                      <Link key={item.id} href={item.href} className="attention-row">
+                        <span className="attention-row-name">
+                          <strong>{item.name}</strong>
+                          <small>
+                            {item.studentName ? `${item.studentName} · ` : ""}
+                            {item.dateLabel}
+                          </small>
+                        </span>
+                        <span className="attention-row-amount">{item.amountLabel}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
           </div>
         </section>
       </div>

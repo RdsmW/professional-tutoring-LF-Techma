@@ -731,7 +731,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .dashboard-main-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr);
+  grid-template-columns: minmax(280px, .9fr) minmax(0, 1.6fr);
   gap: var(--space-4);
   margin-bottom: 16px;
   align-items: stretch;
@@ -838,6 +838,77 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   font: 700 12px/1 Arial, Helvetica, sans-serif;
   letter-spacing: 0;
 }
+.dashboard-count-badge--total {
+  background: var(--edit-action-soft);
+  color: var(--navy);
+}
+.dashboard-count-badge--assignment {
+  background: var(--gold-soft);
+  color: var(--title-gold);
+}
+.dashboard-count-badge--payment {
+  background: var(--rose-soft);
+  color: #91455a;
+}
+.dashboard-priority-panel {
+  min-width: 0;
+}
+.dashboard-priority-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  min-height: 0;
+}
+.dashboard-priority-group {
+  min-width: 0;
+}
+.dashboard-priority-group + .dashboard-priority-group {
+  border-left: 1px solid var(--line);
+  padding-left: 20px;
+}
+.dashboard-priority-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  margin-bottom: 8px;
+}
+.dashboard-priority-group-heading h4 {
+  margin: 0;
+  font-size: var(--text-content);
+}
+.dashboard-priority-group-heading .text-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.dashboard-priority-scroll {
+  max-height: 204px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.dashboard-priority-panel .attention-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 132px);
+  gap: 8px;
+}
+.dashboard-priority-panel .attention-row-amount {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 720px) {
+  .dashboard-priority-columns {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .dashboard-priority-group + .dashboard-priority-group {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    padding-top: 16px;
+    padding-left: 0;
+  }
+}
 .attention-list { display: flex; flex-direction: column; }
 .attention-row {
   width: 100%; border: 0; border-top: 1px solid #edf0ec; background: transparent; display: grid;
@@ -919,6 +990,14 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .dashboard-recent-students .staff-dir-table {
   margin-bottom: 0;
+  max-height: 360px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.dashboard-recent-students .staff-dir-table .table-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 .integration-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
 .integration-card { border: 1px solid var(--line); padding: 12px; display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: center; border-radius: var(--radius); }

@@ -1,0 +1,71 @@
+Before doing any new implementation, verify exactly what has already been implemented.
+
+Do not modify code during this task.
+
+Inspect the current Replit project and compare it against:
+
+the completed Phase 1 behavior;
+the approved Phase 2 Stripe implementation plan;
+the Path B decision: Option B1.
+
+Produce a verification report in:
+
+docs/CURRENT-IMPLEMENTATION-VERIFICATION.md
+
+For each expected Phase 2 item, mark it as:
+
+Implemented and verified
+Implemented but not verified
+Partially implemented
+Not implemented
+Implemented differently from the approved plan
+
+Verify specifically:
+
+Stripe Customer creation/reuse.
+Public payment continuation/security.
+PaymentIntent behavior.
+SetupIntent/card-on-file behavior.
+Full Year calculation.
+Semester calculation.
+Monthly calculation.
+Auto-charge Yes behavior.
+Auto-charge No/manual payment behavior.
+Path A: payment → slot revalidation → same request → one booking → one seat.
+Path A payment/booking failure behavior.
+Path B B1: payment/payment setup before Staff assignment.
+Path B Staff assignment still updates the same request and creates only one booking.
+Stripe webhooks.
+Webhook/payment idempotency.
+payment_records behavior.
+Any database migrations/schema changes already made.
+Any Stripe Products/Prices/Subscriptions/Schedules already created or referenced.
+Any changes made to Phase 1 behavior.
+Confirm that Zoho, Acuity and QuickBooks remain untouched.
+
+For every implemented item, provide:
+
+exact file(s);
+what the code currently does;
+whether it matches the approved plan;
+how it was tested;
+test result;
+any known limitation.
+
+Also run the safest available tests needed to verify the implementation, but do not change code to make tests pass during this task.
+
+At the end, provide:
+
+## What is actually complete
+
+## What is still missing
+
+## Deviations from the approved plan
+
+## Regressions or risks found
+
+## Recommended next action
+
+STOP after the verification report. Do not implement or fix anything yet.
+
+Je veux le point dans un fichier .md
