@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AppToastHost, useAppToast } from "@/components/app-toast";
+import { IconClose, StaffIconButton } from "@/components/staff-action-icons";
 import { PageIntro } from "@/components/ui";
 import { PUBLIC_FORM_CATALOG, type PublicFormCatalogItem } from "@/lib/staff/public-form-catalog";
 import { useDirectoryView } from "@/lib/ui/directory-view";
-
-type Notice = { formId: string; message: string } | null;
 
 function absoluteUrl(path: string) {
   return new URL(path, window.location.origin).toString();
@@ -35,78 +35,150 @@ async function copyText(value: string) {
 
 export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolean }) {
   const { view, setView } = useDirectoryView("pt.view.staff.public-forms", "cards");
-  const [notice, setNotice] = useState<Notice>(null);
+  const toast = useAppToast();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [embedFormId, setEmbedFormId] = useState<string | null>(null);
 
-  const setSuccess = (formId: string, message: string) => {
-    setNotice({ formId, message });
-    window.setTimeout(() => {
-      setNotice((current) => (current?.formId === formId ? null : current));
-    }, 2600);
-  };
+  const embedForm = PUBLIC_FORM_CATALOG.find((form) => form.id === embedFormId) ?? null;
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpenMenuId(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenMenuId(null);
+        setEmbedFormId(null);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
 
   const copyPublicLink = async (form: PublicFormCatalogItem) => {
-    if (!form.publicPath) return;
+    if (!form.publicPath) {
+      toast.error("This public form is not available yet.");
+      return;
+    }
     try {
       await copyText(absoluteUrl(form.publicPath));
-      setSuccess(form.id, "Public link copied.");
+      toast.success("Public link copied.");
     } catch {
-      setNotice({ formId: form.id, message: "Could not copy the public link. Please try again." });
+      toast.error("Could not copy the public link. Please try again.");
     }
   };
 
   const shareForm = async (form: PublicFormCatalogItem) => {
-    if (!form.publicPath) return;
+    if (!form.publicPath) {
+      toast.error("This public form is not available yet.");
+      return;
+    }
     const url = absoluteUrl(form.publicPath);
-
     try {
       if (navigator.share) {
         await navigator.share({ title: form.title, text: `Register for ${form.title}.`, url });
-        setSuccess(form.id, "Share sheet opened.");
+        toast.success("Share sheet opened.");
         return;
       }
       await copyText(url);
-      setSuccess(form.id, "Public link copied for sharing.");
+      toast.success("Public link copied for sharing.");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setNotice({ formId: form.id, message: "Could not share this form. Please try again." });
+      toast.error("Could not share this form. Please try again.");
     }
   };
 
-  const copyEmbedCode = async (form: PublicFormCatalogItem) => {
-    if (!form.publicPath) return;
+  const copyEmbedCode = async () => {
+    if (!embedForm?.publicPath) return;
     try {
-      await copyText(embedCode(form));
-      setSuccess(form.id, "Embed code copied.");
+      await copyText(embedCode(embedForm));
+      toast.success("Embed code copied.");
     } catch {
-      setNotice({ formId: form.id, message: "Could not copy the embed code. Please try again." });
+      toast.error("Could not copy the embed code. Please try again.");
     }
   };
 
-  const renderActions = (form: PublicFormCatalogItem, compact = false) => {
-    if (!form.publicPath) {
-      return <span className="public-form-unavailable">Available after this public form is built.</span>;
-    }
-
+  const renderActionMenu = (form: PublicFormCatalogItem) => {
+    const isOpen = openMenuId === form.id;
     return (
-      <div className={`public-form-actions${compact ? " is-compact" : ""}`}>
-        <Link href={form.publicPath} target="_blank" rel="noreferrer" className="secondary-button">
-          Open form
-        </Link>
-        <button type="button" className="secondary-button" onClick={() => void copyPublicLink(form)}>
-          Copy link
-        </button>
-        <button type="button" className="secondary-button" onClick={() => void shareForm(form)}>
-          Share
-        </button>
+      <div className="public-form-menu" ref={isOpen ? menuRef : null}>
         <button
           type="button"
-          className="secondary-button"
-          aria-expanded={embedFormId === form.id}
-          onClick={() => setEmbedFormId((current) => (current === form.id ? null : form.id))}
+          className="public-form-menu-trigger"
+          aria-label={`Actions for ${form.title}`}
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+          onClick={() => setOpenMenuId((current) => (current === form.id ? null : form.id))}
         >
-          Embed
+          <span aria-hidden="true">⋮</span>
         </button>
+        {isOpen ? (
+          <div className="public-form-menu-popover" role="menu" aria-label={`Actions for ${form.title}`}>
+            {form.publicPath ? (
+              <Link
+                href={form.publicPath}
+                target="_blank"
+                rel="noreferrer"
+                role="menuitem"
+                onClick={() => setOpenMenuId(null)}
+              >
+                Open
+              </Link>
+            ) : (
+              <button type="button" role="menuitem" disabled>
+                Open
+              </button>
+            )}
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!form.publicPath}
+              onClick={() => {
+                setOpenMenuId(null);
+                void copyPublicLink(form);
+              }}
+            >
+              Copy link
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!form.publicPath}
+              onClick={() => {
+                setOpenMenuId(null);
+                void shareForm(form);
+              }}
+            >
+              Share
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!form.publicPath}
+              onClick={() => {
+                setOpenMenuId(null);
+                setEmbedFormId(form.id);
+              }}
+            >
+              Embed
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpenMenuId(null);
+                toast.info("The form editor is being prepared.");
+              }}
+            >
+              Edit
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -134,6 +206,7 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
 
   return (
     <>
+      <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
       {embedded ? (
         <div className="public-forms-settings-toolbar">
           <div>
@@ -163,9 +236,12 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
             <article className={`public-form-card ${form.status === "active" ? "is-active" : ""}`} key={form.id}>
               <div className="public-form-card-topline">
                 <span className="public-form-kind">{form.journeyLabel}</span>
-                <span className={`public-form-status ${form.status}`}>
-                  {form.status === "active" ? "Active" : "Coming soon"}
-                </span>
+                <div className="public-form-card-controls">
+                  <span className={`public-form-status ${form.status}`}>
+                    {form.status === "active" ? "Active" : "Coming soon"}
+                  </span>
+                  {renderActionMenu(form)}
+                </div>
               </div>
               <h2>{form.title}</h2>
               <p>{form.description}</p>
@@ -173,17 +249,6 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
                 <div className="public-form-link-preview">
                   <span>Public link</span>
                   <code>{form.publicPath}</code>
-                </div>
-              ) : null}
-              {renderActions(form)}
-              {notice?.formId === form.id ? <p className="public-form-notice" role="status">{notice.message}</p> : null}
-              {embedFormId === form.id && form.publicPath ? (
-                <div className="public-form-embed">
-                  <label htmlFor={`embed-${form.id}`}>Paste this code into your website</label>
-                  <textarea id={`embed-${form.id}`} readOnly value={embedCode(form)} rows={5} />
-                  <button type="button" className="primary-button" onClick={() => void copyEmbedCode(form)}>
-                    Copy embed code
-                  </button>
                 </div>
               ) : null}
             </article>
@@ -196,7 +261,7 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
             <span>Type</span>
             <span>Status</span>
             <span>Public link</span>
-            <span>Actions</span>
+            <span aria-label="Actions" />
           </div>
           {PUBLIC_FORM_CATALOG.map((form) => (
             <div className="table-row public-forms-table-grid public-forms-table-row" key={form.id}>
@@ -209,22 +274,42 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
                 {form.status === "active" ? "Active" : "Coming soon"}
               </span>
               {form.publicPath ? <code className="public-forms-table-link">{form.publicPath}</code> : <span>—</span>}
-              <span className="public-forms-table-actions">
-                {renderActions(form, true)}
-                {notice?.formId === form.id ? <small className="public-form-notice" role="status">{notice.message}</small> : null}
-              </span>
-              {embedFormId === form.id && form.publicPath ? (
-                <div className="public-forms-table-embed">
-                  <textarea aria-label={`Embed code for ${form.title}`} readOnly value={embedCode(form)} rows={4} />
-                  <button type="button" className="secondary-button" onClick={() => void copyEmbedCode(form)}>
-                    Copy embed code
-                  </button>
-                </div>
-              ) : null}
+              <span className="public-forms-table-actions">{renderActionMenu(form)}</span>
             </div>
           ))}
         </section>
       )}
+
+      {embedForm?.publicPath ? (
+        <div
+          className="staff-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setEmbedFormId(null);
+          }}
+        >
+          <div className="staff-modal public-form-embed-modal" role="dialog" aria-modal="true" aria-labelledby="embed-form-title">
+            <div className="family-list-modal-header">
+              <div>
+                <h3 id="embed-form-title">Embed {embedForm.title}</h3>
+                <p>Paste this code into your website.</p>
+              </div>
+              <StaffIconButton label="Close" tone="muted" onClick={() => setEmbedFormId(null)}>
+                <IconClose size={18} />
+              </StaffIconButton>
+            </div>
+            <textarea aria-label={`Embed code for ${embedForm.title}`} readOnly value={embedCode(embedForm)} rows={6} />
+            <div className="staff-modal-actions">
+              <button type="button" className="secondary-button" onClick={() => setEmbedFormId(null)}>
+                Close
+              </button>
+              <button type="button" className="primary-button" onClick={() => void copyEmbedCode()}>
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

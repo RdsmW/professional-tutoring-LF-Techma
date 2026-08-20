@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     const billingToken = randomBytes(24).toString("hex");
     let secondIsOwner = secondGuardianRequested && body.secondIsBillingOwner === true;
     // First guardian defaults Yes when the flag is omitted; explicit false stays No.
-    let firstIsOwner =
+    const firstIsOwner =
       body.billingIsBillingOwner === true ||
       (body.billingIsBillingOwner !== false && !secondIsOwner);
     if (firstIsOwner && secondIsOwner) {
