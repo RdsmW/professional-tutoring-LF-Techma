@@ -1,0 +1,39 @@
+Implement the approved same-app billing scheduler now by completing #18. Do not start another architecture audit or broad billing refactor.
+
+Before changing anything, quickly verify that the relevant files and current billing behavior still match the issue description. Do not start another broad audit.
+
+Keep the implementation strictly within #18.
+
+Important clarifications:
+
+Prepare the code/runtime for the existing deployment to run as a Reserved VM. If changing Autoscale → Reserved VM requires a manual Replit UI action, do not attempt an alternative architecture; report the exact manual step after the code is ready.
+Keep one app, one public web deployment, one Stripe webhook, and one internal scheduler.
+Add the neutral due-payment dispatcher, but for now it must only delegate to the existing Academic Year collector. Do not generalize billing for Summer or Courses yet.
+Do not change existing Academic Year payment eligibility, Stripe idempotency, atomic claiming, webhook reconciliation, Path A/Path B behavior, or booking/course business models.
+The scheduler must run once after startup and then on the agreed guarded interval without overlapping executions.
+A scheduler/collector failure must not terminate the web server.
+
+Run the minimum targeted verification:
+
+supervised Next.js server starts normally;
+public app remains reachable;
+Stripe webhook route remains reachable;
+startup collector invocation works;
+interval execution can be tested without waiting for the real interval;
+eligible due installment can be collected;
+not-due/ineligible installment is ignored;
+retryable failure behaves correctly;
+duplicate scheduler execution cannot double-collect;
+webhook reconciliation remains intact;
+TypeScript/build pass.
+
+Use Stripe test mode or controlled development data where appropriate. Do not create an unnecessary real production charge for verification.
+
+Report:
+
+exact files changed;
+final Reserved VM run command;
+test results;
+any manual Replit deployment action still required.
+
+STOP after #18 is complete. Do not start Zoho, QuickBooks, Acuity, Summer Tutoring, or Courses in this task.
