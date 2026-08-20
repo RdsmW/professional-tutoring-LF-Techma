@@ -1,0 +1,19 @@
+kind = "design"
+previewPath = "/__mockup/"
+title = "Dashboard Design Exploration"
+description = "Isolated dashboard mockups for comparing Priority Queue hierarchy, compact Students table behavior, and sidebar interaction."
+version = "1.0.0"
+id = "artifacts/dashboard-design-exploration"
+router = "path"
+
+[[services]]
+name = "Component Preview Server"
+paths = [ "/__mockup/" ]
+localPort = 22979
+
+[services.development]
+run = "npm run dev"
+
+[services.env]
+PORT = "22979"
+BASE_PATH = "/__mockup/"
