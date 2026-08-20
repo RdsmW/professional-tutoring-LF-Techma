@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { academicYearPublicFormTokenForTest } from "./public-form-token";
+import {
+  ACADEMIC_YEAR_PAYMENT_TERMS,
+  ACADEMIC_YEAR_POLICY_SECTIONS,
+} from "../src/lib/academic-year/source-content";
 
 const unique = Date.now();
 const phoneSuffix = String(unique).slice(-4);
@@ -11,6 +15,26 @@ test.describe("public academic year registration", () => {
     await expect(page.getByRole("heading", { name: /Welcome/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Start registration/i })).toBeVisible();
     await expect(page.getByText(/tutoring_request/i)).toHaveCount(0);
+  });
+
+  test("uses approved Academic Year payment and appointment wording", () => {
+    const appointmentTerms = ACADEMIC_YEAR_POLICY_SECTIONS.find(
+      (section) => section.heading === "Tutoring Appointments",
+    )?.body;
+    expect(appointmentTerms).toContain("Tutoring appointments must be scheduled through the Professional Tutoring app");
+    expect(appointmentTerms).toContain("When available, families may select an eligible available tutor and time slot directly through the app.");
+    expect(appointmentTerms).toContain("Families may also submit their scheduling preferences for Professional Tutoring staff");
+    expect(appointmentTerms).not.toContain("Under no circumstances are appointments to be made directly with tutors.");
+
+    expect(ACADEMIC_YEAR_PAYMENT_TERMS).toContain(
+      "Academic Year registration payments made through the app are processed securely by credit/debit card through Stripe.",
+    );
+    expect(ACADEMIC_YEAR_PAYMENT_TERMS).toContain(
+      "By completing the Stripe payment setup, you authorize Professional Tutoring to charge the card on file",
+    );
+    expect(ACADEMIC_YEAR_PAYMENT_TERMS).not.toContain("Make checks payable to Professional Tutoring");
+    expect(ACADEMIC_YEAR_PAYMENT_TERMS).not.toContain("Pay Now");
+    expect(ACADEMIC_YEAR_PAYMENT_TERMS).not.toContain("without explicit authorization in the case of late payment");
   });
 
   test("student step uses concise required labels and keeps contact fields together", async ({ page }) => {

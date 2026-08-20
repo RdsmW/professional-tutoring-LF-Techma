@@ -280,22 +280,6 @@ function PaymentTerms() {
       <summary>Read full Payment Terms</summary>
       <div className="public-ay-details-copy">
         <p className="public-ay-source-text">{ACADEMIC_YEAR_PAYMENT_TERMS}</p>
-        <aside className="public-ay-conflict">
-          <strong>Requires Masdouk/client approval:</strong>
-          <p>
-            The source says the card is charged without explicit authorization only for late payment or nonpayment.
-            The new app supports scheduled Stripe installment collection after card setup. This source clause is
-            preserved and has not been silently rewritten.
-          </p>
-        </aside>
-        <aside className="public-ay-conflict">
-          <strong>Requires Masdouk/client approval:</strong>
-          <p>
-            The source requires appointment requests through the office by phone or email. The approved app flow also
-            permits in-app scheduling for Path A and preferred-window selection for Path B. This source clause is
-            preserved and has not been silently rewritten.
-          </p>
-        </aside>
       </div>
     </details>
   );

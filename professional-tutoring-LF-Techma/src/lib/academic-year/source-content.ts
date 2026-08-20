@@ -12,7 +12,7 @@ export const ACADEMIC_YEAR_POLICY_SECTIONS = [
   {
     heading: "Tutoring Appointments",
     body:
-      "All tutoring appointment requests must be made through the Professional Tutoring office by phone at 703-830-7037, or by email at admin@juliarosspt.com. Under no circumstances are appointments to be made directly with tutors.",
+      "Tutoring appointments must be scheduled through the Professional Tutoring app or through the Professional Tutoring office by phone at 703-830-7037 or by email at admin@juliarosspt.com. When available, families may select an eligible available tutor and time slot directly through the app. Families may also submit their scheduling preferences for Professional Tutoring staff to complete the tutor and schedule assignment. Appointments must not be arranged privately or directly with tutors outside the Professional Tutoring scheduling process.",
   },
   {
     heading: "Holiday Schedule",
@@ -51,19 +51,11 @@ export const ACADEMIC_YEAR_POLICY_SECTIONS = [
   },
 ] as const;
 
-export const ACADEMIC_YEAR_PAYMENT_TERMS = `Payment Terms: Professional Tutoring accepts payment by cash, check, bank transfer or credit/debit card. All credit/debit card payments will be charged a 3.6% service fee.
+export const ACADEMIC_YEAR_PAYMENT_TERMS = `Payment Terms: Academic Year registration payments made through the app are processed securely by credit/debit card through Stripe. All credit/debit card payments are charged a 3.6% service fee.
 
-Payment is due the first of each month. Payments received after the seventh of the month will be assessed a $25 late fee. Returned checks will be assessed a $35 fee. In the event that Professional Tutoring does not receive payment within 30 days of its due date, the undersigned client will be responsible for all reasonable attorney and administrative fees incurred in the collections process, in addition to payment due. Interest will accrue at 1.5% per month (18% annually) from due date. If there are mitigating circumstances affecting the tuition payments, such as sickness or job loss, please be assured that Professional Tutoring, LLC will consider such extenuating circumstances.
+Payment is due according to the selected payment plan. Monthly payments are due on the first of each month. Full Year and Semester payments are due on the dates shown in the selected plan. Payments not received by the seventh of the applicable payment month will be assessed a $25 late fee. Returned checks will be assessed a $35 fee. In the event that Professional Tutoring does not receive payment within 30 days of its due date, the undersigned client will be responsible for all reasonable attorney and administrative fees incurred in the collections process, in addition to payment due. Interest will accrue at 1.5% per month (18% annually) from the due date. If there are mitigating circumstances affecting tuition payments, such as sickness or job loss, Professional Tutoring, LLC will consider such extenuating circumstances.
 
-Credit Card Guarantee and Payment Method: Professional Tutoring requires that a current, valid credit be on file to guarantee payment. To avoid late payment and fees, if payment is not received by the seventh of the month, your credit card will be charged the monthly payment plus a 3.6% service fee.
-
-Professional Tutoring will only charge this card without explicit authorization in the case of late payment or nonpayment.
-
-Make checks payable to Professional Tutoring, LLC.
-
-Checks should be mailed to: Professional Tutoring, LLC, 11901 Cub Court, Fairfax Station, VA 22039.
-
-Click on the “Pay Now” button on your emailed invoice to pay through a secure ACH bank transfer. This is the preferred method of payment.`;
+Credit Card Guarantee and Payment Method: Professional Tutoring requires a current, valid credit or debit card to be securely kept on file through Stripe. By completing the Stripe payment setup, you authorize Professional Tutoring to charge the card on file for the payments due under the payment plan you selected, including the applicable 3.6% service fee. Charges will be processed according to the installment schedule presented and accepted during registration.`;
 
 export const ACADEMIC_YEAR_ACKNOWLEDGEMENTS_RELEASE = `Acknowledgements and Release
 

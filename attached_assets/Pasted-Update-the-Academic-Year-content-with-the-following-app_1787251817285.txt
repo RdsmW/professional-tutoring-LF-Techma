@@ -1,0 +1,98 @@
+Update the Academic Year content with the following approved product wording.
+
+Do not start another audit. Do not keep the old contradictory wording in the active public form.
+
+Keep all other Tutoring Policy, Payment Plan, Payment Terms, Acknowledgements & Release, signatures, rates, and policy content already provided unless specifically replaced below.
+
+1. Replace Tutoring Appointments
+
+REMOVE this current paragraph:
+
+Tutoring Appointments: All tutoring appointment requests must be made through the Professional Tutoring office by phone at 703-830-7037, or by email at admin@juliarosspt.com. Under no circumstances are appointments to be made directly with tutors.
+
+REPLACE IT WITH:
+
+Tutoring Appointments: Tutoring appointments must be scheduled through the Professional Tutoring app or through the Professional Tutoring office by phone at 703-830-7037 or by email at admin@juliarosspt.com. When available, families may select an eligible available tutor and time slot directly through the app. Families may also submit their scheduling preferences for Professional Tutoring staff to complete the tutor and schedule assignment. Appointments must not be arranged privately or directly with tutors outside the Professional Tutoring scheduling process.
+
+This wording must match the current product behavior:
+
+Path A → family selects an eligible available tutor and eligible available slot in the app.
+Path B → Professional Tutoring Staff completes tutor/slot assignment.
+2. Replace the active Payment Terms content
+
+The legacy payment wording no longer fully represents the app payment flow.
+
+REPLACE the active Payment Terms section with:
+
+Payment Terms: Academic Year registration payments made through the app are processed securely by credit/debit card through Stripe. All credit/debit card payments are charged a 3.6% service fee.
+
+Payment is due according to the selected payment plan. Monthly payments are due on the first of each month. Full Year and Semester payments are due on the dates shown in the selected plan. Payments not received by the seventh of the applicable payment month will be assessed a $25 late fee. Returned checks will be assessed a $35 fee. In the event that Professional Tutoring does not receive payment within 30 days of its due date, the undersigned client will be responsible for all reasonable attorney and administrative fees incurred in the collections process, in addition to payment due. Interest will accrue at 1.5% per month (18% annually) from the due date. If there are mitigating circumstances affecting tuition payments, such as sickness or job loss, Professional Tutoring, LLC will consider such extenuating circumstances.
+
+3. Replace Credit Card Guarantee and Payment Method
+
+REMOVE:
+
+Credit Card Guarantee and Payment Method: Professional Tutoring requires that a current, valid credit be on file to guarantee payment. To avoid late payment and fees, if payment is not received by the seventh of the month, your credit card will be charged the monthly payment plus a 3.6% service fee.
+
+Professional Tutoring will only charge this card without explicit authorization in the case of late payment or nonpayment.
+
+REPLACE WITH:
+
+Credit Card Guarantee and Payment Method: Professional Tutoring requires a current, valid credit or debit card to be securely kept on file through Stripe. By completing the Stripe payment setup, you authorize Professional Tutoring to charge the card on file for the payments due under the payment plan you selected, including the applicable 3.6% service fee. Charges will be processed according to the installment schedule presented and accepted during registration.
+
+This must match the existing Stripe behavior:
+
+Full Year → one scheduled payment;
+Semester → two scheduled payments;
+Monthly → nine full monthly payments plus the June half-month payment;
+no family-facing Automatically charge card? Yes/No field;
+no alternative-payment selector in the public registration flow.
+4. Remove outdated alternative-payment instructions from the active registration flow
+
+REMOVE these lines from the active Academic Year public registration experience:
+
+Make checks payable to Professional Tutoring, LLC.
+
+Checks should be mailed to: Professional Tutoring, LLC, 11901 Cub Court, Fairfax Station, VA 22039.
+
+Click on the “Pay Now” button on your emailed invoice to pay through a secure ACH bank transfer. This is the preferred method of payment.
+
+These instructions describe the previous payment process and should not be presented as part of the current in-app Stripe payment flow.
+
+This does not require deleting historical/source content from the repository if it is retained for reference. Remove it from the active family-facing Academic Year registration experience.
+
+5. Keep the rest unchanged
+
+Keep the previously provided:
+
+Standard Hours/Rates;
+Advanced Subjects explanation;
+Advanced Hours/Rates;
+two-hour session/hourly-trial explanation;
+remaining Tutoring Policy sections;
+Tutoring Policy acknowledgement;
+Full Year / Semester / Monthly definitions;
+9.5-month / 5 + 4.5-month / June half-month calculations;
+3.6% card fee;
+Acknowledgements and Release;
+Consent;
+Parent Signature;
+Student Signature;
+Date;
+Plan → Agreement → Review → Payment → Confirmation;
+Stripe return to Confirmation;
+Path A / Path B behavior.
+6. Only remaining unresolved pricing case
+
+The only business rule still pending is the final tuition calculation when the same registration contains both Standard and Advanced subjects.
+
+Continue to:
+
+display both applicable rate sections;
+store the request;
+route it for Staff review;
+defer automatic pricing/payment continuation.
+
+Do not invent the mixed pricing formula.
+
+Implement these replacements in the current Academic Year task and include them in the existing targeted verification. Do not start Zoho, QuickBooks, Acuity, Summer Tutoring, or Courses in this task.

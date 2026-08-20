@@ -1,10 +1,10 @@
 ---
 name: Academic Year contractual approvals
-description: Source-agreement constraints and unresolved app-behavior conflicts.
+description: Approved Academic Year agreement wording aligned with the current public app behavior.
 ---
 
-Keep the supplied Academic Year Policy, Payment Terms, and Acknowledgements and Release wording verbatim and accessible in the public flow.
+Keep the approved Academic Year Policy, Payment Terms, and Acknowledgements and Release wording accessible in the public flow.
 
-**Why:** The source agreement limits non-authorized card charging to late payment or nonpayment and routes appointment requests through the office, while the app supports scheduled Stripe collection and in-app scheduling.
+**Why:** The approved wording explicitly aligns the agreement with Path A in-app tutor/slot selection, Path B staff scheduling, and Stripe-backed scheduled installment collection after card setup.
 
-**How to apply:** Preserve both source clauses unchanged and keep the corresponding Masdouk/client approval notices visible until the contract or app behavior is explicitly aligned. Continue deferring mixed Standard + Advanced pricing to Staff; no combined formula is approved.
+**How to apply:** Do not reintroduce the former office-only appointment clause, late-payment-only card authorization clause, or legacy check/ACH instructions into the active public form. Continue deferring mixed Standard + Advanced pricing to Staff; no combined formula is approved.

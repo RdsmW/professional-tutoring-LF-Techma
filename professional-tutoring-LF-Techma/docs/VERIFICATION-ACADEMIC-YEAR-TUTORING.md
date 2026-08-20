@@ -2,7 +2,7 @@
 
 ## Scope
 
-This report covers the current Academic Year Tutoring registration flow. No Zoho, Acuity, QuickBooks, or invitation-email behavior was changed.
+This report covers the current Academic Year Tutoring registration flow. No Zoho, Acuity, QuickBooks, Summer Tutoring, or Courses behavior was changed.
 
 ## Passed checks
 
@@ -39,6 +39,11 @@ This report covers the current Academic Year Tutoring registration flow. No Zoho
   - `npx playwright test e2e/ay-billing-schedule.spec.ts e2e/public-ay-registration.spec.ts e2e/path-a-finalization-safety.spec.ts` completed with 13 passed and 1 skipped.
   - The Path B API test rejects `autoCharge: "no"` plus an alternative payment method, creates a card-backed continuation for compliant registrations, and confirms an hourly package becomes `paymentDeferred` with no payment continuation.
   - Billing schedule tests assert the card-fee-inclusive finite installment amounts, and the existing Path A safety tests still cover deactivated tutors, subject mismatch, changed windows, and concurrent finalization.
+- After the approved Appointment and Payment Terms update:
+  - `npx tsc --noEmit` and targeted lint passed.
+  - `npm run build` completed successfully.
+  - `npx playwright test e2e/public-ay-registration.spec.ts e2e/ay-billing-schedule.spec.ts e2e/path-a-finalization-safety.spec.ts e2e/clerk-portal-invitations.spec.ts` completed with **16 passed and 1 skipped**.
+  - The added content regression test confirms the approved Path A/Path B appointment language, Stripe authorization language, and absence of the removed check, ACH, and late-payment-only authorization instructions.
 
 ## Test-environment correction
 
@@ -47,18 +52,18 @@ Playwright now applies the public-form migration and creates a published Academi
 ## Invitation and confirmation verification
 
 - Successful registrations continue to generate and preserve family-portal invitation URLs.
-- The confirmation page displays the verified payment status and the available invitation links without claiming an email was sent.
-- The repository has no outbound-email provider, queue, mail transport, or delivery call for invitations. No email-send behavior was added or connected.
+- Clerk sends an idempotent family-portal invitation after the required Stripe payment or card setup succeeds.
+- The confirmation page claims an invitation email was sent only after Clerk confirms delivery.
 - The current Agreement remains displayed and acknowledgement-gated in the public flow. The current card setup/payment behavior, Stripe return/finalization flow, and invitation-link retention remain in place.
 
 ## Supplied source content
 
-The complete supplied Academic Year Tutoring Policy, Payment Terms, and Acknowledgements and Release are now accessible in the applicable Plan and Agreement stages without replacing them with headings, links, or paraphrased clauses.
+The complete supplied Academic Year Tutoring Policy, approved app-compatible Payment Terms, and Acknowledgements and Release are accessible in the applicable Plan and Agreement stages without replacing them with headings, links, or paraphrased clauses.
 
-## Source/application differences requiring Masdouk/client approval
+## Current source/application alignment
 
-- **Card authorization:** “Professional Tutoring will only charge this card without explicit authorization in the case of late payment or nonpayment.” The app’s scheduled Stripe installment collection after card setup is different. The clause is visible unchanged alongside an explicit approval notice.
-- **Tutoring appointments:** “Under no circumstances are appointments to be made directly with tutors.” The app allows the approved in-app Path A tutor/slot flow and Path B preferred-window flow. The clause is visible unchanged alongside an explicit approval notice.
+- **Card authorization:** The active Payment Terms now state that completing Stripe payment setup authorizes charges according to the accepted installment schedule, including the 3.6% service fee.
+- **Tutoring appointments:** The active Tutoring Policy now states that families may schedule through the app using Path A or submit preferences for Staff assignment using Path B, while prohibiting private arrangements outside the Professional Tutoring process.
 - **Mixed Standard + Advanced pricing:** The source does not define a combined formula. The app continues to defer price confirmation and payment to Staff rather than inventing an amount.
 - **Hourly requests:** The source limits hourly pricing to no-full-time-spot and short trial situations. The app routes hourly requests to Staff for a staff-set amount before payment rather than automatically charging a family-selected hourly rate.
 
