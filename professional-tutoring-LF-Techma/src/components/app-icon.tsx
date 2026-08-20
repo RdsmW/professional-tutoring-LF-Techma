@@ -13,6 +13,7 @@ export type IconName =
   | "clock"
   | "billing"
   | "integrations"
+  | "forms"
   | "reports"
   | "settings"
   | "home"
@@ -132,6 +133,13 @@ const drawings: Record<IconName, ReactNode> = {
     <>
       <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L10.7 5.23" />
       <path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07L13.3 18.77" />
+    </>
+  ),
+  forms: (
+    <>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M8.5 8h7M8.5 12h7M8.5 16h4" />
+      <path d="M3 7v12a2 2 0 0 0 2 2" />
     </>
   ),
   reports: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,

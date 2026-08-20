@@ -17,6 +17,7 @@ export const STAFF_NAV = [
   { href: "/staff/tutors", label: "Tutors", icon: "tutor" },
   { href: "/staff/sessions", label: "Sessions", icon: "calendar" },
   { href: "/staff/billing", label: "Billing", icon: "billing" },
+  { href: "/staff/public-forms", label: "Public Forms", icon: "forms" },
   { href: "/staff/reports", label: "Reports", icon: "reports" },
   // Support temporarily hidden from nav; /staff/support redirects to Dashboard.
   { href: "/staff/settings", label: "Settings", icon: "settings" },
