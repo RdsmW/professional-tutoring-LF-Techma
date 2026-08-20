@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import {
   IconArchive,
@@ -59,6 +59,8 @@ export function StaffSettingsCoursesSubjectsPanel() {
   const [courseForm, setCourseForm] = useState(emptyCourseForm);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
+  const lastFocusedElement = useRef<HTMLElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -106,15 +108,56 @@ export function StaffSettingsCoursesSubjectsPanel() {
   }, [busyId]);
 
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) {
+      const element = lastFocusedElement.current;
+      if (element) {
+        window.requestAnimationFrame(() => element.focus());
+        lastFocusedElement.current = null;
+      }
+      return;
+    }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeEditor();
+      if (event.key !== "Tab") return;
+
+      const modal = modalRef.current;
+      if (!modal) return;
+      if (busyId) {
+        event.preventDefault();
+        modal.focus();
+        return;
+      }
+      const focusable = Array.from(
+        modal.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [closeEditor, editor]);
+  }, [busyId, closeEditor, editor]);
+
+  useEffect(() => {
+    if (!busyId) return;
+    modalRef.current?.focus();
+  }, [busyId]);
+
+  function rememberFocus() {
+    lastFocusedElement.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  }
 
   function openSubjectEditor(subject?: CatalogSubject) {
+    rememberFocus();
     setEditorError(null);
     setEditingCourseId(null);
     setCourseForm(emptyCourseForm);
@@ -128,6 +171,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
   }
 
   function openCourseEditor(course?: CatalogCourse) {
+    rememberFocus();
     setEditorError(null);
     setEditingSubjectId(null);
     setSubjectForm(emptySubjectForm);
@@ -318,12 +362,13 @@ export function StaffSettingsCoursesSubjectsPanel() {
             <p>Catalog used for tutor assignment and scheduling.</p>
           </div>
           <StaffIconButton
-            label="New Subject"
+            label="Add subject"
             tone="edit"
             className="catalog-add-button"
             onClick={() => openSubjectEditor()}
           >
             <IconPlus />
+            <span>Add subject</span>
           </StaffIconButton>
         </div>
         {loading ? (
@@ -388,12 +433,13 @@ export function StaffSettingsCoursesSubjectsPanel() {
             <p>Group course offerings available to families.</p>
           </div>
           <StaffIconButton
-            label="New course"
+            label="Add course"
             tone="edit"
             className="catalog-add-button"
             onClick={() => openCourseEditor()}
           >
             <IconPlus />
+            <span>Add course</span>
           </StaffIconButton>
         </div>
         {loading ? (
@@ -456,9 +502,17 @@ export function StaffSettingsCoursesSubjectsPanel() {
             if (event.target === event.currentTarget) closeEditor();
           }}
         >
-          <div className="staff-modal catalog-editor-modal" role="dialog" aria-modal="true" aria-labelledby="subject-editor-title">
+          <div
+            ref={modalRef}
+            className="staff-modal catalog-editor-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="subject-editor-title"
+            aria-busy={Boolean(busyId)}
+            tabIndex={-1}
+          >
             <div className="family-list-modal-header">
-              <h3 id="subject-editor-title">{editingSubjectId ? "Edit subject" : "New subject"}</h3>
+              <h3 id="subject-editor-title">{editingSubjectId ? "Edit subject" : "Add subject"}</h3>
               <StaffIconButton label="Close" tone="muted" disabled={!!busyId} onClick={closeEditor}>
                 <IconClose size={18} />
               </StaffIconButton>
@@ -472,7 +526,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
               }}
             >
               {editorError ? (
-                <p className="form-error" role="alert">
+                <p className="form-error" role="alert" aria-live="assertive">
                   {editorError}
                 </p>
               ) : null}
@@ -522,7 +576,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Cancel
                 </button>
                 <button type="submit" className="primary-button" disabled={!!busyId}>
-                  {busyId ? "Saving…" : editingSubjectId ? "Save subject" : "Create subject"}
+                  {busyId ? "Saving…" : editingSubjectId ? "Save changes" : "Add subject"}
                 </button>
               </div>
             </form>
@@ -538,9 +592,17 @@ export function StaffSettingsCoursesSubjectsPanel() {
             if (event.target === event.currentTarget) closeEditor();
           }}
         >
-          <div className="staff-modal catalog-editor-modal" role="dialog" aria-modal="true" aria-labelledby="course-editor-title">
+          <div
+            ref={modalRef}
+            className="staff-modal catalog-editor-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="course-editor-title"
+            aria-busy={Boolean(busyId)}
+            tabIndex={-1}
+          >
             <div className="family-list-modal-header">
-              <h3 id="course-editor-title">{editingCourseId ? "Edit course" : "New course"}</h3>
+              <h3 id="course-editor-title">{editingCourseId ? "Edit course" : "Add course"}</h3>
               <StaffIconButton label="Close" tone="muted" disabled={!!busyId} onClick={closeEditor}>
                 <IconClose size={18} />
               </StaffIconButton>
@@ -554,7 +616,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
               }}
             >
               {editorError ? (
-                <p className="form-error" role="alert">
+                <p className="form-error" role="alert" aria-live="assertive">
                   {editorError}
                 </p>
               ) : null}
@@ -643,7 +705,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Cancel
                 </button>
                 <button type="submit" className="primary-button" disabled={!!busyId}>
-                  {busyId ? "Saving…" : editingCourseId ? "Save course" : "Create course"}
+                  {busyId ? "Saving…" : editingCourseId ? "Save changes" : "Add course"}
                 </button>
               </div>
             </form>

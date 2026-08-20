@@ -185,7 +185,7 @@ async function loadDashboardData() {
         .innerJoin(households, eq(students.householdId, households.id))
         .where(ne(students.lifecycle, "archived"))
         .orderBy(desc(students.createdAt))
-        .limit(3),
+        .limit(20),
       listTutoringAssignmentQueue(),
     ]);
 
@@ -280,7 +280,7 @@ async function loadDashboardData() {
       ...paymentPriorityItems,
     ]
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-      .slice(0, 3);
+      .slice(0, 20);
 
     const studentIds = recentStudentRows.map((row) => row.id);
     const subjectsByStudent = new Map<string, Array<{ id: string; name: string }>>();
@@ -356,6 +356,7 @@ export default async function StaffDashboardPage() {
     day: "numeric",
   }).format(new Date());
   const priorityRequestTotal = data.familyRequestsTotal;
+  const priorityTotal = data.assignmentQueue.length + priorityRequestTotal;
 
   return (
     <>
@@ -398,7 +399,7 @@ export default async function StaffDashboardPage() {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <h3 className="staff-section-title">This Week Capacity</h3>
+              <h3 className="staff-section-title">This week capacity</h3>
             </div>
             <Link href="/staff/sessions" className="text-button">
               Open schedule
@@ -429,9 +430,22 @@ export default async function StaffDashboardPage() {
 
         <section className="panel dashboard-priority-panel">
           <div className="panel-heading">
-            <h3 className="staff-section-title dashboard-queue-title">
-              Priority Queue {data.assignmentQueue.length + priorityRequestTotal}
-            </h3>
+            <div>
+              <h3 className="staff-section-title dashboard-queue-title">
+                <span className="dashboard-count-badge dashboard-count-badge--total">{priorityTotal}</span>
+                Priority queue
+              </h3>
+              <div className="dashboard-priority-summary" aria-label="Priority queue breakdown">
+                <span>
+                  <i className="dashboard-priority-marker dashboard-priority-marker--assignment" aria-hidden="true" />
+                  <strong>{data.assignmentQueue.length}</strong> New assignments
+                </span>
+                <span>
+                  <i className="dashboard-priority-marker dashboard-priority-marker--payment" aria-hidden="true" />
+                  <strong>{priorityRequestTotal}</strong> Payment issues
+                </span>
+              </div>
+            </div>
             <Link href="/staff/priority-queue" className="text-button">
               Open queue
             </Link>
@@ -442,10 +456,14 @@ export default async function StaffDashboardPage() {
             <div className="attention-list dashboard-priority-list">
               {data.priorityItems.map((item) => (
                 <Link key={`${item.kind}-${item.id}`} href={item.href} className="attention-row">
-                  <span
-                    className={`dashboard-priority-status dashboard-priority-status--${item.kind}`}
-                  >
-                    {item.kind === "assignment" ? "New assignment" : "Payment issue"}
+                  <span className="dashboard-priority-item-kind">
+                    <span
+                      className={`dashboard-priority-marker dashboard-priority-marker--${item.kind}`}
+                      aria-hidden="true"
+                    />
+                    <span className="sr-only">
+                      {item.kind === "assignment" ? "New assignment" : "Payment issue"}
+                    </span>
                   </span>
                   <span className="attention-row-name">
                     <strong>{item.title}</strong>
@@ -462,8 +480,7 @@ export default async function StaffDashboardPage() {
       <section className="panel dashboard-recent-students">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">Students</span>
-            <h3 className="staff-section-title">Recently added</h3>
+            <h3 className="staff-section-title">Recently added students</h3>
           </div>
           <Link href="/staff/students" className="text-button">
             Open students
