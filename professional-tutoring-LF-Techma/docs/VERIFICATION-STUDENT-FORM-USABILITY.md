@@ -17,4 +17,5 @@
 
 - The browser no longer sends direct requests to Mapbox.
 - The application now uses a public server route for address lookup and returns a friendly unavailable message rather than exposing Mapbox's raw Forbidden response.
-- The currently configured Mapbox public token returned HTTP 403 Forbidden for Mapbox Geocoding v5, Geocoding v6, and Search Box lookups. The token is configured and has a public-token format, but its current permissions do not permit address-search requests.
+- The currently configured Mapbox public token returned HTTP 403 Forbidden for requests from unapproved Replit origins.
+- When the lookup route forwarded the token's approved `http://localhost:3000` origin, Mapbox returned HTTP 200 with five normalized address suggestions. This confirms that the token supports address search and is blocked only by its URL restrictions.
