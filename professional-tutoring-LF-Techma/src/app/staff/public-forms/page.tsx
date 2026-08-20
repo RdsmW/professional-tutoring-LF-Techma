@@ -1,5 +1,5 @@
-import { StaffPublicFormsClient } from "@/components/staff-public-forms-client";
+import { redirect } from "next/navigation";
 
 export default function StaffPublicFormsPage() {
-  return <StaffPublicFormsClient />;
+  redirect("/staff/settings?tab=public-forms");
 }

@@ -1109,6 +1109,21 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   background: var(--navy);
   color: #fff;
 }
+.public-forms-settings-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+.public-forms-settings-toolbar h2 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+.public-forms-settings-toolbar p {
+  margin: 0;
+  max-width: 680px;
+}
 .public-forms-summary {
   display: flex;
   align-items: baseline;

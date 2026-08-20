@@ -33,7 +33,7 @@ async function copyText(value: string) {
   input.remove();
 }
 
-export function StaffPublicFormsClient() {
+export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolean }) {
   const { view, setView } = useDirectoryView("pt.view.staff.public-forms", "cards");
   const [notice, setNotice] = useState<Notice>(null);
   const [embedFormId, setEmbedFormId] = useState<string | null>(null);
@@ -111,33 +111,46 @@ export function StaffPublicFormsClient() {
     );
   };
 
+  const viewToggle = (
+    <div className="directory-view-toggle public-forms-view-toggle" aria-label="Choose public forms view">
+      <button
+        type="button"
+        className={view === "cards" ? "active" : ""}
+        aria-pressed={view === "cards"}
+        onClick={() => setView("cards")}
+      >
+        Cards
+      </button>
+      <button
+        type="button"
+        className={view === "table" ? "active" : ""}
+        aria-pressed={view === "table"}
+        onClick={() => setView("table")}
+      >
+        List
+      </button>
+    </div>
+  );
+
   return (
     <>
-      <PageIntro
-        eyebrow="Staff tools"
-        title="Public Forms"
-        description="Share registration forms with families or copy an embed snippet for your website."
-        action={
-          <div className="directory-view-toggle public-forms-view-toggle" aria-label="Choose public forms view">
-            <button
-              type="button"
-              className={view === "cards" ? "active" : ""}
-              aria-pressed={view === "cards"}
-              onClick={() => setView("cards")}
-            >
-              Cards
-            </button>
-            <button
-              type="button"
-              className={view === "table" ? "active" : ""}
-              aria-pressed={view === "table"}
-              onClick={() => setView("table")}
-            >
-              List
-            </button>
+      {embedded ? (
+        <div className="public-forms-settings-toolbar">
+          <div>
+            <span className="eyebrow">Sharing and embeds</span>
+            <h2>Public Forms</h2>
+            <p>Share registration forms with families or copy an embed snippet for your website.</p>
           </div>
-        }
-      />
+          {viewToggle}
+        </div>
+      ) : (
+        <PageIntro
+          eyebrow="Staff tools"
+          title="Public Forms"
+          description="Share registration forms with families or copy an embed snippet for your website."
+          action={viewToggle}
+        />
+      )}
 
       <section className="public-forms-summary" aria-label="Public form status">
         <strong>1 active form</strong>

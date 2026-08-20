@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageIntro, Panel } from "@/components/ui";
 import { IntegrationStatusPanel } from "@/components/staff-integrations-client";
 import { StaffSettingsCoursesSubjectsPanel } from "@/components/staff-settings-courses-subjects";
+import { StaffPublicFormsClient } from "@/components/staff-public-forms-client";
 import { APP_TIMEZONE } from "@/lib/constants";
 import {
   DEFAULT_CANCELLATION_POLICY_CODE,
@@ -55,6 +56,7 @@ const TABS = [
   { id: "policy", label: "Policy" },
   { id: "prices", label: "Prices" },
   { id: "courses", label: "Courses / Subjects" },
+  { id: "public-forms", label: "Public Forms" },
   { id: "history", label: "History" },
   { id: "integrations", label: "Integrations" },
   { id: "recycle", label: "Recycle bin" },
@@ -290,6 +292,8 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
         {stripeConfigured ? "Stripe ready" : "Stripe pending"}
       </span>
     );
+  } else if (tab === "public-forms") {
+    headerAction = <span className="pill green">1 active form</span>;
   }
 
   return (
@@ -506,6 +510,8 @@ export function StaffSettingsClient({ stripeConfigured }: { stripeConfigured: bo
       ) : null}
 
       {tab === "courses" ? <StaffSettingsCoursesSubjectsPanel /> : null}
+
+      {tab === "public-forms" ? <StaffPublicFormsClient embedded /> : null}
 
       {tab === "history" ? (
         <Panel title="Policy history">
