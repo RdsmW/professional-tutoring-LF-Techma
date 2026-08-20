@@ -8,11 +8,22 @@ config();
 const databaseUrl = process.env.DATABASE_URL;
 const database = databaseUrl ? postgres(databaseUrl, { max: 1, prepare: false }) : null;
 
+async function currentFormVersionToken(request: APIRequestContext) {
+  const response = await request.get("/register/academic-year-tutoring");
+  expect(response.ok()).toBeTruthy();
+  const html = await response.text();
+  const token = html.match(/name="formVersionToken" value="([^"]+)"/)?.[1];
+  expect(token).toBeTruthy();
+  return token!;
+}
+
 async function submitPathB1Registration(request: APIRequestContext, paymentPlanId: "full_year" | "semester" | "monthly") {
   const unique = `${Date.now()}${Math.floor(Math.random() * 10_000)}`;
   const phoneSuffix = unique.slice(-4);
+  const formVersionToken = await currentFormVersionToken(request);
   const response = await request.post("/api/public/ay-tutoring-registration", {
     data: {
+      formVersionToken,
       student: {
         firstName: "Billing",
         lastName: `Plan${paymentPlanId}${unique}`,

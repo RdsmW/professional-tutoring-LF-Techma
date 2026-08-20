@@ -28,6 +28,10 @@ function dueDate(value: string) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(new Date(value));
 }
 
+function academicYearPaymentReturnUrl() {
+  return `${window.location.origin}/register/academic-year-tutoring?payment=return`;
+}
+
 function CardConfirmation({
   mode,
   token,
@@ -62,13 +66,21 @@ function CardConfirmation({
     setError(null);
     try {
       if (mode.kind === "payment_intent") {
-        const result = await stripe.confirmPayment({ elements, redirect: "if_required" });
+        const result = await stripe.confirmPayment({
+          elements,
+          confirmParams: { return_url: academicYearPaymentReturnUrl() },
+          redirect: "if_required",
+        });
         if (result.error || !result.paymentIntent?.id) {
           throw new Error(result.error?.message || "Payment authorization was not completed.");
         }
         await finalize(result.paymentIntent.id);
       } else {
-        const result = await stripe.confirmSetup({ elements, redirect: "if_required" });
+        const result = await stripe.confirmSetup({
+          elements,
+          confirmParams: { return_url: academicYearPaymentReturnUrl() },
+          redirect: "if_required",
+        });
         if (result.error || !result.setupIntent?.id) {
           throw new Error(result.error?.message || "Card setup was not completed.");
         }

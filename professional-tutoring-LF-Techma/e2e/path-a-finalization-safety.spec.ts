@@ -16,6 +16,15 @@ type SafetyCase = {
   cleanup: () => Promise<void>;
 };
 
+async function currentFormVersionToken(request: APIRequestContext) {
+  const response = await request.get("/register/academic-year-tutoring");
+  expect(response.ok()).toBeTruthy();
+  const html = await response.text();
+  const token = html.match(/name="formVersionToken" value="([^"]+)"/)?.[1];
+  expect(token).toBeTruthy();
+  return token!;
+}
+
 async function createPathASafetyCase(): Promise<SafetyCase> {
   if (!database) throw new Error("DATABASE_URL missing");
 
@@ -73,8 +82,10 @@ async function registerManualPathA(
 ) {
   const suffix = `${Date.now()}${Math.floor(Math.random() * 10_000)}`;
   const phoneSuffix = suffix.slice(-4);
+  const formVersionToken = await currentFormVersionToken(request);
   const response = await request.post("/api/public/ay-tutoring-registration", {
     data: {
+      formVersionToken,
       student: {
         firstName: "Safety",
         lastName: label,
