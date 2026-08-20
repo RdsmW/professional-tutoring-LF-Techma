@@ -8,16 +8,6 @@ type MapboxResponse = {
   message?: string;
 };
 
-function requestOrigin(request: Request) {
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0].trim();
-  const host = forwardedHost || request.headers.get("host");
-  if (!host) return new URL(request.url).origin;
-
-  const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0].trim();
-  const protocol = forwardedProtocol || new URL(request.url).protocol.replace(":", "");
-  return `${protocol}://${host}`;
-}
-
 export async function GET(request: Request) {
   const query = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   if (query.length < 3) {
@@ -42,12 +32,7 @@ export async function GET(request: Request) {
   url.searchParams.set("limit", "5");
 
   try {
-    const origin = requestOrigin(request);
     const response = await fetch(url, {
-      headers: {
-        origin,
-        referer: `${origin}/`,
-      },
       next: { revalidate: 60 },
     });
     const data = (await response.json().catch(() => ({}))) as MapboxResponse;
