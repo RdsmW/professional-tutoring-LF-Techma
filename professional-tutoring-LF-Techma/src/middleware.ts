@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   "/register/academic-year-tutoring(.*)",
   "/api/public/ay-tutoring-registration(.*)",
   "/api/public/ay-tutoring-availability(.*)",
+  "/api/public/ay-tutoring-payment(.*)",
 ]);
 
 /** Bootstrap authenticates inside the route so unauth clients get JSON 401, not a Clerk rewrite. */

@@ -14,6 +14,7 @@ import {
   isValidOptionId,
 } from "@/lib/forms/options";
 import { loadActiveCancellationPolicy } from "@/lib/policy/cancellation";
+import { createAyPublicPaymentContinuation } from "@/lib/public-intake/ay-tutoring-payment";
 import { findHouseholdMatchCandidates } from "@/lib/staff/family-match";
 import { buildHouseholdDisplayName, HOUSEHOLD_COUNTRY_US, MAX_GUARDIANS_PER_HOUSEHOLD } from "@/lib/staff/household-display-name";
 import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
@@ -163,7 +164,7 @@ function resolveMailingAddress(
 ) {
   if (contact?.sameAsStudentAddress) return studentAddress;
   const hasOwnStreet = Boolean(trim(contact?.addressLine1));
-  return requireAddress(label, hasOwnStreet ? contact : fallback ?? contact);
+  return requireAddress(label, hasOwnStreet ? contact ?? undefined : fallback ?? contact ?? undefined);
 }
 
 function guardianAddressValues(address: AddressInput) {
@@ -276,14 +277,21 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   if (hoursRatePackage && advancedHoursRatePackage) {
     throw new PublicIntakeError("Choose a standard or advanced hours/rate package, not both.");
   }
+  const selectedRatePackage = hoursRatePackage ?? advancedHoursRatePackage;
+  if (!selectedRatePackage) {
+    throw new PublicIntakeError("Choose an hours/rate package before payment.");
+  }
+  if (selectedRatePackage.endsWith("_hourly")) {
+    throw new PublicIntakeError("Hourly Academic Year tutoring requires a staff-set amount before payment.");
+  }
 
   const autoCharge = optional(raw.autoCharge);
-  if (autoCharge && !isValidOptionId("YES_NO", autoCharge)) {
-    throw new PublicIntakeError("Invalid automatic-charge preference.");
+  if (!isValidOptionId("YES_NO", autoCharge ?? "")) {
+    throw new PublicIntakeError("Choose whether to automatically charge a card.");
   }
   const altPaymentMethod = autoCharge === "no" ? optional(raw.altPaymentMethod) : null;
-  if (altPaymentMethod && !isValidOptionId("ALT_PAYMENT_METHODS", altPaymentMethod)) {
-    throw new PublicIntakeError("Invalid alternate payment method.");
+  if (autoCharge === "no" && !isValidOptionId("ALT_PAYMENT_METHODS", altPaymentMethod ?? "")) {
+    throw new PublicIntakeError("Choose an alternative payment method.");
   }
 
   if (raw.policyAck !== true || raw.agreementAck !== true) {
@@ -648,9 +656,20 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
       preferredSlotId,
     };
   });
+  const payment = await createAyPublicPaymentContinuation({
+    householdId: result.householdId,
+    tutoringRequestId: result.tutoringRequestId,
+    schedulingPath,
+    paymentPlanId,
+    hoursRatePackage,
+    advancedHoursRatePackage,
+    autoCharge: autoCharge as "yes" | "no",
+    altPaymentMethod,
+  });
 
   return {
     ...result,
+    payment,
     message:
       schedulingPath === "family_selected"
         ? "We received your registration and saved your preferred time. Your place is confirmed after payment in a later step."

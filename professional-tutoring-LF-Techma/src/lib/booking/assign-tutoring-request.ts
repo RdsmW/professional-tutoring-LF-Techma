@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { availabilitySlots, bookings, tutoringRequests } from "@/lib/db/schema";
+import { availabilitySlots, bookings, paymentRecords, tutoringRequests } from "@/lib/db/schema";
 
 const OCCUPYING_BOOKING_STATUSES = ["held", "pending_payment", "pending_staff_review", "confirmed"] as const;
 
@@ -23,10 +23,17 @@ export async function assignTutoringRequest(input: {
   requestId: string;
   tutorId: string;
   slotId: string;
-  staffId: string;
+  staffId?: string | null;
+  /**
+   * Path A uses the existing atomic slot claim while Stripe has an active
+   * authorization. It is immediately confirmed or removed after capture.
+   */
+  bookingStatus?: "confirmed" | "pending_payment";
 }) {
   const database = requireDb();
   const now = new Date();
+  const bookingStatus = input.bookingStatus ?? "confirmed";
+  const isStaffAssignment = Boolean(input.staffId);
 
   return database.transaction(async (tx) => {
     const [request] = await tx
@@ -40,6 +47,29 @@ export async function assignTutoringRequest(input: {
     }
     if (request.status === "cancelled") {
       throw new AssignTutoringRequestError("This registration was cancelled.", 409, "cancelled");
+    }
+
+    if (isStaffAssignment) {
+      const [payment] = await tx
+        .select({
+          status: paymentRecords.status,
+          paymentSetupCompletedAt: paymentRecords.paymentSetupCompletedAt,
+        })
+        .from(paymentRecords)
+        .where(
+          and(
+            eq(paymentRecords.relatedEntityType, "tutoring_request"),
+            eq(paymentRecords.relatedEntityId, request.id),
+          ),
+        )
+        .limit(1);
+      if (payment && payment.status !== "paid" && !payment.paymentSetupCompletedAt) {
+        throw new AssignTutoringRequestError(
+          "Complete the selected payment or payment setup before assigning a tutor.",
+          409,
+          "payment_not_ready",
+        );
+      }
     }
 
     const occupying = await tx
@@ -92,11 +122,11 @@ export async function assignTutoringRequest(input: {
       .update(tutoringRequests)
       .set({
         preferredSlotId: input.slotId,
-        status: "confirmed",
+        status: bookingStatus === "confirmed" ? "confirmed" : "pending_staff_review",
         scheduleWindowId: claimed.scheduleWindowId ?? request.scheduleWindowId,
         payload: {
           ...previousPayload,
-          assignedByStaffId: input.staffId,
+          ...(isStaffAssignment ? { assignedByStaffId: input.staffId } : { assignedByFamily: true }),
           assignedAt: now.toISOString(),
           assignedTutorId: input.tutorId,
           assignedSlotId: input.slotId,
@@ -115,14 +145,71 @@ export async function assignTutoringRequest(input: {
         subjectId: request.subjectId,
         tutorId: input.tutorId,
         slotId: input.slotId,
-        status: "confirmed",
+        status: bookingStatus,
         seatsClaimed: 1,
-        confirmedByStaffId: input.staffId,
-        confirmedAt: now,
+        confirmedByStaffId: bookingStatus === "confirmed" && isStaffAssignment ? input.staffId : null,
+        confirmedAt: bookingStatus === "confirmed" ? now : null,
         updatedAt: now,
       })
       .returning();
 
     return { request: updatedRequest, booking };
+  });
+}
+
+/** Finalize a Path A booking only after Stripe captures its authorization. */
+export async function confirmPendingPaymentBooking(input: { requestId: string; bookingId: string }) {
+  const database = requireDb();
+  const now = new Date();
+  return database.transaction(async (tx) => {
+    const [booking] = await tx
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.tutoringRequestId, input.requestId)))
+      .limit(1);
+    if (!booking || booking.status !== "pending_payment") {
+      throw new AssignTutoringRequestError("Pending booking not found.", 409, "pending_booking_not_found");
+    }
+    const [updatedBooking] = await tx
+      .update(bookings)
+      .set({ status: "confirmed", confirmedAt: now, updatedAt: now })
+      .where(eq(bookings.id, booking.id))
+      .returning();
+    const [updatedRequest] = await tx
+      .update(tutoringRequests)
+      .set({ status: "confirmed", updatedAt: now })
+      .where(eq(tutoringRequests.id, input.requestId))
+      .returning();
+    return { booking: updatedBooking, request: updatedRequest };
+  });
+}
+
+/**
+ * If Stripe capture fails, delete the short-lived pending booking and return
+ * the claimed seat. The request remains available for a fresh payment attempt.
+ */
+export async function releasePendingPaymentBooking(input: { requestId: string; bookingId: string }) {
+  const database = requireDb();
+  const now = new Date();
+  return database.transaction(async (tx) => {
+    const [booking] = await tx
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.tutoringRequestId, input.requestId)))
+      .limit(1);
+    if (!booking || booking.status !== "pending_payment" || !booking.slotId) return;
+
+    await tx.delete(bookings).where(eq(bookings.id, booking.id));
+    await tx
+      .update(availabilitySlots)
+      .set({
+        bookedSeats: sql`GREATEST(${availabilitySlots.bookedSeats} - 1, 0)`,
+        updatedAt: now,
+      })
+      .where(eq(availabilitySlots.id, booking.slotId));
+    await tx
+      .update(tutoringRequests)
+      .set({ status: "pending_staff_review", updatedAt: now })
+      .where(eq(tutoringRequests.id, input.requestId));
   });
 }

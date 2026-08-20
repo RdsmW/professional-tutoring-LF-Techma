@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const unique = Date.now();
+const phoneSuffix = String(unique).slice(-4);
 
 test.describe("public academic year registration", () => {
   test("unauthenticated registration page loads", async ({ page }) => {
@@ -35,7 +36,7 @@ test.describe("public academic year registration", () => {
         graduationYear: String(new Date().getFullYear() + 3),
         gender: "M",
         birthdate: "2010-04-12",
-        cellPhone: "7035550199",
+        cellPhone: `703555${phoneSuffix}`,
         addressLine1: "1 Student Ln",
         city: "Burke",
         state: "VA",
@@ -46,7 +47,7 @@ test.describe("public academic year registration", () => {
         firstName: "Pat",
         lastName: "Martin",
         email: `ay-parent-b-${unique}@example.com`,
-        phone: "7035550100",
+        phone: `571555${phoneSuffix}`,
       },
       householdAddress: {
         addressLine1: "1 Main St",
@@ -58,7 +59,7 @@ test.describe("public academic year registration", () => {
         firstName: "Pat",
         lastName: "Martin",
         email: `ay-bill-b-${unique}@example.com`,
-        phone: "7035550101",
+        phone: `540555${phoneSuffix}`,
         addressLine1: "9 Billing Rd",
         city: "Burke",
         state: "VA",
@@ -70,6 +71,9 @@ test.describe("public academic year registration", () => {
       schedulingPath: "pt_chooses",
       preferredWindowIds: ["tue_1715_1915"],
       paymentPlanId: "monthly",
+      hoursRatePackage: "std_2h",
+      autoCharge: "no",
+      altPaymentMethod: "Check",
       policyAck: true,
       agreementAck: true,
       parentSignature: "Pat Martin",
@@ -86,5 +90,125 @@ test.describe("public academic year registration", () => {
     expect(body.schedulingPath).toBe("pt_chooses");
     expect(body.preferredSlotId).toBeNull();
     expect(body.invitePaths?.length).toBeGreaterThan(0);
+    expect(body.payment?.token).toBeTruthy();
+
+    const prepared = await request.post("/api/public/ay-tutoring-payment/prepare", {
+      data: { token: body.payment.token },
+    });
+    expect(prepared.ok(), await prepared.text()).toBeTruthy();
+    expect((await prepared.json()).kind).toBe("manual");
+
+    const finalized = await request.post("/api/public/ay-tutoring-payment/finalize", {
+      data: { token: body.payment.token },
+    });
+    const finalizedBody = await finalized.json();
+    expect(finalized.ok(), JSON.stringify(finalizedBody)).toBeTruthy();
+    expect(finalizedBody.schedulingPath).toBe("pt_chooses");
+    expect(finalizedBody.bookingId).toBeNull();
+    expect(finalizedBody.paymentStatus).toBe("unpaid");
+  });
+
+  test("Path A confirms the selected open slot on the same request", async ({ request }) => {
+    const availability = await request.get(
+      "/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915",
+    );
+    expect(availability.ok(), await availability.text()).toBeTruthy();
+    const availabilityBody = await availability.json();
+    const tutor = availabilityBody.tutors?.[0];
+    test.skip(!tutor, "No open Academic Year tutor is available for the Path A test");
+
+    const slotsResponse = await request.get(
+      `/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915&tutorId=${encodeURIComponent(tutor.id)}`,
+    );
+    expect(slotsResponse.ok(), await slotsResponse.text()).toBeTruthy();
+    const slotsBody = await slotsResponse.json();
+    const slot = slotsBody.slots?.[0];
+    test.skip(!slot, "No open Academic Year slot is available for the Path A test");
+
+    const pathAUnique = unique + 1;
+    const pathAPhoneSuffix = String(pathAUnique).slice(-4);
+    const registration = await request.post("/api/public/ay-tutoring-registration", {
+      data: {
+        student: {
+          firstName: "Jordan",
+          lastName: `Lee${pathAUnique}`,
+          schoolName: "Test High",
+          gradeLabel: "grade_9",
+          graduationYear: String(new Date().getFullYear() + 3),
+          gender: "F",
+          birthdate: "2010-04-12",
+          cellPhone: `703444${pathAPhoneSuffix}`,
+          addressLine1: "2 Student Ln",
+          city: "Burke",
+          state: "VA",
+          postalCode: "22015",
+        },
+        parent1: {
+          firstName: "Riley",
+          lastName: "Lee",
+          email: `ay-parent-a-${pathAUnique}@example.com`,
+          phone: `571444${pathAPhoneSuffix}`,
+        },
+        householdAddress: {
+          addressLine1: "2 Main St",
+          city: "Burke",
+          state: "VA",
+          postalCode: "22015",
+        },
+        billing: {
+          firstName: "Riley",
+          lastName: "Lee",
+          email: `ay-bill-a-${pathAUnique}@example.com`,
+          phone: `540444${pathAPhoneSuffix}`,
+          addressLine1: "2 Billing Rd",
+          city: "Burke",
+          state: "VA",
+          postalCode: "22015",
+        },
+        subjectCodes: ["algebra_1"],
+        primarySubjectCode: "algebra_1",
+        referralSource: "friend",
+        schedulingPath: "family_selected",
+        windowId: "tue_1715_1915",
+        tutorId: tutor.id,
+        slotId: slot.id,
+        paymentPlanId: "monthly",
+        hoursRatePackage: "std_2h",
+        autoCharge: "no",
+        altPaymentMethod: "Check",
+        policyAck: true,
+        agreementAck: true,
+        parentSignature: "Riley Lee",
+        studentSignature: "Jordan Lee",
+      },
+    });
+    const registrationBody = await registration.json();
+    expect(registration.ok(), JSON.stringify(registrationBody)).toBeTruthy();
+    expect(registrationBody.tutoringRequestId).toBeTruthy();
+    expect(registrationBody.preferredSlotId).toBe(slot.id);
+
+    const prepared = await request.post("/api/public/ay-tutoring-payment/prepare", {
+      data: { token: registrationBody.payment.token },
+    });
+    expect(prepared.ok(), await prepared.text()).toBeTruthy();
+    expect((await prepared.json()).kind).toBe("manual");
+
+    const finalized = await request.post("/api/public/ay-tutoring-payment/finalize", {
+      data: { token: registrationBody.payment.token },
+    });
+    const finalizedBody = await finalized.json();
+    expect(finalized.ok(), JSON.stringify(finalizedBody)).toBeTruthy();
+    expect(finalizedBody.schedulingPath).toBe("family_selected");
+    expect(finalizedBody.bookingId).toBeTruthy();
+    expect(finalizedBody.paymentStatus).toBe("unpaid");
+    expect(finalizedBody.pendingManualPayment).toBe(true);
+
+    const replay = await request.post("/api/public/ay-tutoring-payment/finalize", {
+      data: { token: registrationBody.payment.token },
+    });
+    const replayBody = await replay.json();
+    expect(replay.ok(), JSON.stringify(replayBody)).toBeTruthy();
+    expect(replayBody.bookingId).toBe(finalizedBody.bookingId);
+    expect(replayBody.alreadyCompleted).toBe(true);
   });
 });

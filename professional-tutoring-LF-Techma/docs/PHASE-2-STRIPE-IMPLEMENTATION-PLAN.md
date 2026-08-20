@@ -9,7 +9,7 @@ Turn the public Academic Year Tutoring **Plan** step from billing preferences in
 - Path B remains a request until Professional Tutoring assigns it;
 - a payment must never create a second request, a duplicate booking, or an unrequested seat reservation.
 
-This is a plan only. It does **not** change Zoho, Acuity, QuickBooks, or any related integration.
+The approved policy is **Option B1**. This work does **not** change Zoho, Acuity, QuickBooks, or any related integration.
 
 ---
 
@@ -246,20 +246,18 @@ If revalidation fails, the family is not successfully charged for that slot. The
 
 ---
 
-## Path B: one unresolved business rule
+## Path B: approved payment timing
 
-**The only unresolved business rule is when Path B payment occurs.**
+Path B has no tutor or slot at public submission. Professional Tutoring chooses those later. **Option B1 is approved and enforced.**
 
-Path B has no tutor or slot at public submission. Professional Tutoring must choose those later. Choose exactly one policy before implementation:
-
-### Option B1 — payment before Professional Tutoring assigns
+### Option B1 — payment before Professional Tutoring assigns (approved)
 
 - Public registration follows the same Plan & payment flow as Path A.
 - The family pays or places a card on file based on the selected plan before assignment.
 - Staff later assigns the tutor/slot only after the payment gate is satisfied.
 - The request remains payment-cleared but unbooked until staff assignment.
 
-### Option B2 — payment after Professional Tutoring assigns
+### Option B2 — payment after Professional Tutoring assigns (not selected)
 
 - Public registration records plan and payment preferences only.
 - No public card collection, PaymentIntent, subscription, or payment record is created at registration.
@@ -329,7 +327,7 @@ Extract shared Customer, payment-method ownership, and household-card persistenc
 
 ### Path B
 
-- The chosen B1 or B2 timing policy is enforced consistently.
+- Option B1 payment-before-assignment is enforced consistently.
 - Before staff assignment, there is no booking, no seat change, and no duplicate request.
 - Staff assignment updates the same request and creates exactly one booking.
 

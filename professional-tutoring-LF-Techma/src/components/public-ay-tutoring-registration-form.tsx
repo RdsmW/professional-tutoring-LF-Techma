@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { PhoneInput } from "@/components/phone-input";
+import { PublicAyTutoringPaymentPanel } from "@/components/public-ay-tutoring-payment-panel";
 import {
   ACADEMIC_ADVANCED_RATE_PACKAGES,
   ACADEMIC_PAYMENT_PLANS,
@@ -30,7 +31,7 @@ const STEPS = [
   "Parents & billing",
   "Tutoring needs",
   "Schedule",
-  "Plan",
+  "Plan & payment",
   "Agreement",
   "Review",
 ] as const;
@@ -177,6 +178,14 @@ type SlotOption = {
   startTimeLocal: string;
   endTimeLocal: string;
   openSeats: number;
+};
+
+type PaymentContinuation = {
+  token: string;
+  amountCents: number;
+  dueAt: string;
+  label: string;
+  requiresCard: boolean;
 };
 
 function RequiredMark() {
@@ -330,6 +339,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   const [tutors, setTutors] = useState<TutorOption[]>([]);
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
+  const [paymentContinuation, setPaymentContinuation] = useState<PaymentContinuation | null>(null);
 
   const primarySubject = draft.primarySubjectCode;
 
@@ -499,8 +509,15 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
     }
     if (step === 5) {
       if (!draft.paymentPlanId) return "Select a payment plan.";
+      if (!draft.hoursRatePackage && !draft.advancedHoursRatePackage) {
+        return "Choose a standard or advanced hours/rate package.";
+      }
       if (draft.hoursRatePackage && draft.advancedHoursRatePackage) {
         return "Choose a standard or advanced hours/rate package, not both.";
+      }
+      if (!draft.autoCharge) return "Choose whether to automatically charge a card.";
+      if (draft.autoCharge === "no" && !draft.altPaymentMethod) {
+        return "Choose an alternative payment method.";
       }
     }
     if (step === 6) {
@@ -649,16 +666,11 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         toast.error(data.error || "Unable to submit.");
         return;
       }
-      sessionStorage.setItem(
-        "ayTutoringConfirmation",
-        JSON.stringify({
-          message: data.message,
-          schedulingPath: data.schedulingPath,
-          invitePaths: data.invitePaths,
-        }),
-      );
-      toast.success("Registration submitted.");
-      router.push("/register/academic-year-tutoring/confirmation");
+      if (!data.payment?.token) {
+        toast.error("Registration was saved, but payment could not be prepared. Please contact Professional Tutoring.");
+        return;
+      }
+      setPaymentContinuation(data.payment as PaymentContinuation);
     } catch {
       toast.error("Unable to submit. Please try again.");
     } finally {
@@ -682,7 +694,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
       {step === 0 ? (
         <div className="public-ay-copy">
           <p>Register for Academic Year Tutoring. We’ll save your information and invite you to the family portal.</p>
-          <p>You will not be charged today.</p>
+          <p>Your payment setup or required payment is completed before your registration is confirmed.</p>
         </div>
       ) : null}
 
@@ -1167,7 +1179,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
 
       {step === 5 ? (
         <div className="public-ay-stack">
-          <p>These are billing preferences only. You will not be charged today, and we are not collecting a card.</p>
+          <p>Choose your plan and payment preference. Your secure payment step follows your review.</p>
           <Field label="Payment plan" required invalid={showErrors && !draft.paymentPlanId}>
             <select value={draft.paymentPlanId} onChange={(event) => patch({ paymentPlanId: event.target.value })}>
               <option value="">Select</option>
@@ -1178,7 +1190,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               ))}
             </select>
           </Field>
-          <Field label="Hours / rates (standard, optional)">
+          <Field label="Hours / rates (standard)" required invalid={showErrors && !draft.hoursRatePackage && !draft.advancedHoursRatePackage}>
             <select
               value={draft.hoursRatePackage}
               onChange={(event) =>
@@ -1193,7 +1205,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
               ))}
             </select>
           </Field>
-          <Field label="Hours / rates (advanced, optional)">
+          <Field label="Hours / rates (advanced)" required invalid={showErrors && !draft.hoursRatePackage && !draft.advancedHoursRatePackage}>
             <select
               value={draft.advancedHoursRatePackage}
               onChange={(event) =>
@@ -1209,7 +1221,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
             </select>
           </Field>
           <p className="public-ay-help">Choose a standard or advanced package, not both.</p>
-          <Field label="Automatically charge a card for monthly payments? (optional)">
+          <Field label="Automatically charge a card for scheduled payments?" required invalid={showErrors && !draft.autoCharge}>
             <select
               value={draft.autoCharge}
               onChange={(event) => {
@@ -1226,7 +1238,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
             </select>
           </Field>
           {draft.autoCharge === "no" ? (
-            <Field label="Alternative form of payment (optional)">
+            <Field label="Alternative form of payment" required invalid={showErrors && !draft.altPaymentMethod}>
               <select value={draft.altPaymentMethod} onChange={(event) => patch({ altPaymentMethod: event.target.value })}>
                 <option value="">Select</option>
                 {ALT_PAYMENT_METHODS.options.map((option) => (
@@ -1345,7 +1357,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                     selectedSlot
                       ? ` · ${DAY_NAMES[selectedSlot.dayOfWeek]} ${formatTimeRange12h(selectedSlot.startTimeLocal, selectedSlot.endTimeLocal)}`
                       : ""
-                  }. This is a preference, not a confirmed seat.`
+                  }. We will recheck availability while completing payment.`
                 : "Professional Tutoring will choose a tutor and time."}
             </p>
           </section>
@@ -1376,7 +1388,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
                   draft.altPaymentMethod}
               </p>
             ) : null}
-            <p>You will not be charged today.</p>
+            <p>Complete the secure payment step below before your registration is confirmed.</p>
           </section>
           <section>
             <h2>Agreement</h2>
@@ -1386,7 +1398,35 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         </div>
       ) : null}
 
-      <div className="public-ay-actions">
+      {paymentContinuation ? (
+        <PublicAyTutoringPaymentPanel
+          token={paymentContinuation.token}
+          amountCents={paymentContinuation.amountCents}
+          dueAt={paymentContinuation.dueAt}
+          label={paymentContinuation.label}
+          requiresCard={paymentContinuation.requiresCard}
+          onCompleted={(payment) => {
+            sessionStorage.setItem(
+              "ayTutoringConfirmation",
+              JSON.stringify({
+                message:
+                  payment.schedulingPath === "family_selected"
+                    ? payment.pendingManualPayment
+                      ? "Your registration and selected time are recorded. Complete your selected payment method to finalize billing."
+                      : "Your registration and selected time are confirmed."
+                    : "Your registration is ready for Professional Tutoring to assign a tutor and available time.",
+                schedulingPath: payment.schedulingPath,
+                bookingId: payment.bookingId,
+                paymentStatus: payment.paymentStatus,
+              }),
+            );
+            toast.success("Registration confirmed.");
+            router.push("/register/academic-year-tutoring/confirmation");
+          }}
+        />
+      ) : null}
+
+      {!paymentContinuation ? <div className="public-ay-actions">
         {step > 0 ? (
           <button type="button" className="public-ay-secondary" onClick={() => {
             setShowErrors(false);
@@ -1406,7 +1446,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
             {saving ? "Submitting…" : "Submit registration"}
           </button>
         )}
-      </div>
+      </div> : null}
     </div>
   );
 }
