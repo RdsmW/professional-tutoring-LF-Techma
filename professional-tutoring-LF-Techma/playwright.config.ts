@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 dotenv.config();
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:5000";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -26,8 +26,8 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: "npm run dev",
-        url: baseURL,
+        command: "npm run dev -- -p 5000",
+        url: `${baseURL}/sign-in`,
         reuseExistingServer: true,
         timeout: 120_000,
       },
