@@ -14,6 +14,7 @@ test.describe("public academic year registration", () => {
     expect(response?.ok()).toBeTruthy();
     await expect(page.getByRole("heading", { name: /Welcome/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Start registration/i })).toBeVisible();
+    await expect(page.locator('input[name="formVersionToken"]')).toHaveValue(/.+\..+/);
     await expect(page.getByText(/tutoring_request/i)).toHaveCount(0);
   });
 
@@ -56,6 +57,35 @@ test.describe("public academic year registration", () => {
     await expect(page.locator(".public-ay-field.is-invalid").first()).toBeVisible();
   });
 
+  test("parents step requires two parents and uses parent-specific contact labels", async ({ page }) => {
+    await page.goto("/register/academic-year-tutoring");
+    await page.getByRole("button", { name: /Start registration/i }).click();
+    await page.getByLabel(/^First name/).fill("Avery");
+    await page.getByLabel(/^Last name/).fill("Student");
+    await page.getByLabel(/^School/).fill("Test High");
+    await page.getByLabel(/^Grade/).selectOption("grade_9");
+    await page.getByLabel(/^Graduation year/).selectOption(String(new Date().getFullYear() + 3));
+    await page.getByLabel(/^Gender/).selectOption("F");
+    await page.getByLabel(/^Birthdate/).fill("2010-04-12");
+    await page.getByLabel(/^Phone/).fill("7035551111");
+    await page.getByLabel(/^Email/).fill("avery.student@example.com");
+    await page.getByLabel(/^Street/).fill("1 Student Lane");
+    await page.getByLabel(/^City/).fill("Burke");
+    await page.getByLabel(/^State/).selectOption("VA");
+    await page.getByLabel(/^ZIP/).fill("22015");
+    await page.getByRole("button", { name: /Continue/i }).click();
+
+    await expect(page.getByRole("heading", { name: /^Parent 1$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Parent 2$/ })).toBeVisible();
+    await expect(page.getByText("Parent 2 (optional)")).toHaveCount(0);
+    await expect(page.getByLabel("Parent 1 email")).toBeVisible();
+    await expect(page.getByLabel("Parent 1 cell phone")).toBeVisible();
+    await expect(page.getByLabel("Parent 2 email")).toBeVisible();
+    await expect(page.getByLabel("Parent 2 cell phone")).toBeVisible();
+    await expect(page.getByText("Student cell phone")).toHaveCount(0);
+    await expect(page.getByText("Student email")).toHaveCount(0);
+  });
+
   test("family portal remains protected", async ({ page }) => {
     await page.goto("/family");
     await expect(page).toHaveURL(/sign-in/);
@@ -91,6 +121,13 @@ test.describe("public academic year registration", () => {
         lastName: "Martin",
         email: `ay-parent-b-${unique}@example.com`,
         phone: `571555${phoneSuffix}`,
+      },
+      parent2: {
+        firstName: "Casey",
+        lastName: "Martin",
+        email: `ay-parent2-b-${unique}@example.com`,
+        phone: `572555${phoneSuffix}`,
+        sameAsStudentAddress: true,
       },
       householdAddress: {
         addressLine1: "1 Main St",
@@ -140,6 +177,12 @@ test.describe("public academic year registration", () => {
     expect(body.invitePaths?.length).toBeGreaterThan(0);
     expect(body.payment?.token).toBeTruthy();
     expect(body.payment?.requiresCard).toBe(true);
+
+    const missingParent2Response = await request.post("/api/public/ay-tutoring-registration", {
+      data: { ...payload, parent2: null },
+    });
+    expect(missingParent2Response.status()).toBe(400);
+    expect((await missingParent2Response.json()).error).toMatch(/Parent 2 first name, last name, and email are required/i);
 
     const hourlyUnique = unique + 50;
     const hourlyPhoneSuffix = String(hourlyUnique).slice(-4);
@@ -215,6 +258,13 @@ test.describe("public academic year registration", () => {
           email: `ay-parent-a-${pathAUnique}@example.com`,
           phone: `571444${pathAPhoneSuffix}`,
         },
+        parent2: {
+          firstName: "Morgan",
+          lastName: "Lee",
+          email: `ay-parent2-a-${pathAUnique}@example.com`,
+          phone: `572444${pathAPhoneSuffix}`,
+          sameAsStudentAddress: true,
+        },
         householdAddress: {
           addressLine1: "2 Main St",
           city: "Burke",
@@ -281,6 +331,13 @@ test.describe("public academic year registration", () => {
           lastName: "Parent",
           email: `ay-mixed-parent-${mixedUnique}@example.com`,
           phone: `571333${String(mixedUnique).slice(-4)}`,
+        },
+        parent2: {
+          firstName: "Second",
+          lastName: "Parent",
+          email: `ay-mixed-parent2-${mixedUnique}@example.com`,
+          phone: `572333${String(mixedUnique).slice(-4)}`,
+          sameAsStudentAddress: true,
         },
         householdAddress: { addressLine1: "3 Main St", city: "Burke", state: "VA", postalCode: "22015" },
         billing: {

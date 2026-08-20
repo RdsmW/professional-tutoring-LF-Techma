@@ -76,7 +76,7 @@ export type AyTutoringRegistrationInput = {
     postalCode?: string;
   };
   parent1: ContactInput;
-  parent2?: ContactInput | null;
+  parent2: ContactInput;
   /** Parent 1 mailing fallback for older clients; household billing still uses `billing`. */
   householdAddress?: AddressInput;
   billing: ContactInput & AddressInput;
@@ -121,11 +121,11 @@ function inviteToken() {
   return randomBytes(24).toString("hex");
 }
 
-function requireContact(label: string, contact: ContactInput, requirePhone = false) {
-  const firstName = trim(contact.firstName);
-  const lastName = trim(contact.lastName);
-  const email = normalizeEmail(contact.email);
-  const phone = trim(contact.phone ?? "");
+function requireContact(label: string, contact: ContactInput | null | undefined, requirePhone = false) {
+  const firstName = trim(contact?.firstName);
+  const lastName = trim(contact?.lastName);
+  const email = normalizeEmail(contact?.email ?? "");
+  const phone = trim(contact?.phone ?? "");
   if (!firstName || !lastName || !email) {
     throw new PublicIntakeError(`${label} first name, last name, and email are required.`);
   }
@@ -220,10 +220,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
 
   const parent1 = requireContact("Parent 1", raw.parent1, true);
   const parent2Raw = raw.parent2;
-  const parent2Present = Boolean(
-    parent2Raw && (trim(parent2Raw.firstName) || trim(parent2Raw.lastName) || trim(parent2Raw.email)),
-  );
-  const parent2 = parent2Present ? requireContact("Parent 2", parent2Raw as ContactInput) : null;
+  const parent2 = requireContact("Parent 2", parent2Raw, true);
 
   const parent1Mailing = resolveMailingAddress(
     "Parent 1 mailing address",
@@ -231,9 +228,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
     studentAddress,
     raw.householdAddress,
   );
-  const parent2Mailing = parent2
-    ? resolveMailingAddress("Parent 2 mailing address", parent2Raw as ContactInput, studentAddress)
-    : null;
+  const parent2Mailing = resolveMailingAddress("Parent 2 mailing address", parent2Raw, studentAddress);
   const billingSameAsStudent = Boolean(raw.billing?.sameAsStudentAddress);
   const billingContact = {
     ...requireContact("Billing", raw.billing),

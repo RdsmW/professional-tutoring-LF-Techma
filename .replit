@@ -2,7 +2,6 @@ modules = ["nodejs-24", "postgresql-16", "python-base-3.13"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["glib", "nspr", "nss", "atk", "at-spi2-atk", "at-spi2-core", "dbus", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "mesa", "xorg.libxcb", "libxkbcommon", "alsa-lib", "libgbm"]
 
 [workflows]
 runButton = "Project"
@@ -20,39 +19,10 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd professional-tutoring-LF-Techma && npm run dev -- -p 5000"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[[ports]]
-localPort = 3000
-externalPort = 3001
-
-[[ports]]
-localPort = 5000
-externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
-
-[[ports]]
-localPort = 5002
-externalPort = 3003
-
-[[ports]]
-localPort = 22979
-externalPort = 3002
-
-[postMerge]
-path = "professional-tutoring-LF-Techma/scripts/post-merge.sh"
-timeoutMs = 300000
-
-[deployment]
-deploymentTarget = "vm"
-run = ["bash", "-c", "cd professional-tutoring-LF-Techma && node scripts/start-production-with-billing-scheduler.mjs"]
-build = ["bash", "-c", "cd professional-tutoring-LF-Techma && npm run build"]

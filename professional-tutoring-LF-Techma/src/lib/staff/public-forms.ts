@@ -324,25 +324,62 @@ export async function rollbackPublicFormVersion(input: {
   });
 }
 
-export async function getPublishedPublicForm(formId: FormId): Promise<{ content: PublicFormContent; versionId: string | null }> {
-  try {
-    return await withDbRetry(async () => {
-      const database = requireDb();
-      const definition = await ensureDefinition(formId);
-      const [published] = await database
+export async function getPublishedPublicForm(formId: FormId): Promise<{ content: PublicFormContent; versionId: string }> {
+  return withDbRetry(async () => {
+    const database = requireDb();
+    const definition = await ensureDefinition(formId);
+
+    return database.transaction(async (tx) => {
+      await tx.execute(sql`select 1 from ${publicFormDefinitions} where ${publicFormDefinitions.id} = ${definition.id} for update`);
+      const [published] = await tx
         .select()
         .from(publicFormVersions)
         .where(and(eq(publicFormVersions.definitionId, definition.id), eq(publicFormVersions.status, "published")))
         .orderBy(desc(publicFormVersions.versionNumber))
         .limit(1);
       const parsed = published ? parsePublicFormContent(formId, published.content) : { content: null };
-      if (!published || !parsed.content) return { content: createDefaultPublicFormContent(formId), versionId: null };
-      return { content: parsed.content, versionId: published.id };
+      if (published && parsed.content) return { content: parsed.content, versionId: published.id };
+
+      const [latestVersion] = await tx
+        .select({ versionNumber: publicFormVersions.versionNumber })
+        .from(publicFormVersions)
+        .where(eq(publicFormVersions.definitionId, definition.id))
+        .orderBy(desc(publicFormVersions.versionNumber))
+        .limit(1);
+      const content = createDefaultPublicFormContent(formId);
+      const restoredFromInvalidVersion = Boolean(published);
+      const replacementReason = restoredFromInvalidVersion
+        ? "Replaced invalid published form with protected baseline"
+        : "Restored missing public form baseline";
+      if (published) {
+        await tx
+          .update(publicFormVersions)
+          .set({ status: "retired", retiredAt: new Date() })
+          .where(eq(publicFormVersions.id, published.id));
+      }
+      const [seeded] = await tx
+        .insert(publicFormVersions)
+        .values({
+          definitionId: definition.id,
+          versionNumber: (latestVersion?.versionNumber ?? 0) + 1,
+          status: "published",
+          content,
+          changeReason: replacementReason,
+          publishedAt: new Date(),
+        })
+        .returning();
+      await tx.insert(publicFormAuditEvents).values({
+        definitionId: definition.id,
+        versionId: seeded.id,
+        action: restoredFromInvalidVersion ? "restored" : "seeded",
+        reason: replacementReason,
+        metadata: published
+          ? { replacedVersionId: published.id, replacedVersionNumber: published.versionNumber }
+          : undefined,
+      });
+      return { content, versionId: seeded.id };
     });
-  } catch (error) {
-    console.warn("[public-forms] published version fallback", error);
-    return { content: createDefaultPublicFormContent(formId), versionId: null };
-  }
+  });
 }
 
 export async function getPublishedPublicFormVersionId(formId: FormId) {

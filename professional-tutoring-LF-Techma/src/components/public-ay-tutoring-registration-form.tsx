@@ -666,9 +666,6 @@ export function PublicAyTutoringRegistrationForm({
     }
     if (activeStepKey === "contacts" || (!formContent && step === 2)) {
       const studentMailing = studentAddressFrom(draft);
-      const parent2Started = Boolean(
-        draft.p2FirstName.trim() || draft.p2LastName.trim() || draft.p2Email.trim() || draft.p2Phone.trim(),
-      );
       if (!draft.p1FirstName.trim() || !draft.p1LastName.trim() || !draft.p1Email.trim()) {
         return "Parent 1 name and email are required.";
       }
@@ -687,24 +684,23 @@ export function PublicAyTutoringRegistrationForm({
       ) {
         return "Parent 1 mailing address is required.";
       }
-      if (parent2Started) {
-        if (!draft.p2FirstName.trim() || !draft.p2LastName.trim() || !draft.p2Email.trim()) {
-          return "Parent 2 name and email are required when Parent 2 is provided.";
-        }
-        if (!isValidEmail(draft.p2Email)) return "Enter a valid Parent 2 email.";
-        if (filledPhoneInvalid(draft.p2Phone)) return "Enter a valid Parent 2 phone number.";
-        if (
-          mailingIncomplete(
-            mailingFrom(draft.p2SameAsStudentAddress, {
-              addressLine1: draft.p2AddressLine1,
-              city: draft.p2City,
-              state: draft.p2State,
-              postalCode: draft.p2PostalCode,
-            }, studentMailing),
-          )
-        ) {
-          return "Parent 2 mailing address is required.";
-        }
+      if (!draft.p2FirstName.trim() || !draft.p2LastName.trim() || !draft.p2Email.trim()) {
+        return "Parent 2 name and email are required.";
+      }
+      if (!isValidEmail(draft.p2Email)) return "Enter a valid Parent 2 email.";
+      if (!draft.p2Phone.trim()) return "Parent 2 phone is required.";
+      if (!isValidPhone(draft.p2Phone)) return "Enter a valid Parent 2 phone number.";
+      if (
+        mailingIncomplete(
+          mailingFrom(draft.p2SameAsStudentAddress, {
+            addressLine1: draft.p2AddressLine1,
+            city: draft.p2City,
+            state: draft.p2State,
+            postalCode: draft.p2PostalCode,
+          }, studentMailing),
+        )
+      ) {
+        return "Parent 2 mailing address is required.";
       }
       if (!draft.billingFirstName.trim() || !draft.billingLastName.trim() || !draft.billingEmail.trim()) {
         return "Billing name, email, and address are required.";
@@ -853,17 +849,14 @@ export function PublicAyTutoringRegistrationForm({
             sameAsStudentAddress: draft.p1SameAsStudentAddress,
             ...parent1Mailing,
           },
-          parent2:
-            draft.p2FirstName || draft.p2LastName || draft.p2Email
-              ? {
-                  firstName: draft.p2FirstName,
-                  lastName: draft.p2LastName,
-                  email: draft.p2Email,
-                  phone: draft.p2Phone,
-                  sameAsStudentAddress: draft.p2SameAsStudentAddress,
-                  ...parent2Mailing,
-                }
-              : null,
+          parent2: {
+            firstName: draft.p2FirstName,
+            lastName: draft.p2LastName,
+            email: draft.p2Email,
+            phone: draft.p2Phone,
+            sameAsStudentAddress: draft.p2SameAsStudentAddress,
+            ...parent2Mailing,
+          },
           householdAddress: parent1Mailing,
           billing: {
             firstName: draft.billingFirstName,
@@ -1081,17 +1074,18 @@ export function PublicAyTutoringRegistrationForm({
         <div className="public-ay-stack">
           <h2>Parent 1</h2>
           <div className="public-ay-grid">
-            <Field label="First name" required invalid={showErrors && !draft.p1FirstName.trim()}>
+            <Field label="Parent 1 first name" fixedLabel required invalid={showErrors && !draft.p1FirstName.trim()}>
               <input value={draft.p1FirstName} onChange={(event) => patch({ p1FirstName: event.target.value })} />
             </Field>
-            <Field label="Last name" required invalid={showErrors && !draft.p1LastName.trim()}>
+            <Field label="Parent 1 last name" fixedLabel required invalid={showErrors && !draft.p1LastName.trim()}>
               <input value={draft.p1LastName} onChange={(event) => patch({ p1LastName: event.target.value })} />
             </Field>
-            <Field label="Email" required invalid={showErrors && (!draft.p1Email.trim() || filledEmailInvalid(draft.p1Email))}>
+            <Field label="Parent 1 email" fixedLabel required invalid={showErrors && (!draft.p1Email.trim() || filledEmailInvalid(draft.p1Email))}>
               <input type="email" value={draft.p1Email} onChange={(event) => patch({ p1Email: event.target.value })} autoComplete="email" />
             </Field>
             <Field
-              label="Phone"
+              label="Parent 1 cell phone"
+              fixedLabel
               required
               invalid={showErrors && (!draft.p1Phone.trim() || filledPhoneInvalid(draft.p1Phone))}
             >
@@ -1142,21 +1136,31 @@ export function PublicAyTutoringRegistrationForm({
               }
             />
           ) : null}
-          <h2>Parent 2 (optional)</h2>
+          <h2>Parent 2</h2>
           <div className="public-ay-grid">
-            <Field label="First name">
+            <Field label="Parent 2 first name" fixedLabel required invalid={showErrors && !draft.p2FirstName.trim()}>
               <input value={draft.p2FirstName} onChange={(event) => patch({ p2FirstName: event.target.value })} />
             </Field>
-            <Field label="Last name">
+            <Field label="Parent 2 last name" fixedLabel required invalid={showErrors && !draft.p2LastName.trim()}>
               <input value={draft.p2LastName} onChange={(event) => patch({ p2LastName: event.target.value })} />
             </Field>
-            <Field label="Email" invalid={showErrors && filledEmailInvalid(draft.p2Email)}>
+            <Field
+              label="Parent 2 email"
+              fixedLabel
+              required
+              invalid={showErrors && (!draft.p2Email.trim() || filledEmailInvalid(draft.p2Email))}
+            >
               <input type="email" value={draft.p2Email} onChange={(event) => patch({ p2Email: event.target.value })} autoComplete="email" />
             </Field>
-            <Field label="Phone" invalid={showErrors && filledPhoneInvalid(draft.p2Phone)}>
+            <Field
+              label="Parent 2 cell phone"
+              fixedLabel
+              required
+              invalid={showErrors && (!draft.p2Phone.trim() || filledPhoneInvalid(draft.p2Phone))}
+            >
               <PhoneInput
                 value={draft.p2Phone}
-                invalid={showErrors && filledPhoneInvalid(draft.p2Phone)}
+                invalid={showErrors && (!draft.p2Phone.trim() || filledPhoneInvalid(draft.p2Phone))}
                 onChange={(p2Phone) => patch({ p2Phone })}
               />
             </Field>
@@ -1189,9 +1193,7 @@ export function PublicAyTutoringRegistrationForm({
               city={draft.p2City}
               state={draft.p2State}
               postalCode={draft.p2PostalCode}
-              required={Boolean(
-                draft.p2FirstName.trim() || draft.p2LastName.trim() || draft.p2Email.trim() || draft.p2Phone.trim(),
-              )}
+              required
               showErrors={showErrors}
               onChange={(next) =>
                 patch({
