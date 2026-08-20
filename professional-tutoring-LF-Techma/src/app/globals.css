@@ -4949,6 +4949,38 @@ textarea.is-invalid {
   border-color: var(--red-action);
 }
 .public-ay-stack { display: flex; flex-direction: column; gap: 16px; }
+.public-ay-details,
+.public-ay-rate-section {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 14px 16px;
+}
+.public-ay-details summary {
+  cursor: pointer;
+  color: var(--navy);
+  font-weight: 800;
+}
+.public-ay-details-copy {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  color: var(--ink);
+}
+.public-ay-details-copy h3,
+.public-ay-rate-section h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.public-ay-details-copy p,
+.public-ay-details-copy ul,
+.public-ay-rate-section ul {
+  margin: 0;
+}
+.public-ay-details-copy li,
+.public-ay-rate-section li {
+  margin: 4px 0;
+}
 .public-ay-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
 .public-ay-check {
   display: flex;

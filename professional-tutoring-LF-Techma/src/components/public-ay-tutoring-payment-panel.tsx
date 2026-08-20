@@ -116,6 +116,8 @@ export function PublicAyTutoringPaymentPanel({
   dueAt,
   label,
   requiresCard,
+  serviceFeeCents,
+  returnedIntentId,
   onCompleted,
 }: {
   token: string;
@@ -123,6 +125,8 @@ export function PublicAyTutoringPaymentPanel({
   dueAt: string;
   label: string;
   requiresCard: boolean;
+  serviceFeeCents: number;
+  returnedIntentId?: string | null;
   onCompleted: (result: FinalizedPayment) => void;
 }) {
   const [prepared, setPrepared] = useState<PreparedPayment | null>(null);
@@ -136,6 +140,26 @@ export function PublicAyTutoringPaymentPanel({
 
   useEffect(() => {
     const controller = new AbortController();
+    if (returnedIntentId) {
+      void fetch("/api/public/ay-tutoring-payment/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, intentId: returnedIntentId }),
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok || !data.ok) throw new Error(data.error || "Unable to complete payment.");
+          onCompleted(data as FinalizedPayment);
+        })
+        .catch((caught: unknown) => {
+          if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : "Unable to complete payment.");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoading(false);
+        });
+      return () => controller.abort();
+    }
     void fetch("/api/public/ay-tutoring-payment/prepare", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -156,7 +180,7 @@ export function PublicAyTutoringPaymentPanel({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [token]);
+  }, [onCompleted, returnedIntentId, token]);
 
   async function completeManualPayment() {
     setSaving(true);
@@ -179,10 +203,11 @@ export function PublicAyTutoringPaymentPanel({
 
   return (
     <section className="public-ay-stack" aria-live="polite">
-      <h2>Plan & payment</h2>
+       <h2>Payment</h2>
       <p>
         {label}: <strong>{money(amountCents)}</strong> due {dueDate(dueAt)}.
       </p>
+       {serviceFeeCents ? <p className="public-ay-help">Includes {money(serviceFeeCents)} 3.6% credit/debit card service fee.</p> : null}
       {loading ? <p>Preparing your secure payment step…</p> : null}
       {error ? <p className="validation-hint">{error}</p> : null}
       {!loading && !error && prepared?.kind === "manual" ? (

@@ -1,7 +1,7 @@
 "use client";
 
-import { cloneElement, createContext, isValidElement, useContext, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { cloneElement, createContext, isValidElement, useContext, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
 import { PhoneInput } from "@/components/phone-input";
@@ -12,27 +12,31 @@ import {
   ACADEMIC_RATE_PACKAGES,
   ACADEMIC_SCHEDULE_WINDOWS,
   ACADEMIC_SUBJECTS,
-  ALT_PAYMENT_METHODS,
   GENDER,
   GRADE_LABELS,
   GRADUATION_YEARS,
   REFERRAL_SOURCE,
   TEST_PREP_INTERESTS,
   US_STATES,
-  YES_NO,
 } from "@/lib/forms/options";
 import type { PublicFormContent } from "@/lib/forms/public-form-schema";
 import type { AddressSuggestion } from "@/lib/mapbox/geocode";
 import { formatTimeRange12h } from "@/lib/ui/datetime";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
+import {
+  academicSubjectLabel,
+  academicSubjectRateProfile,
+  requiresAcademicYearStaffReview,
+  type AcademicSubjectRateProfile,
+} from "@/lib/academic-year/subject-pricing";
 
 const STEPS = [
   "Welcome",
   "Student",
-  "Parents & billing",
+  "Parents & billing information",
   "Tutoring needs",
   "Schedule",
-  "Plan & payment",
+  "Plan",
   "Agreement",
   "Review",
 ] as const;
@@ -83,6 +87,7 @@ type Draft = {
   copyStudentAddressToBilling: boolean;
   subjectCodes: string[];
   primarySubjectCode: string;
+  otherSubject: string;
   subjectNotes: string;
   testPrepInterests: string[];
   referralSource: string;
@@ -149,6 +154,7 @@ const emptyDraft: Draft = {
   copyStudentAddressToBilling: true,
   subjectCodes: [],
   primarySubjectCode: "",
+  otherSubject: "",
   subjectNotes: "",
   testPrepInterests: [],
   referralSource: "",
@@ -161,7 +167,7 @@ const emptyDraft: Draft = {
   paymentPlanId: "",
   hoursRatePackage: "",
   advancedHoursRatePackage: "",
-  autoCharge: "",
+  autoCharge: "yes",
   altPaymentMethod: "",
   policyAck: false,
   agreementAck: false,
@@ -170,6 +176,19 @@ const emptyDraft: Draft = {
 };
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const PENDING_PAYMENT_STORAGE_KEY = "ayTutoringPendingPayment";
+const CONFIRMATION_STORAGE_KEY = "ayTutoringConfirmation";
+
+const CANONICAL_STEP_NAMES: Record<string, string> = {
+  welcome: "Welcome",
+  student: "Student",
+  contacts: "Parents & billing information",
+  needs: "Tutoring needs",
+  schedule: "Schedule",
+  payment: "Plan",
+  agreement: "Agreement",
+  review: "Review",
+};
 
 type TutorOption = { id: string; displayName: string; openSlots: number };
 type SlotOption = {
@@ -184,10 +203,122 @@ type SlotOption = {
 type PaymentContinuation = {
   token: string;
   amountCents: number;
+  serviceFeeCents: number;
   dueAt: string;
   label: string;
   requiresCard: boolean;
+  invitePaths: Array<{ label: string; path: string }>;
 };
+
+type ConfirmationInvite = { label: string; path: string };
+
+function RateSection({
+  title,
+  options,
+  selectable,
+  value,
+  onChange,
+  invalid,
+}: {
+  title: string;
+  options: typeof ACADEMIC_RATE_PACKAGES.options;
+  selectable?: boolean;
+  value?: string;
+  onChange?: (value: string) => void;
+  invalid?: boolean;
+}) {
+  if (selectable) {
+    return (
+      <Field label={title} required invalid={invalid}>
+        <select value={value} onChange={(event) => onChange?.(event.target.value)}>
+          <option value="">Select</option>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+    );
+  }
+  return (
+    <section className="public-ay-rate-section" aria-label={title}>
+      <h2>{title}</h2>
+      <ul>
+        {options.map((option) => (
+          <li key={option.id}>{option.label}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function AcademicYearPolicy() {
+  return (
+    <details className="public-ay-details">
+      <summary>Tutoring Policy — See more</summary>
+      <div className="public-ay-details-copy">
+        <section>
+          <h3>Business Hours</h3>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+        <section>
+          <h3>Tutoring Year and Rates</h3>
+          <p>Academic Year tutoring runs September through June 10. The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+        <section>
+          <h3>Tutoring Appointments</h3>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+        <section>
+          <h3>Holiday Schedule</h3>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+        <section>
+          <h3>Federal/School Holidays</h3>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+        <section>
+          <h3>Student Cancellations</h3>
+          <p>Current cancellation rules require 24 hours’ notice. Eligible cancelled sessions are generally banked as a credit for up to 90 days; no-shows do not receive a credit unless Professional Tutoring authorizes an exception.</p>
+        </section>
+        <section>
+          <h3>Banking a Session</h3>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+        <section>
+          <h3>Weather Cancellations</h3>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+        <section>
+          <h3>Instructor Information and Cancellation Policy</h3>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+        <section>
+          <h3>Terminating Services or Decreasing Hours</h3>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
+        </section>
+      </div>
+    </details>
+  );
+}
+
+function PaymentTerms() {
+  return (
+    <details className="public-ay-details">
+      <summary>Payment Terms — See more</summary>
+      <div className="public-ay-details-copy">
+        <ul>
+          <li>A 3.6% credit/debit card service fee is included in card amounts shown at payment.</li>
+          <li>Payments are due on the scheduled due date; a $25 late fee applies after the seventh.</li>
+          <li>A $35 returned-check fee, collection costs, and 1.5% monthly / 18% annual interest may apply where permitted.</li>
+          <li>A credit card is kept on file for scheduled Academic Year payments.</li>
+          <li>Payment and nonpayment obligations remain subject to the approved agreement language provided by Professional Tutoring.</li>
+        </ul>
+      </div>
+    </details>
+  );
+}
 
 type PublicFieldSettings = Record<string, { label: string; placeholder: string; visible: boolean; order: number }>;
 
@@ -378,6 +509,7 @@ export function PublicAyTutoringRegistrationForm({
   formVersionToken?: string | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useAppToast();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -406,10 +538,36 @@ export function PublicAyTutoringRegistrationForm({
         : STEPS.map((name, order) => ({ key: `legacy_${order}`, name, helpText: "", order, fields: [] })),
     [formContent],
   );
-  const activeStepKey = formSteps[step]?.key;
+  const visibleSteps = useMemo(
+    () => [
+      ...formSteps.map((item) => ({ ...item, name: CANONICAL_STEP_NAMES[item.key] ?? item.name })),
+      ...(paymentContinuation ? [{ key: "payment_stage", name: "Payment" }] : []),
+    ],
+    [formSteps, paymentContinuation],
+  );
+  const activeStepKey = paymentContinuation ? "payment_stage" : formSteps[step]?.key;
   const stepIndexFor = (key: string) => formSteps.findIndex((item) => item.key === key);
+  const subjectRateProfile = useMemo(
+    () => academicSubjectRateProfile(draft.subjectCodes),
+    [draft.subjectCodes],
+  );
+  const matchingRequiresStaff = useMemo(
+    () => requiresAcademicYearStaffReview(draft.subjectCodes),
+    [draft.subjectCodes],
+  );
+  const primarySubject = !matchingRequiresStaff ? draft.primarySubjectCode : "";
 
-  const primarySubject = draft.primarySubjectCode;
+  useEffect(() => {
+    if (searchParams.get("payment") !== "return") return;
+    const saved = window.sessionStorage.getItem(PENDING_PAYMENT_STORAGE_KEY);
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved) as PaymentContinuation;
+      if (parsed?.token && !paymentContinuation) setPaymentContinuation(parsed);
+    } catch {
+      window.sessionStorage.removeItem(PENDING_PAYMENT_STORAGE_KEY);
+    }
+  }, [paymentContinuation, searchParams]);
 
   function patch(next: Partial<Draft>) {
     setDraft((current) => ({ ...current, ...next }));
@@ -422,13 +580,15 @@ export function PublicAyTutoringRegistrationForm({
       if (key !== "subjectCodes") {
         return { ...current, [key]: nextList };
       }
-      const primaryStillSelected = nextList.includes(current.primarySubjectCode);
+       const canMatchDirectly = nextList.length === 1 && nextList[0] !== "other";
+       const primarySubjectCode = canMatchDirectly ? nextList[0]! : "";
       return {
         ...current,
         subjectCodes: nextList,
-        primarySubjectCode: primaryStillSelected ? current.primarySubjectCode : "",
-        tutorId: primaryStillSelected ? current.tutorId : "",
-        slotId: primaryStillSelected ? current.slotId : "",
+         primarySubjectCode,
+         otherSubject: nextList.includes("other") ? current.otherSubject : "",
+         tutorId: canMatchDirectly ? current.tutorId : "",
+         slotId: canMatchDirectly ? current.slotId : "",
       };
     });
   }
@@ -557,14 +717,14 @@ export function PublicAyTutoringRegistrationForm({
     }
     if (activeStepKey === "needs" || (!formContent && step === 3)) {
       if (draft.subjectCodes.length === 0) return "Select at least one subject.";
-      if (!draft.primarySubjectCode) return "Choose a primary subject so we can match a tutor.";
-      if (!draft.subjectCodes.includes(draft.primarySubjectCode)) {
-        return "Primary subject must be one of the selected subjects.";
-      }
+      if (draft.subjectCodes.includes("other") && !draft.otherSubject.trim()) return "Tell us the other subject you need help with.";
       if (!draft.referralSource) return "Please tell us how you heard about us.";
     }
     if (activeStepKey === "schedule" || (!formContent && step === 4)) {
       if (!draft.schedulingPath) return "Choose how you’d like us to schedule.";
+      if (matchingRequiresStaff && draft.schedulingPath !== "pt_chooses") {
+        return "For multiple or unlisted subjects, Professional Tutoring will choose the tutor after reviewing your request.";
+      }
       if (draft.schedulingPath === "family_selected" && !draft.slotId) {
         return "Choose a preferred tutor and time, or let Professional Tutoring choose.";
       }
@@ -578,15 +738,13 @@ export function PublicAyTutoringRegistrationForm({
     }
     if (activeStepKey === "payment" || (!formContent && step === 5)) {
       if (!draft.paymentPlanId) return "Select a payment plan.";
-      if (!draft.hoursRatePackage && !draft.advancedHoursRatePackage) {
-        return "Choose a standard or advanced hours/rate package.";
-      }
-      if (draft.hoursRatePackage && draft.advancedHoursRatePackage) {
-        return "Choose a standard or advanced hours/rate package, not both.";
-      }
-      if (!draft.autoCharge) return "Choose whether to automatically charge a card.";
-      if (draft.autoCharge === "no" && !draft.altPaymentMethod) {
-        return "Choose an alternative payment method.";
+      if (subjectRateProfile !== "mixed" && subjectRateProfile !== "staff_review") {
+        const expected = subjectRateProfile === "advanced" ? draft.advancedHoursRatePackage : draft.hoursRatePackage;
+        if (!expected) {
+          return subjectRateProfile === "advanced"
+            ? "Choose an Advanced Subjects Hours / Rates option."
+            : "Choose a Standard Hours / Rates option.";
+        }
       }
     }
     if (activeStepKey === "agreement" || (!formContent && step === 6)) {
@@ -708,6 +866,7 @@ export function PublicAyTutoringRegistrationForm({
           },
           subjectCodes: draft.subjectCodes,
           primarySubjectCode: draft.primarySubjectCode,
+          otherSubject: draft.otherSubject,
           subjectNotes: draft.subjectNotes,
           testPrepInterests: draft.testPrepInterests,
           referralSource: draft.referralSource,
@@ -736,11 +895,26 @@ export function PublicAyTutoringRegistrationForm({
         toast.error(data.error || "Unable to submit.");
         return;
       }
+      const invitePaths = (data.invitePaths ?? []) as ConfirmationInvite[];
+      if (data.paymentDeferred) {
+        window.sessionStorage.setItem(
+          CONFIRMATION_STORAGE_KEY,
+          JSON.stringify({
+            paymentStatus: "pending_staff_review",
+            invitePaths,
+            message: "Your request has been received. Professional Tutoring will review the subjects and confirm pricing before payment.",
+          }),
+        );
+        router.push("/register/academic-year-tutoring/confirmation");
+        return;
+      }
       if (!data.payment?.token) {
         toast.error("Registration was saved, but payment could not be prepared. Please contact Professional Tutoring.");
         return;
       }
-      setPaymentContinuation(data.payment as PaymentContinuation);
+      const continuation = { ...(data.payment as Omit<PaymentContinuation, "invitePaths">), invitePaths };
+      window.sessionStorage.setItem(PENDING_PAYMENT_STORAGE_KEY, JSON.stringify(continuation));
+      setPaymentContinuation(continuation);
     } catch {
       toast.error("Unable to submit. Please try again.");
     } finally {
@@ -754,11 +928,22 @@ export function PublicAyTutoringRegistrationForm({
       <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
       <input type="hidden" name="formVersionToken" value={formVersionToken ?? ""} readOnly />
       <p className="public-ay-kicker">{formContent?.title || title}</p>
-      <h1>{formSteps[step]?.name ?? STEPS[step]}</h1>
+       <h1>{activeStepKey === "payment_stage" ? "Payment" : visibleSteps[step]?.name ?? STEPS[step]}</h1>
       {formContent?.description ? <p className="public-ay-description">{formContent.description}</p> : null}
       <ol className="public-ay-steps" aria-label="Registration steps">
-        {formSteps.map((item, index) => (
-          <li key={item.key} className={index === step ? "is-current" : index < step ? "is-done" : undefined}>
+         {visibleSteps.map((item, index) => (
+           <li
+             key={item.key}
+             className={
+               item.key === "payment_stage"
+                 ? "is-current"
+                 : index === step
+                   ? "is-current"
+                   : index < step
+                     ? "is-done"
+                     : undefined
+             }
+           >
             {item.name}
           </li>
         ))}
@@ -1084,7 +1269,7 @@ export function PublicAyTutoringRegistrationForm({
 
       {(activeStepKey === "needs" || (!formContent && step === 3)) ? (
         <div className="public-ay-stack">
-          <p>Select every subject that applies. Then choose one primary subject for tutor matching.</p>
+          <p>Select every subject that applies. Professional Tutoring will match the right tutor for your request.</p>
           <div className="public-ay-checks">
             {ACADEMIC_SUBJECTS.options.map((option) => (
               <label key={option.id} className="public-ay-check">
@@ -1097,26 +1282,14 @@ export function PublicAyTutoringRegistrationForm({
               </label>
             ))}
           </div>
-          <Field label="Primary subject" required invalid={showErrors && !draft.primarySubjectCode}>
-            <select
-              value={draft.primarySubjectCode}
-              onChange={(event) =>
-                patch({ primarySubjectCode: event.target.value, tutorId: "", slotId: "" })
-              }
-            >
-              <option value="">Select</option>
-              {ACADEMIC_SUBJECTS.options
-                .filter((option) => draft.subjectCodes.includes(option.id))
-                .map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-            </select>
-          </Field>
-          <p className="public-ay-help">
-            We match a tutor to the primary subject. Other checked subjects are additional tutoring needs.
-          </p>
+          {draft.subjectCodes.includes("other") ? (
+            <Field label="Other subject" required invalid={showErrors && !draft.otherSubject.trim()}>
+              <input value={draft.otherSubject} onChange={(event) => patch({ otherSubject: event.target.value })} />
+            </Field>
+          ) : null}
+          {matchingRequiresStaff ? (
+            <p className="public-ay-help">Professional Tutoring will review the requested subjects and choose the best tutor match.</p>
+          ) : null}
           <label className="public-ay-field">
             <span>Notes (optional)</span>
             <textarea value={draft.subjectNotes} onChange={(event) => patch({ subjectNotes: event.target.value })} rows={3} />
@@ -1153,6 +1326,7 @@ export function PublicAyTutoringRegistrationForm({
             <button
               type="button"
               className={draft.schedulingPath === "family_selected" ? "is-selected" : undefined}
+              disabled={matchingRequiresStaff}
               onClick={() => patch({ schedulingPath: "family_selected" })}
             >
               Choose a tutor and time
@@ -1165,6 +1339,9 @@ export function PublicAyTutoringRegistrationForm({
               Let Professional Tutoring choose my tutor
             </button>
           </div>
+          {matchingRequiresStaff ? (
+            <p className="public-ay-help">For multiple or unlisted subjects, Professional Tutoring will choose the tutor after reviewing your request.</p>
+          ) : null}
           {draft.schedulingPath === "family_selected" ? (
             <>
               <p className="public-ay-help">
@@ -1264,7 +1441,7 @@ export function PublicAyTutoringRegistrationForm({
 
       {(activeStepKey === "payment" || (!formContent && step === 5)) ? (
         <div className="public-ay-stack">
-          <p>Choose your plan and payment preference. Your secure payment step follows your review.</p>
+          <p>Choose your payment plan. The secure card step follows your review.</p>
           <Field label="Payment plan" required invalid={showErrors && !draft.paymentPlanId}>
             <select value={draft.paymentPlanId} onChange={(event) => patch({ paymentPlanId: event.target.value })}>
               <option value="">Select</option>
@@ -1275,70 +1452,47 @@ export function PublicAyTutoringRegistrationForm({
               ))}
             </select>
           </Field>
-          <Field label="Hours / rates (standard)" required invalid={showErrors && !draft.hoursRatePackage && !draft.advancedHoursRatePackage}>
-            <select
+          {subjectRateProfile === "standard" ? (
+            <RateSection
+              title="Standard Hours / Rates"
+              options={ACADEMIC_RATE_PACKAGES.options}
+              selectable
               value={draft.hoursRatePackage}
-              onChange={(event) =>
-                patch({ hoursRatePackage: event.target.value, advancedHoursRatePackage: "" })
-              }
-            >
-              <option value="">Select</option>
-              {ACADEMIC_RATE_PACKAGES.options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Hours / rates (advanced)" required invalid={showErrors && !draft.hoursRatePackage && !draft.advancedHoursRatePackage}>
-            <select
-              value={draft.advancedHoursRatePackage}
-              onChange={(event) =>
-                patch({ advancedHoursRatePackage: event.target.value, hoursRatePackage: "" })
-              }
-            >
-              <option value="">Select</option>
-              {ACADEMIC_ADVANCED_RATE_PACKAGES.options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <p className="public-ay-help">Choose a standard or advanced package, not both.</p>
-          <Field label="Automatically charge a card for scheduled payments?" required invalid={showErrors && !draft.autoCharge}>
-            <select
-              value={draft.autoCharge}
-              onChange={(event) => {
-                const autoCharge = event.target.value;
-                patch({ autoCharge, altPaymentMethod: autoCharge === "no" ? draft.altPaymentMethod : "" });
-              }}
-            >
-              <option value="">Select</option>
-              {YES_NO.options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          {draft.autoCharge === "no" ? (
-            <Field label="Alternative form of payment" required invalid={showErrors && !draft.altPaymentMethod}>
-              <select value={draft.altPaymentMethod} onChange={(event) => patch({ altPaymentMethod: event.target.value })}>
-                <option value="">Select</option>
-                {ALT_PAYMENT_METHODS.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
+              invalid={showErrors && !draft.hoursRatePackage}
+              onChange={(hoursRatePackage) => patch({ hoursRatePackage, advancedHoursRatePackage: "" })}
+            />
           ) : null}
+          {subjectRateProfile === "advanced" ? (
+            <>
+              <p className="public-ay-help">Advanced rate applies to all AP/IB subjects, Multivariable Calculus, Linear Algebra, and community college/university subjects.</p>
+              <RateSection
+                title="Advanced Subjects Hours / Rates"
+                options={ACADEMIC_ADVANCED_RATE_PACKAGES.options}
+                selectable
+                value={draft.advancedHoursRatePackage}
+                invalid={showErrors && !draft.advancedHoursRatePackage}
+                onChange={(advancedHoursRatePackage) => patch({ advancedHoursRatePackage, hoursRatePackage: "" })}
+              />
+            </>
+          ) : null}
+          {subjectRateProfile === "mixed" ? (
+            <>
+              <RateSection title="Standard Hours / Rates" options={ACADEMIC_RATE_PACKAGES.options} />
+              <RateSection title="Advanced Subjects Hours / Rates" options={ACADEMIC_ADVANCED_RATE_PACKAGES.options} />
+              <p className="public-ay-help">Your requested subjects include both Standard and Advanced course levels. Professional Tutoring will review the request and confirm pricing before payment.</p>
+            </>
+          ) : null}
+          {subjectRateProfile === "staff_review" ? (
+            <p className="public-ay-help">Professional Tutoring will review the requested subject details and confirm the tutor match and pricing before payment.</p>
+          ) : null}
+          <p className="public-ay-help">A card is collected securely after review and kept on file for scheduled Academic Year payments. A 3.6% credit/debit card service fee applies.</p>
+          <PaymentTerms />
         </div>
       ) : null}
 
       {(activeStepKey === "agreement" || (!formContent && step === 6)) ? (
         <div className="public-ay-stack">
+          <AcademicYearPolicy />
           <label className="public-ay-check">
             <input
               type="checkbox"
@@ -1346,7 +1500,7 @@ export function PublicAyTutoringRegistrationForm({
               onChange={(event) => patch({ policyAck: event.target.checked })}
             />
             <span>
-              I acknowledge the Academic Year Tutoring policy.
+              I acknowledge the Academic Year Tutoring Policy.
               <RequiredMark />
             </span>
           </label>
@@ -1357,7 +1511,7 @@ export function PublicAyTutoringRegistrationForm({
               onChange={(event) => patch({ agreementAck: event.target.checked })}
             />
             <span>
-              I agree to the terms outlined in this agreement.
+              I agree to the Parent/Student Agreement and Liability Release.
               <RequiredMark />
             </span>
           </label>
@@ -1420,19 +1574,9 @@ export function PublicAyTutoringRegistrationForm({
           <section>
             <h2>Tutoring needs</h2>
             <p>
-              Primary:{" "}
-              {ACADEMIC_SUBJECTS.options.find((option) => option.id === draft.primarySubjectCode)?.label ??
-                draft.primarySubjectCode}
+              Requested: {draft.subjectCodes.map((code) => (code === "other" && draft.otherSubject ? `Other: ${draft.otherSubject}` : academicSubjectLabel(code))).join(", ")}
             </p>
-            {draft.subjectCodes.filter((code) => code !== draft.primarySubjectCode).length > 0 ? (
-              <p>
-                Additional:{" "}
-                {ACADEMIC_SUBJECTS.options
-                  .filter((option) => draft.subjectCodes.includes(option.id) && option.id !== draft.primarySubjectCode)
-                  .map((option) => option.label)
-                  .join(", ")}
-              </p>
-            ) : null}
+            {matchingRequiresStaff ? <p>Professional Tutoring will review the tutor match.</p> : null}
           </section>
           <section>
             <h2>Schedule</h2>
@@ -1466,14 +1610,11 @@ export function PublicAyTutoringRegistrationForm({
                 }
               </p>
             ) : null}
-            {draft.autoCharge === "no" && draft.altPaymentMethod ? (
-              <p>
-                Alternative payment:{" "}
-                {ALT_PAYMENT_METHODS.options.find((option) => option.id === draft.altPaymentMethod)?.label ??
-                  draft.altPaymentMethod}
-              </p>
-            ) : null}
-            <p>Complete the secure payment step below before your registration is confirmed.</p>
+            {subjectRateProfile === "mixed" || subjectRateProfile === "staff_review" ? (
+              <p>Pricing will be confirmed by Professional Tutoring before payment.</p>
+            ) : (
+              <p>Complete the secure card step below before your registration is confirmed. The due amount includes the 3.6% card service fee.</p>
+            )}
           </section>
           <section>
             <h2>Agreement</h2>
@@ -1487,12 +1628,14 @@ export function PublicAyTutoringRegistrationForm({
         <PublicAyTutoringPaymentPanel
           token={paymentContinuation.token}
           amountCents={paymentContinuation.amountCents}
+          serviceFeeCents={paymentContinuation.serviceFeeCents}
           dueAt={paymentContinuation.dueAt}
           label={paymentContinuation.label}
           requiresCard={paymentContinuation.requiresCard}
+          returnedIntentId={searchParams.get("payment_intent") ?? searchParams.get("setup_intent")}
           onCompleted={(payment) => {
             sessionStorage.setItem(
-              "ayTutoringConfirmation",
+              CONFIRMATION_STORAGE_KEY,
               JSON.stringify({
                 message:
                   payment.schedulingPath === "family_selected"
@@ -1503,8 +1646,10 @@ export function PublicAyTutoringRegistrationForm({
                 schedulingPath: payment.schedulingPath,
                 bookingId: payment.bookingId,
                 paymentStatus: payment.paymentStatus,
+                invitePaths: paymentContinuation.invitePaths,
               }),
             );
+            sessionStorage.removeItem(PENDING_PAYMENT_STORAGE_KEY);
             toast.success("Registration confirmed.");
             router.push("/register/academic-year-tutoring/confirmation");
           }}

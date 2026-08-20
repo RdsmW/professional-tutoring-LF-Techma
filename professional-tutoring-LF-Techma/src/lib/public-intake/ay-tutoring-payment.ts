@@ -13,6 +13,7 @@ export type AyPublicPaymentContinuation = {
   paymentRecordId: string;
   paymentPlanId: "full_year" | "semester" | "monthly";
   amountCents: number;
+  serviceFeeCents: number;
   dueAt: string;
   label: string;
   requiresCard: boolean;
@@ -46,32 +47,54 @@ export async function createAyPublicPaymentContinuation(input: {
     advancedHoursRatePackage: input.advancedHoursRatePackage,
     now,
   });
-  const firstInstallment = schedule.installments[0]!;
-  const totalCents = schedule.installments.reduce((sum, installment) => sum + installment.amountCents, 0);
+  const requiresCard = input.autoCharge === "yes";
+  const surchargeBps = requiresCard ? 360 : 0;
+  const chargedInstallments = schedule.installments.map((installment) => {
+    const serviceFeeCents = surchargeBps ? Math.round((installment.amountCents * surchargeBps) / 10_000) : 0;
+    return {
+      ...installment,
+      baseAmountCents: installment.amountCents,
+      serviceFeeCents,
+      amountCents: installment.amountCents + serviceFeeCents,
+    };
+  });
+  const firstInstallment = chargedInstallments[0]!;
+  const baseTotalCents = schedule.installments.reduce((sum, installment) => sum + installment.amountCents, 0);
+  const totalCents = chargedInstallments.reduce((sum, installment) => sum + installment.amountCents, 0);
   const quote: PriceQuoteBreakdown = {
     program: "academic_tutoring",
     planCode: paymentPlanId,
     packageCode: schedule.packageCode,
     rateTier: schedule.rateTier,
-    lines: schedule.installments.map((installment) => ({
+    lines: chargedInstallments.flatMap((installment) => [
+      {
       code: `installment_${installment.sequence}`,
       label: installment.label,
-      amountCents: installment.amountCents,
-    })),
-    subtotalCents: schedule.monthlyAmountCents * 10,
-    discountCents: schedule.monthlyAmountCents * 10 - totalCents,
+        amountCents: installment.baseAmountCents,
+      },
+      ...(installment.serviceFeeCents
+        ? [
+            {
+              code: `card_service_fee_${installment.sequence}`,
+              label: `3.6% card service fee — ${installment.label}`,
+              amountCents: installment.serviceFeeCents,
+            },
+          ]
+        : []),
+    ]),
+    subtotalCents: baseTotalCents,
+    discountCents: Math.max(Math.round(schedule.monthlyAmountCents * 9.5) - baseTotalCents, 0),
     registrationFeeCents: 0,
     totalCents,
-    surchargeBps: 0,
+    surchargeBps,
     assumedPackage: false,
   };
   const snapshot = await insertPriceSnapshot(quote);
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(now.getTime() + CONTINUATION_TTL_MS);
-  const requiresCard = input.autoCharge === "yes";
   const billingScheduleId = randomUUID();
   const database = requireDb();
-  const installments = schedule.installments.map((installment) => ({
+  const paymentRows = chargedInstallments.map((installment) => ({
     householdId: input.householdId,
     relatedEntityType: "tutoring_request",
     relatedEntityId: input.tutoringRequestId,
@@ -93,9 +116,11 @@ export async function createAyPublicPaymentContinuation(input: {
       packageCode: schedule.packageCode,
       rateTier: schedule.rateTier,
       monthlyAmountCents: schedule.monthlyAmountCents,
-      installmentSchedule: schedule.installments.map((entry) => ({
+      installmentSchedule: chargedInstallments.map((entry) => ({
         sequence: entry.sequence,
         amountCents: entry.amountCents,
+         baseAmountCents: entry.baseAmountCents,
+         serviceFeeCents: entry.serviceFeeCents,
         dueAt: entry.dueAt.toISOString(),
         label: entry.label,
       })),
@@ -108,7 +133,7 @@ export async function createAyPublicPaymentContinuation(input: {
   }));
   const payments = await database
     .insert(paymentRecords)
-    .values(installments)
+    .values(paymentRows)
     .returning({ id: paymentRecords.id, installmentSequence: paymentRecords.installmentSequence });
   const payment = payments.find((entry) => entry.installmentSequence === 1);
   if (!payment) throw new Error("Unable to create the first Academic Year payment installment.");
@@ -119,6 +144,7 @@ export async function createAyPublicPaymentContinuation(input: {
     paymentRecordId: payment.id,
     paymentPlanId,
     amountCents: firstInstallment.amountCents,
+    serviceFeeCents: firstInstallment.serviceFeeCents,
     dueAt: firstInstallment.dueAt.toISOString(),
     label: firstInstallment.label,
     requiresCard,

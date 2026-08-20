@@ -45,10 +45,10 @@ export type FormValidationIssue = { path: string; message: string };
 const STEP_META: Array<Pick<PublicFormStep, "key" | "name" | "helpText">> = [
   { key: "welcome", name: "Welcome", helpText: "Review the registration process before you begin." },
   { key: "student", name: "Student", helpText: "Tell us about the student who needs tutoring." },
-  { key: "contacts", name: "Parents & billing", helpText: "Add parent and billing information." },
+  { key: "contacts", name: "Parents & billing information", helpText: "Add parent and billing information." },
   { key: "needs", name: "Tutoring needs", helpText: "Tell us what support is needed." },
   { key: "schedule", name: "Schedule", helpText: "Choose a preferred schedule path." },
-  { key: "payment", name: "Plan & payment", helpText: "Choose a plan and payment preference." },
+  { key: "payment", name: "Plan", helpText: "Choose a plan before the secure card step." },
   { key: "agreement", name: "Agreement", helpText: "Review and acknowledge the agreement." },
   { key: "review", name: "Review", helpText: "Review your details before submitting." },
 ];

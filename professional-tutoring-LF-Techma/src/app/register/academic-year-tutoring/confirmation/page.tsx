@@ -5,8 +5,9 @@ import Link from "next/link";
 
 type ConfirmationState = {
   message: string;
-  schedulingPath: "family_selected" | "pt_chooses";
-  invitePaths: Array<{ label: string; path: string }>;
+  schedulingPath?: "family_selected" | "pt_chooses";
+  paymentStatus?: string;
+  invitePaths?: Array<{ label: string; path: string }>;
 };
 
 export default function AcademicYearTutoringConfirmationPage() {
@@ -29,24 +30,27 @@ export default function AcademicYearTutoringConfirmationPage() {
         {state ? (
           <>
             <p>{state.message}</p>
-            <p>
-              {state.schedulingPath === "family_selected"
-                ? "We saved your preferred tutor and time. This is not a confirmed seat yet."
-                : "Professional Tutoring will choose a tutor and time for you."}
-            </p>
+            {state.paymentStatus ? <p>Payment status: <strong>{state.paymentStatus}</strong>.</p> : null}
+            {state.schedulingPath ? (
+              <p>
+                {state.schedulingPath === "family_selected"
+                  ? "We saved your preferred tutor and time. This is not a confirmed seat yet."
+                  : "Professional Tutoring will choose a tutor and time for you."}
+              </p>
+            ) : null}
             <h2>Join the family portal</h2>
             <p>
-              Open your invite link and finish joining <strong>before</strong> opening the family
-              portal.
+              Your invitation to join the family portal has been prepared. Open your invite link and finish joining
+              <strong> before </strong> opening the portal.
             </p>
-            <ul className="public-ay-invites">
+            {state.invitePaths?.length ? <ul className="public-ay-invites">
               {state.invitePaths.map((invite) => (
                 <li key={invite.path}>
                   <span>{invite.label}</span>
                   <Link href={invite.path}>{invite.path}</Link>
                 </li>
               ))}
-            </ul>
+            </ul> : <p>Professional Tutoring will provide the portal invitation details.</p>}
           </>
         ) : (
           <p>This confirmation is only shown right after you submit. If you need your invite link, contact Professional Tutoring.</p>

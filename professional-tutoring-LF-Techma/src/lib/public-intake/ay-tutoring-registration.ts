@@ -13,6 +13,7 @@ import {
   ACADEMIC_SUBJECTS,
   isValidOptionId,
 } from "@/lib/forms/options";
+import { academicSubjectRateProfile, requiresAcademicYearStaffReview } from "@/lib/academic-year/subject-pricing";
 import { loadActiveCancellationPolicy } from "@/lib/policy/cancellation";
 import { createAyPublicPaymentContinuation } from "@/lib/public-intake/ay-tutoring-payment";
 import { findHouseholdMatchCandidates } from "@/lib/staff/family-match";
@@ -80,8 +81,9 @@ export type AyTutoringRegistrationInput = {
   householdAddress?: AddressInput;
   billing: ContactInput & AddressInput;
   subjectCodes: string[];
-  /** Explicit primary subject for tutor matching; must be one of subjectCodes. */
-  primarySubjectCode: string;
+  /** Legacy/internal matching hint. The public flow derives this when safe. */
+  primarySubjectCode?: string;
+  otherSubject?: string;
   subjectNotes?: string;
   testPrepInterests?: string[];
   referralSource: string;
@@ -245,13 +247,25 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   if (subjectCodes.some((code) => !isValidOptionId("ACADEMIC_SUBJECTS", code))) {
     throw new PublicIntakeError("Invalid subject selection.");
   }
-  const primarySubjectCode = trim(raw.primarySubjectCode);
-  if (!primarySubjectCode) {
-    throw new PublicIntakeError("Choose a primary subject so we can match a tutor.");
+  const otherSubject = optional(raw.otherSubject);
+  if (subjectCodes.includes("other") && !otherSubject) {
+    throw new PublicIntakeError("Tell us the other subject you need help with.");
   }
-  if (!subjectCodes.includes(primarySubjectCode)) {
-    throw new PublicIntakeError("Primary subject must be one of the selected subjects.");
+  if (otherSubject && !subjectCodes.includes("other")) {
+    throw new PublicIntakeError("Select Other when adding an unlisted subject.");
   }
+  const knownSubjectCodes = subjectCodes.filter((code) => code !== "other");
+  const matchingDeferred = requiresAcademicYearStaffReview(subjectCodes);
+  const requestedPrimarySubjectCode = trim(raw.primarySubjectCode);
+  const primarySubjectCode =
+    !matchingDeferred && knownSubjectCodes.length === 1
+      ? knownSubjectCodes[0]!
+      : knownSubjectCodes[0] ?? "other";
+  if (requestedPrimarySubjectCode && !subjectCodes.includes(requestedPrimarySubjectCode)) {
+    throw new PublicIntakeError("The subject selected for matching must be one of the requested subjects.");
+  }
+  const subjectRateProfile = academicSubjectRateProfile(subjectCodes);
+  const paymentDeferred = subjectRateProfile === "mixed" || subjectRateProfile === "staff_review";
 
   const referralSource = trim(raw.referralSource);
   if (!isValidOptionId("REFERRAL_SOURCE", referralSource)) {
@@ -278,18 +292,30 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   if (advancedHoursRatePackage && !isValidOptionId("ACADEMIC_ADVANCED_RATE_PACKAGES", advancedHoursRatePackage)) {
     throw new PublicIntakeError("Invalid advanced hours/rate selection.");
   }
-  if (hoursRatePackage && advancedHoursRatePackage) {
-    throw new PublicIntakeError("Choose a standard or advanced hours/rate package, not both.");
-  }
-  const selectedRatePackage = hoursRatePackage ?? advancedHoursRatePackage;
-  if (!selectedRatePackage) {
-    throw new PublicIntakeError("Choose an hours/rate package before payment.");
-  }
-  if (selectedRatePackage.endsWith("_hourly")) {
-    throw new PublicIntakeError("Hourly Academic Year tutoring requires a staff-set amount before payment.");
+  if (paymentDeferred) {
+    if (hoursRatePackage || advancedHoursRatePackage) {
+      throw new PublicIntakeError("Professional Tutoring will confirm pricing for this subject combination.");
+    }
+  } else {
+    if (hoursRatePackage && advancedHoursRatePackage) {
+      throw new PublicIntakeError("Choose only the rate package that applies to your selected subjects.");
+    }
+    const selectedRatePackage = hoursRatePackage ?? advancedHoursRatePackage;
+    if (!selectedRatePackage) {
+      throw new PublicIntakeError("Choose an hours/rate package before payment.");
+    }
+    if (subjectRateProfile === "standard" && !hoursRatePackage) {
+      throw new PublicIntakeError("Choose a Standard Hours / Rates option.");
+    }
+    if (subjectRateProfile === "advanced" && !advancedHoursRatePackage) {
+      throw new PublicIntakeError("Choose an Advanced Subjects Hours / Rates option.");
+    }
+    if (selectedRatePackage.endsWith("_hourly")) {
+      throw new PublicIntakeError("Hourly Academic Year tutoring requires a staff-set amount before payment.");
+    }
   }
 
-  const autoCharge = optional(raw.autoCharge);
+  const autoCharge = optional(raw.autoCharge) ?? "yes";
   if (!isValidOptionId("YES_NO", autoCharge ?? "")) {
     throw new PublicIntakeError("Choose whether to automatically charge a card.");
   }
@@ -310,6 +336,11 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   const schedulingPath = raw.schedulingPath;
   if (schedulingPath !== "family_selected" && schedulingPath !== "pt_chooses") {
     throw new PublicIntakeError("Choose a scheduling option.");
+  }
+  if (matchingDeferred && schedulingPath !== "pt_chooses") {
+    throw new PublicIntakeError(
+      "For multiple or unlisted subjects, Professional Tutoring will choose the tutor after reviewing your request.",
+    );
   }
 
   const preferredWindowIds = Array.isArray(raw.preferredWindowIds)
@@ -420,7 +451,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
 
   const subjectLabels = ACADEMIC_SUBJECTS.options
     .filter((option) => subjectCodes.includes(option.id))
-    .map((option) => option.label);
+    .map((option) => (option.id === "other" && otherSubject ? `Other: ${otherSubject}` : option.label));
   const learningNeeds = [subjectLabels.join(", "), optional(raw.subjectNotes)].filter(Boolean).join(" — ");
 
   const billingEmailNorm = billingContact.email;
@@ -595,8 +626,13 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
     const payload: Record<string, unknown> = {
       source: "public_ay_tutoring",
       schedulingPath,
+      requestedSubjectCodes: subjectCodes,
       catalogSubjectCode: primarySubjectCode,
       additionalSubjectCodes: subjectCodes.filter((code) => code !== primarySubjectCode),
+      otherSubject,
+      subjectRateProfile,
+      matchingDeferred,
+      paymentDeferred,
       testPrepInterests,
       preferredWindowIds: schedulingPath === "pt_chooses" ? preferredWindowIds : scheduleWindowId ? [scheduleWindowId] : [],
       hoursRatePackage,
@@ -668,20 +704,24 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
       preferredSlotId,
     };
   });
-  const payment = await createAyPublicPaymentContinuation({
-    householdId: result.householdId,
-    tutoringRequestId: result.tutoringRequestId,
-    schedulingPath,
-    paymentPlanId,
-    hoursRatePackage,
-    advancedHoursRatePackage,
-    autoCharge: autoCharge as "yes" | "no",
-    altPaymentMethod,
-  });
+  const payment = paymentDeferred
+    ? null
+    : await createAyPublicPaymentContinuation({
+        householdId: result.householdId,
+        tutoringRequestId: result.tutoringRequestId,
+        schedulingPath,
+        paymentPlanId,
+        hoursRatePackage,
+        advancedHoursRatePackage,
+        autoCharge: autoCharge as "yes" | "no",
+        altPaymentMethod,
+      });
 
   return {
     ...result,
     payment,
+    paymentDeferred,
+    subjectRateProfile,
     message:
       schedulingPath === "family_selected"
         ? "We received your registration and saved your preferred time. Your place is confirmed after payment in a later step."

@@ -147,6 +147,7 @@ export const ACADEMIC_SUBJECTS: OptionList = {
     "Pre-Calculus",
     "Calculus AB",
     "Calculus BC",
+    "Multivariable Calculus",
     "Linear Algebra",
     "Statistics",
     "AP Statistics",
@@ -234,9 +235,9 @@ export const ACADEMIC_ADVANCED_RATE_PACKAGES: OptionList = {
 export const ACADEMIC_PAYMENT_PLANS: OptionList = {
   id: "ACADEMIC_PAYMENT_PLANS",
   options: optsWithIds([
-    ["full_year", "Full Year: Sept. through June 10, Full payment due 9/1 – 10% discount"],
-    ["semester", "Semester: 9/1 and/or 2/1 – 5% discount"],
-    ["monthly", "Monthly: Due the first of each month"],
+    ["full_year", "Full Year: September through June 10 (9.5 months), due 9/1 — 10% discount"],
+    ["semester", "Semester: Fall 5 months + Spring 4.5 months, due 9/1 and 2/1 — 5% discount"],
+    ["monthly", "Monthly: September–May in full, June half-month; due the first of each month"],
   ]),
 };
 

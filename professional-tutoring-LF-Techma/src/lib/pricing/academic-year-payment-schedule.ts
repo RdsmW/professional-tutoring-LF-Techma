@@ -74,7 +74,7 @@ export async function buildAcademicYearPaymentSchedule(input: {
       installments: [
         {
           sequence: 1,
-          amountCents: centsWithDiscount(monthlyAmountCents * 10, 1000),
+          amountCents: centsWithDiscount(Math.round(monthlyAmountCents * 9.5), 1000),
           dueAt: dueDate(startYear, 8),
           label: "Full Year tuition",
         },
@@ -83,7 +83,8 @@ export async function buildAcademicYearPaymentSchedule(input: {
   }
 
   if (input.paymentPlanId === "semester") {
-    const semesterAmountCents = centsWithDiscount(monthlyAmountCents * 5, 500);
+    const fallSemesterAmountCents = centsWithDiscount(monthlyAmountCents * 5, 500);
+    const springSemesterAmountCents = centsWithDiscount(Math.round(monthlyAmountCents * 4.5), 500);
     return {
       planId: "semester",
       packageCode,
@@ -93,13 +94,13 @@ export async function buildAcademicYearPaymentSchedule(input: {
       installments: [
         {
           sequence: 1,
-          amountCents: semesterAmountCents,
+          amountCents: fallSemesterAmountCents,
           dueAt: dueDate(startYear, 8),
           label: "Fall semester tuition",
         },
         {
           sequence: 2,
-          amountCents: semesterAmountCents,
+          amountCents: springSemesterAmountCents,
           dueAt: dueDate(startYear + 1, 1),
           label: "Spring semester tuition",
         },
@@ -118,9 +119,9 @@ export async function buildAcademicYearPaymentSchedule(input: {
       const year = startYear + Math.floor(monthIndex / 12);
       return {
         sequence: index + 1,
-        amountCents: monthlyAmountCents,
+        amountCents: index === 9 ? Math.round(monthlyAmountCents / 2) : monthlyAmountCents,
         dueAt: dueDate(year, monthIndex % 12),
-        label: `Monthly tuition ${index + 1} of 10`,
+        label: index === 9 ? "Monthly tuition June (half month)" : `Monthly tuition ${index + 1} of 10`,
       };
     }),
   };
