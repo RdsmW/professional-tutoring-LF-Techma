@@ -72,7 +72,7 @@ async function createPathASafetyCase(): Promise<SafetyCase> {
   };
 }
 
-async function registerManualPathA(
+async function registerPathASafetyCase(
   request: APIRequestContext,
   safetyCase: SafetyCase,
   label: string,
@@ -130,8 +130,7 @@ async function registerManualPathA(
       slotId: safetyCase.slotId,
       paymentPlanId: "monthly",
       hoursRatePackage: "std_2h",
-      autoCharge: "no",
-      altPaymentMethod: "Check",
+       autoCharge: "yes",
       policyAck: true,
       agreementAck: true,
       parentSignature: "Path Safety",
@@ -140,6 +139,14 @@ async function registerManualPathA(
   });
   const body = await response.json();
   expect(response.ok(), JSON.stringify(body)).toBeTruthy();
+  if (!database || !body.payment?.paymentRecordId) throw new Error("Card payment continuation was not created.");
+  // Preserve the legacy-continuation safety assertions without allowing a
+  // public request to create a manual-payment path.
+  await database`
+    UPDATE payment_records
+    SET notes = jsonb_set(notes::jsonb, '{autoCharge}', '"no"'::jsonb, true)::text
+    WHERE id = ${body.payment.paymentRecordId}::uuid
+  `;
   return body;
 }
 
@@ -155,7 +162,7 @@ test.describe("Path A finalization safety", () => {
     if (!sql) throw new Error("DATABASE_URL missing");
     const safetyCase = await createPathASafetyCase();
     try {
-      const registration = await registerManualPathA(request, safetyCase, "inactive");
+      const registration = await registerPathASafetyCase(request, safetyCase, "inactive");
       await sql`UPDATE tutors SET active = false WHERE id = ${safetyCase.tutorId}::uuid`;
 
       const response = await request.post("/api/public/ay-tutoring-payment/finalize", {
@@ -171,7 +178,7 @@ test.describe("Path A finalization safety", () => {
   test("reuses one booking for concurrent Path A finalization", async ({ request }) => {
     const safetyCase = await createPathASafetyCase();
     try {
-      const registration = await registerManualPathA(request, safetyCase, "concurrent");
+      const registration = await registerPathASafetyCase(request, safetyCase, "concurrent");
       const [first, second] = await Promise.all([
         request.post("/api/public/ay-tutoring-payment/finalize", {
           data: { token: registration.payment.token },
@@ -197,7 +204,7 @@ test.describe("Path A finalization safety", () => {
     if (!sql) throw new Error("DATABASE_URL missing");
     const safetyCase = await createPathASafetyCase();
     try {
-      const registration = await registerManualPathA(request, safetyCase, "subject");
+      const registration = await registerPathASafetyCase(request, safetyCase, "subject");
       await sql`DELETE FROM tutor_subjects WHERE tutor_id = ${safetyCase.tutorId}::uuid`;
 
       const response = await request.post("/api/public/ay-tutoring-payment/finalize", {
@@ -215,7 +222,7 @@ test.describe("Path A finalization safety", () => {
     if (!sql) throw new Error("DATABASE_URL missing");
     const safetyCase = await createPathASafetyCase();
     try {
-      const registration = await registerManualPathA(request, safetyCase, "window");
+      const registration = await registerPathASafetyCase(request, safetyCase, "window");
       await sql`
         UPDATE availability_slots
         SET schedule_window_id = 'tue_1715_1915_changed'

@@ -1,0 +1,262 @@
+The complete Academic Year source content is now provided below. Continue the current Academic Year task using this text as the source of truth.
+
+Do not start another broad audit or redesign.
+
+The source text below comes from the client's current Academic Year Tutoring Registration Agreement.
+
+Use it to complete the missing content in the approved app flow:
+
+Welcome → Student → Parents & Billing Information → Tutoring Needs → Schedule → Plan → Agreement → Review → Payment → Confirmation
+
+Do not mechanically reproduce the old Gravity Forms layout. Preserve the actual information, rates, policies, payment conditions, acknowledgements, and signatures while presenting them cleanly in the new app.
+
+1. Plan — Standard Hours/Rates
+
+Preserve the Standard pricing options:
+
+2 hours per week — $460/month
+4 hours per week — $910/month
+6 hours per week — $1,360/month
+8 hours per week — $1,810/month
+Hourly — $65/hour
+
+Only one Standard Hours/Rates option should be selected where Standard pricing is applicable.
+
+2. Plan — Advanced Subjects
+
+Display the following explanation whenever Advanced pricing is relevant:
+
+The following advanced subjects will be charged at the rates below.
+
+All AP/IB subjects
+Multivariable Calculus
+Linear Algebra
+Any community college or university class
+
+Preserve the Advanced pricing options:
+
+2 hours per week — $600/month
+4 hours per week — $1,200/month
+6 hours per week — $1,800/month
+8 hours per week — $2,400/month
+Hourly — $85/hour
+
+Display behavior already confirmed:
+
+Standard subjects only → Standard Hours/Rates only
+Advanced subjects only → Advanced Hours/Rates + Advanced Subjects explanation
+Standard + Advanced subjects → show both Standard and Advanced Hours/Rates + Advanced Subjects explanation
+
+Do not invent the final billing formula for a mixed Standard + Advanced request.
+
+That business rule is still awaiting clarification. Mixed requests may remain Staff-review/payment-deferred where necessary.
+
+3. Tutoring session explanation
+
+Include the following exact source text after the Hours/Rates sections:
+
+Tutoring sessions are two hours each. The hourly rate is only available when there is no full-time tutoring spot open or on a short-term one- to two-week trial basis. Once a full-time spot becomes available or the trial period ends, students who continue with tutoring will be considered full-time and will be accorded the lower full-time rates listed above.
+
+4. Tutoring Policy
+
+Add the complete policy below to the Plan stage.
+
+A clean expandable UI such as Read full Tutoring Policy / See more is acceptable, but the entire source text must be accessible.
+
+Do not replace it with headings or an external link.
+
+Do not silently rewrite contractual wording.
+
+Tutoring Policy
+
+Business Hours: We are in the office Monday through Friday, and available by phone/email, generally from 9:00 am to 5:00 pm. Saturday and Sunday, the office is closed.
+
+Tutoring Year and Rates: The tutoring year follows an academic calendar, beginning Tuesday, September 8, 2026. and ending Thursday, June 10, 2027. The full-time rates are annualized based on this nine-and-a-half-month period; each month September through May is considered one-ninth of the school year. Nine equal installments are due from September through May, regardless of the number of weeks in a month or if there are holidays in a month (see holiday schedule below). To accommodate students’ final exams, we will offer tutoring at our regular schedule June 1-10, 2027, and will charge one-half of a month’s tuition for all students who have not given termination notice by May 1, 2027. Students who begin tutoring after the school year begins will pay the same monthly rates. The tutoring fee includes reasonable interaction with teachers (at a parent’s request) and parents as well as lesson preparation and research. Administration of testing, including SAT, ACT, SSAT, HSPT, GRE, GMAT, PSAT, etc., is billed at the hourly tutoring rate.
+
+Tutoring Appointments: All tutoring appointment requests must be made through the Professional Tutoring office by phone at 703-830-7037, or by email at admin@juliarosspt.com. Under no circumstances are appointments to be made directly with tutors.
+
+Holiday Schedule: Professional Tutoring is open for most federal holidays. During the following dates, we will not hold tutoring sessions:
+
+Thanksgiving: Tuesday, Nov. 24 – Sunday, Nov. 29, 2026
+Winter Break: Saturday, Dec. 19, 2026 – Saturday, Jan. 2, 2027
+Spring Break: Saturday, March 20 – Sunday, March 28, 2027
+Memorial Day: Sunday, May 30, and Monday, May 31, 2027
+
+Spring Break: Accommodations will be made for students in private school or college who have different schedules.
+
+Federal/School Holidays: Many families travel or make plans for federal/student holidays. Tutoring sessions which fall on these holidays will be considered optional for students. This means that tutoring will be available on the scheduled dates but make-up sessions will not be available. Students may not “bank” these hours.
+
+Student Cancellations: In this busy metropolitan area, we all struggle with our kids’ heavily loaded schedules, not to mention our own. Professional Tutoring, LLC understands that cancellations and schedule changes are inevitable, and we will do everything possible to accommodate schedule changes. We ask for as much advance notice as possible. With all of this in mind, please respect the following requirements:
+
+Call or email as early as possible. If there is no answer, leave a detailed message.
+Greater than 24-hour notice: make-up session permitted.
+Less than 24-hour notice: tutoring session forfeited.
+Sunday/Monday cancellation: required by close of business on Thursday.
+
+Banking a Session: When a student is not able to attend a tutoring session and gives the requisite notice, Professional Tutoring provides two opportunities:
+
+Attending virtually during their scheduled session: OR
+Banking the session for later use under the following protocols:
+Banked sessions must be used within two months following the missed session.
+Banked sessions are usable during the student’s active tutoring tenure or by the end of the current academic year, whichever comes first.
+Banked sessions may not be used in lieu of tendering the monthly tuition payment.
+Professional Tutoring puts their best effort into rescheduling students’ banked sessions, generally offering two make-up opportunities.
+In the case that a client declines two or more make-up opportunities offered by Professional Tutoring, the banked sessions will be forfeited.
+
+Weather Cancellations: In the case of snow or severe weather, Professional Tutoring does not necessarily follow the Fairfax County Public School schedule. Instead, we see how the roads are several hours before tutoring. Many times, the roads clear during the day and are safe to drive. If the roads are dangerous or impassable, tutoring will be cancelled and a make-up session will be scheduled. Students and parents will be notified by e-mail or phone call. Whenever possible, notices are also posted on our website. If you do not receive a call or e-mail, tutoring will continue as normal. When tutoring is offered (in-person or virtually), student cancellations are considered forfeitures and are not eligible for banking or make-ups. If Professional Tutoring cancels tutoring due to inclement weather or power outages, tutoring will be rescheduled where reasonably feasible. In any case, tuition will be due.
+
+Instructor Information and Cancellation Policy: It is understood that Professional Tutoring, LLC employs a number of professional staff members under the supervision of Julia Ross. In the event of an instructor absence, a substitute teacher will provide tutoring. If no substitute is available, you will receive a phone call or email with information.
+
+Terminating Services or Decreasing Hours: The undersigned client will provide Professional Tutoring, LLC, one full calendar month notice prior to terminating this Agreement or decreasing the number of weekly tutoring sessions. Notice must be given by the first of the month in order to terminate or decrease tutoring by the first of the following month. For example, termination given on December 15 would trigger a January 1 notice date, and a final termination date of January 31. The last day to provide a termination or decrease of hours notice during the school year is May 1 (for termination date of May 31). After May 1, tuition will be required through June 10.
+
+Keep the required acknowledgement:
+
+Did you read the tutoring policy information*
+
+Yes, I read & understood the tutoring policy information
+
+5. Plan — Payment Plan
+
+Preserve these three options:
+
+Payment Plan (Check One):
+
+Full Year: Sept. through June 10, Full payment due 9/1/2026 – 10% discount (9.5 months)
+Semester: 9/1/2026 and/or 2/1/2027 – 5% discount (Fall – 5 months, Spring – 4.5 months)
+Monthly: Due the first of each month
+
+Preserve the source note:
+
+To be confirmed by PT staff.
+
+The Stripe schedule must remain consistent with:
+
+Full Year = 9.5 months less 10%
+Semester = 5 months + 4.5 months less 5%
+Monthly = nine full September–May installments + one June half-month installment
+6. Plan — Payment Terms
+
+Add the complete following source text:
+
+Payment Terms: Professional Tutoring accepts payment by cash, check, bank transfer or credit/debit card. All credit/debit card payments will be charged a 3.6% service fee.
+
+Payment is due the first of each month. Payments received after the seventh of the month will be assessed a $25 late fee. Returned checks will be assessed a $35 fee. In the event that Professional Tutoring does not receive payment within 30 days of its due date, the undersigned client will be responsible for all reasonable attorney and administrative fees incurred in the collections process, in addition to payment due. Interest will accrue at 1.5% per month (18% annually) from due date. If there are mitigating circumstances affecting the tuition payments, such as sickness or job loss, please be assured that Professional Tutoring, LLC will consider such extenuating circumstances.
+
+Credit Card Guarantee and Payment Method: Professional Tutoring requires that a current, valid credit be on file to guarantee payment. To avoid late payment and fees, if payment is not received by the seventh of the month, your credit card will be charged the monthly payment plus a 3.6% service fee.
+
+Professional Tutoring will only charge this card without explicit authorization in the case of late payment or nonpayment.
+
+Also preserve:
+
+Make checks payable to Professional Tutoring, LLC.
+
+Checks should be mailed to: Professional Tutoring, LLC, 11901 Cub Court, Fairfax Station, VA 22039.
+
+Click on the “Pay Now” button on your emailed invoice to pay through a secure ACH bank transfer. This is the preferred method of payment.
+
+The UI may use expandable content, but the full source wording must remain accessible.
+
+Important contractual conflict: the current source says the card will only be charged without explicit authorization for late payment/nonpayment, while the new app currently supports scheduled Stripe installment collection.
+
+Do not silently rewrite this clause.
+
+Flag it explicitly as requiring Masdouk/client approval.
+
+Similarly, Tutoring Appointments refers only to phone/email office booking while the new application permits approved in-app scheduling. Do not silently rewrite that clause either; flag it for approval.
+
+Do not reintroduce the old family-facing fields:
+
+Would you like us to automatically charge your credit card?
+alternative form of payment selection
+
+Those fields were intentionally removed from the new flow.
+
+7. Agreement — Acknowledgements and Release
+
+Add the complete source content below to the Agreement stage:
+
+Acknowledgements and Release
+
+The Professional Tutoring programs are designed to support students in their goals through academic tutoring, test preparation and/or coaching. Mature behavior is expected from students/families/representatives at all times. If the undersigned student’s/family’s/representative’s behavior is incompatible with the interest, harmony, comfort or welfare of the Professional Tutoring’s programs, the undersigned student may be suspended and/or dismissed from Professional Tutoring programs at the sole discretion of Professional Tutoring. In such a case, the full contracted tuition and fees will be due to Professional Tutoring as per this Agreement. No refunds will be provided.
+
+I authorize Professional Tutoring, LLC, to use any work completed by my student (or myself, if over 18 years old) in connection with Professional Tutoring, as well as any photos taken of my student (myself) during tutoring, in furtherance of the business of Professional Tutoring, LLC, including, but not limited to, brochures, marketing, and social media.
+
+I acknowledge that I have read this Agreement and understand the nature of the services to be rendered and the applicable fees. I further acknowledge that I have been afforded the opportunity to discuss any questions about the terms of this Agreement before signing below.
+
+Keep:
+
+Consent*
+
+I agree to the terms outlined in this Agreement.*
+
+Preserve the existing:
+
+Parent Signature
+Student Signature
+Date
+
+Agreement must remain before Review and Payment.
+
+8. Review
+
+Review must present the actual choices before Stripe:
+
+student/family information;
+subjects;
+Test Prep if applicable;
+scheduling choice;
+tutor/slot for Path A or Professional Tutoring scheduling for Path B;
+applicable Standard and/or Advanced rate section;
+selected Hours/Rates;
+Payment Plan;
+amount due now;
+future installments;
+policy acknowledgement;
+Agreement/Consent/signatures.
+
+Do not invent a mixed Standard + Advanced final amount while that rule remains unresolved.
+
+9. Payment → Confirmation
+
+Preserve the verified Stripe architecture.
+
+Final behavior:
+
+Stripe → automatic return to app → Confirmation
+
+Do not automatically redirect the family from Confirmation into the portal.
+
+Confirmation must accurately reflect the actual invitation state.
+
+If the system only generates an invitation URL but does not yet send an outbound email, do not claim that an email was sent.
+
+Continue the invitation/email verification already underway.
+
+10. Complete the previously blocked verification
+
+Continue the existing targeted work to:
+
+resolve the test-only formVersionToken issue without changing registration business logic;
+verify Full Year 9.5-month pricing;
+verify Semester 5 + 4.5-month pricing;
+verify Monthly nine full installments + June half-month;
+verify the 3.6% card fee;
+verify Path A;
+verify Path B;
+verify Stripe return to Confirmation;
+verify the invitation mechanism;
+run TypeScript/build and the targeted integration tests.
+
+Do not start another broad audit.
+
+Do not start Zoho, QuickBooks, Acuity, Summer Tutoring, or Courses during this task.
+
+When complete, report only:
+
+exact files changed;
+targeted test results;
+invitation/email status;
+remaining mixed Standard + Advanced pricing blocker;
+exact contractual source clauses that conflict with the new app and require Masdouk/client approval.
+
+Stop after completing this Academic Year task.

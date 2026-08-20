@@ -17,7 +17,6 @@ async function currentFormVersionToken(request: APIRequestContext) {
 async function submitPathB1Registration(
   request: APIRequestContext,
   paymentPlanId: "full_year" | "semester" | "monthly",
-  autoCharge: "yes" | "no" = "no",
 ) {
   const unique = `${Date.now()}${Math.floor(Math.random() * 10_000)}`;
   const phoneSuffix = unique.slice(-4);
@@ -69,8 +68,7 @@ async function submitPathB1Registration(
       preferredWindowIds: ["tue_1715_1915"],
       paymentPlanId,
       hoursRatePackage: "std_2h",
-       autoCharge,
-       ...(autoCharge === "no" ? { altPaymentMethod: "Check" } : {}),
+       autoCharge: "yes",
       policyAck: true,
       agreementAck: true,
       parentSignature: "Billing Parent",
@@ -129,11 +127,11 @@ test.describe("Academic Year billing schedules", () => {
       const dueTimes = rows.map((row) => new Date(row.due_at).getTime());
       expect(dueTimes).toEqual([...dueTimes].sort((left, right) => left - right));
       const amounts = rows.map((row) => Number(row.amount_cents));
-      if (planId === "full_year") expect(amounts).toEqual([393300]);
-      if (planId === "semester") expect(amounts).toEqual([218500, 196650]);
+      if (planId === "full_year") expect(amounts).toEqual([407459]);
+      if (planId === "semester") expect(amounts).toEqual([226366, 203729]);
       if (planId === "monthly") {
-        expect(amounts.slice(0, 9)).toEqual(Array(9).fill(46000));
-        expect(amounts[9]).toBe(23000);
+        expect(amounts.slice(0, 9)).toEqual(Array(9).fill(47656));
+        expect(amounts[9]).toBe(23828);
       }
     });
   }
@@ -141,7 +139,7 @@ test.describe("Academic Year billing schedules", () => {
   test("includes the 3.6% card fee in card-collected installments", async ({ request }) => {
     const sql = database;
     if (!sql) throw new Error("DATABASE_URL missing");
-    const registration = await submitPathB1Registration(request, "monthly", "yes");
+    const registration = await submitPathB1Registration(request, "monthly");
     const rows = await sql`
       SELECT amount_cents, notes
       FROM payment_records

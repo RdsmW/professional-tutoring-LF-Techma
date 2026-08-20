@@ -28,6 +28,17 @@ This report covers the current Academic Year Tutoring registration flow. No Zoho
   - `npx eslint src/components/public-ay-tutoring-registration-form.tsx src/lib/forms/options.ts`
   - `npx playwright test e2e/ay-billing-schedule.spec.ts e2e/public-ay-registration.spec.ts e2e/path-a-finalization-safety.spec.ts`
   - 13 passed; 1 skipped only because no open public tutor slot was available for the opportunistic Path A page-level scenario.
+- After the complete contractual source was integrated:
+  - `npm run build` completed successfully.
+  - `npx tsc --noEmit` passed.
+  - `npm run lint` completed with 7 existing project warnings and no errors.
+  - The Review schedule calculation was checked against the 2026–27 source schedule and card surcharge: Full Year $4,074.59, Semester $2,263.66 then $2,037.29, and Monthly $476.56 through May plus $238.28 in June.
+- After the final public-payment and hourly-review correction:
+  - `npx tsc --noEmit` and targeted lint passed.
+  - `npm run build` completed successfully.
+  - `npx playwright test e2e/ay-billing-schedule.spec.ts e2e/public-ay-registration.spec.ts e2e/path-a-finalization-safety.spec.ts` completed with 13 passed and 1 skipped.
+  - The Path B API test rejects `autoCharge: "no"` plus an alternative payment method, creates a card-backed continuation for compliant registrations, and confirms an hourly package becomes `paymentDeferred` with no payment continuation.
+  - Billing schedule tests assert the card-fee-inclusive finite installment amounts, and the existing Path A safety tests still cover deactivated tutors, subject mismatch, changed windows, and concurrent finalization.
 
 ## Test-environment correction
 
@@ -40,24 +51,16 @@ Playwright now applies the public-form migration and creates a published Academi
 - The repository has no outbound-email provider, queue, mail transport, or delivery call for invitations. No email-send behavior was added or connected.
 - The current Agreement remains displayed and acknowledgement-gated in the public flow. The current card setup/payment behavior, Stripe return/finalization flow, and invitation-link retention remain in place.
 
-## Supplied source and contractual-text blocker
+## Supplied source content
 
-The later attached source supplied exact rate amounts, payment-plan dates, the two-hour-session explanation, the PT-staff confirmation note, and acknowledgement/signature labels. Those items are now reflected in the public flow.
+The complete supplied Academic Year Tutoring Policy, Payment Terms, and Acknowledgements and Release are now accessible in the applicable Plan and Agreement stages without replacing them with headings, links, or paraphrased clauses.
 
-However, despite describing itself as complete, the file does not include the body text for:
+## Source/application differences requiring Masdouk/client approval
 
-- the Academic Year Tutoring Policy;
-- Payment Terms and accepted-payment-method language;
-- card-on-file guarantee and authorization-to-charge wording; or
-- Acknowledgements and Release.
-
-No missing clause was invented or paraphrased. The previous unsourced cancellation and payment-term summaries were removed, and the visible placeholders now state that the approved wording was not supplied.
-
-## Source/application differences requiring approved wording
-
-- The source says the hourly rate is available only when no full-time tutoring spot is open or for a short one- to two-week trial. The current app sends hourly requests to Staff for a staff-set amount before payment instead of automatically charging a family-selected hourly rate.
-- The source requires accepted-payment-method, card-on-file, and authorization-to-charge wording. The app preserves its existing Stripe PaymentIntent/SetupIntent and scheduled card-collection behavior, but the supplied file does not contain the approved contractual text needed to compare that behavior to the agreement.
-- The supplied Full Year and Semester dates are 2026–27, while the installment engine determines the applicable academic year from the current date. They align for the current 2026–27 registration year; a future-year legal copy must be supplied before those visible dates are reused after that year.
+- **Card authorization:** “Professional Tutoring will only charge this card without explicit authorization in the case of late payment or nonpayment.” The app’s scheduled Stripe installment collection after card setup is different. The clause is visible unchanged alongside an explicit approval notice.
+- **Tutoring appointments:** “Under no circumstances are appointments to be made directly with tutors.” The app allows the approved in-app Path A tutor/slot flow and Path B preferred-window flow. The clause is visible unchanged alongside an explicit approval notice.
+- **Mixed Standard + Advanced pricing:** The source does not define a combined formula. The app continues to defer price confirmation and payment to Staff rather than inventing an amount.
+- **Hourly requests:** The source limits hourly pricing to no-full-time-spot and short trial situations. The app routes hourly requests to Staff for a staff-set amount before payment rather than automatically charging a family-selected hourly rate.
 
 ## Files changed for this verification
 
@@ -69,5 +72,13 @@ No missing clause was invented or paraphrased. The previous unsourced cancellati
 - `e2e/path-a-finalization-safety.spec.ts`
 - `src/lib/forms/options.ts`
 - `src/components/public-ay-tutoring-registration-form.tsx`
+- `src/lib/academic-year/source-content.ts`
+- `src/lib/academic-year/client-review-quote.ts`
+- `src/app/globals.css`
+- `src/lib/public-intake/ay-tutoring-registration.ts`
+- `src/lib/public-intake/ay-tutoring-payment.ts`
+- `e2e/ay-billing-schedule.spec.ts`
+- `e2e/public-ay-registration.spec.ts`
+- `e2e/path-a-finalization-safety.spec.ts`
 - `docs/WORK-ACADEMIC-YEAR-TUTORING.md`
 - `docs/VERIFICATION-ACADEMIC-YEAR-TUTORING.md`

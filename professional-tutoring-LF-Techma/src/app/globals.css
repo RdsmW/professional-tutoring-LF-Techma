@@ -4981,6 +4981,23 @@ textarea.is-invalid {
 .public-ay-rate-section li {
   margin: 4px 0;
 }
+.public-ay-source-text {
+  white-space: pre-line;
+}
+.public-ay-conflict {
+  border-left: 4px solid var(--gold);
+  background: var(--gold-soft);
+  padding: 12px;
+  color: var(--ink);
+}
+.public-ay-conflict p,
+.public-ay-review-payment p,
+.public-ay-review-payment ul {
+  margin: 8px 0 0;
+}
+.public-ay-review-payment li {
+  margin: 4px 0;
+}
 .public-ay-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
 .public-ay-check {
   display: flex;

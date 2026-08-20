@@ -265,7 +265,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
     throw new PublicIntakeError("The subject selected for matching must be one of the requested subjects.");
   }
   const subjectRateProfile = academicSubjectRateProfile(subjectCodes);
-  const paymentDeferred = subjectRateProfile === "mixed" || subjectRateProfile === "staff_review";
+  let paymentDeferred = subjectRateProfile === "mixed" || subjectRateProfile === "staff_review";
 
   const referralSource = trim(raw.referralSource);
   if (!isValidOptionId("REFERRAL_SOURCE", referralSource)) {
@@ -310,19 +310,16 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
     if (subjectRateProfile === "advanced" && !advancedHoursRatePackage) {
       throw new PublicIntakeError("Choose an Advanced Subjects Hours / Rates option.");
     }
-    if (selectedRatePackage.endsWith("_hourly")) {
-      throw new PublicIntakeError("Hourly Academic Year tutoring requires a staff-set amount before payment.");
-    }
+    if (selectedRatePackage.endsWith("_hourly")) paymentDeferred = true;
   }
 
-  const autoCharge = optional(raw.autoCharge) ?? "yes";
-  if (!isValidOptionId("YES_NO", autoCharge ?? "")) {
-    throw new PublicIntakeError("Choose whether to automatically charge a card.");
+  if (optional(raw.autoCharge) === "no" || optional(raw.altPaymentMethod)) {
+    throw new PublicIntakeError(
+      "Academic Year registrations require secure card collection. Alternative payment methods are not available in this form.",
+    );
   }
-  const altPaymentMethod = autoCharge === "no" ? optional(raw.altPaymentMethod) : null;
-  if (autoCharge === "no" && !isValidOptionId("ALT_PAYMENT_METHODS", altPaymentMethod ?? "")) {
-    throw new PublicIntakeError("Choose an alternative payment method.");
-  }
+  const autoCharge = "yes" as const;
+  const altPaymentMethod = null;
 
   if (raw.policyAck !== true || raw.agreementAck !== true) {
     throw new PublicIntakeError("Please acknowledge the policy and agreement.");
@@ -713,8 +710,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
         paymentPlanId,
         hoursRatePackage,
         advancedHoursRatePackage,
-        autoCharge: autoCharge as "yes" | "no",
-        altPaymentMethod,
+        autoCharge,
       });
 
   return {

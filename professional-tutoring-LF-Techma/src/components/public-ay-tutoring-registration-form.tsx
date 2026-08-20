@@ -24,6 +24,15 @@ import type { AddressSuggestion } from "@/lib/mapbox/geocode";
 import { formatTimeRange12h } from "@/lib/ui/datetime";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
 import {
+  ACADEMIC_YEAR_ACKNOWLEDGEMENTS_RELEASE,
+  ACADEMIC_YEAR_PAYMENT_TERMS,
+  ACADEMIC_YEAR_POLICY_SECTIONS,
+} from "@/lib/academic-year/source-content";
+import {
+  buildAcademicYearReviewInstallments,
+  formatReviewCurrency,
+} from "@/lib/academic-year/client-review-quote";
+import {
   academicSubjectLabel,
   academicSubjectRateProfile,
   requiresAcademicYearStaffReview,
@@ -99,8 +108,6 @@ type Draft = {
   paymentPlanId: string;
   hoursRatePackage: string;
   advancedHoursRatePackage: string;
-  autoCharge: string;
-  altPaymentMethod: string;
   policyAck: boolean;
   agreementAck: boolean;
   parentSignature: string;
@@ -166,8 +173,6 @@ const emptyDraft: Draft = {
   paymentPlanId: "",
   hoursRatePackage: "",
   advancedHoursRatePackage: "",
-  autoCharge: "yes",
-  altPaymentMethod: "",
   policyAck: false,
   agreementAck: false,
   parentSignature: "",
@@ -255,48 +260,15 @@ function RateSection({
 function AcademicYearPolicy() {
   return (
     <details className="public-ay-details">
-      <summary>Tutoring Policy — See more</summary>
+      <summary>Read full Tutoring Policy</summary>
       <div className="public-ay-details-copy">
-        <section>
-          <h3>Business Hours</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Tutoring Year and Rates</h3>
-          <p>Academic Year tutoring runs September through June 10. The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Tutoring Appointments</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Holiday Schedule</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Federal/School Holidays</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Student Cancellations</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Banking a Session</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Weather Cancellations</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Instructor Information and Cancellation Policy</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
-        <section>
-          <h3>Terminating Services or Decreasing Hours</h3>
-          <p>The approved full policy text for this heading is not configured in the public form.</p>
-        </section>
+        <h2>Tutoring Policy</h2>
+        {ACADEMIC_YEAR_POLICY_SECTIONS.map((section) => (
+          <section key={section.heading}>
+            <h3>{section.heading}</h3>
+            <p className="public-ay-source-text">{section.body}</p>
+          </section>
+        ))}
       </div>
     </details>
   );
@@ -305,11 +277,70 @@ function AcademicYearPolicy() {
 function PaymentTerms() {
   return (
     <details className="public-ay-details">
-      <summary>Payment Terms — See more</summary>
+      <summary>Read full Payment Terms</summary>
       <div className="public-ay-details-copy">
-        <p>The complete approved Payment Terms wording was not included in the supplied source.</p>
+        <p className="public-ay-source-text">{ACADEMIC_YEAR_PAYMENT_TERMS}</p>
+        <aside className="public-ay-conflict">
+          <strong>Requires Masdouk/client approval:</strong>
+          <p>
+            The source says the card is charged without explicit authorization only for late payment or nonpayment.
+            The new app supports scheduled Stripe installment collection after card setup. This source clause is
+            preserved and has not been silently rewritten.
+          </p>
+        </aside>
+        <aside className="public-ay-conflict">
+          <strong>Requires Masdouk/client approval:</strong>
+          <p>
+            The source requires appointment requests through the office by phone or email. The approved app flow also
+            permits in-app scheduling for Path A and preferred-window selection for Path B. This source clause is
+            preserved and has not been silently rewritten.
+          </p>
+        </aside>
       </div>
     </details>
+  );
+}
+
+function ReviewInstallmentSummary({ paymentPlanId, packageCode }: { paymentPlanId: string; packageCode: string }) {
+  const installments = buildAcademicYearReviewInstallments(paymentPlanId, packageCode);
+  if (!installments) {
+    return <p>Pricing and the payment schedule will be confirmed by Professional Tutoring before payment.</p>;
+  }
+  return (
+    <div className="public-ay-review-payment">
+      <p>
+        <strong>Amount due at the secure payment step:</strong> {formatReviewCurrency(installments[0]!.amountCents)}
+        {installments[0]!.serviceFeeCents > 0
+          ? ` (includes ${formatReviewCurrency(installments[0]!.serviceFeeCents)} 3.6% card service fee)`
+          : ""}
+      </p>
+      <p><strong>Future installments:</strong></p>
+      {installments.length > 1 ? (
+        <ul>
+          {installments.slice(1).map((installment) => (
+            <li key={`${installment.label}-${installment.dueAt.toISOString()}`}>
+              {installment.label}: {formatReviewCurrency(installment.amountCents)} due {installment.dueAt.toLocaleDateString("en-US")}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No future installment remains after the Full Year payment.</p>
+      )}
+    </div>
+  );
+}
+
+function AdvancedSubjectExplanation() {
+  return (
+    <div className="public-ay-help">
+      <p>The following advanced subjects will be charged at the rates below.</p>
+      <ul>
+        <li>All AP/IB subjects</li>
+        <li>Multivariable Calculus</li>
+        <li>Linear Algebra</li>
+        <li>Any community college or university class</li>
+      </ul>
+    </div>
   );
 }
 
@@ -739,9 +770,10 @@ export function PublicAyTutoringRegistrationForm({
             : "Choose a Standard Hours / Rates option.";
         }
       }
+      if (!draft.policyAck) return "Please confirm that you read and understood the tutoring policy information.";
     }
     if (activeStepKey === "agreement" || (!formContent && step === 6)) {
-      if (!draft.policyAck || !draft.agreementAck) return "Please acknowledge the policy and agreement.";
+      if (!draft.agreementAck) return "Please agree to the terms outlined in this Agreement.";
       if (!draft.parentSignature.trim() || !draft.studentSignature.trim()) {
         return "Parent and student signatures are required.";
       }
@@ -872,8 +904,6 @@ export function PublicAyTutoringRegistrationForm({
           paymentPlanId: draft.paymentPlanId,
           hoursRatePackage: draft.hoursRatePackage,
           advancedHoursRatePackage: draft.advancedHoursRatePackage,
-          autoCharge: draft.autoCharge,
-          altPaymentMethod: draft.altPaymentMethod,
           policyAck: draft.policyAck,
           agreementAck: draft.agreementAck,
           parentSignature: draft.parentSignature,
@@ -1457,7 +1487,7 @@ export function PublicAyTutoringRegistrationForm({
           ) : null}
           {subjectRateProfile === "advanced" ? (
             <>
-              <p className="public-ay-help">Advanced rate applies to all AP/IB subjects, Multivariable Calculus, Linear Algebra, and community college/university subjects.</p>
+              <AdvancedSubjectExplanation />
               <RateSection
                 title="Advanced Subjects Hours / Rates"
                 options={ACADEMIC_ADVANCED_RATE_PACKAGES.options}
@@ -1470,7 +1500,7 @@ export function PublicAyTutoringRegistrationForm({
           ) : null}
           {subjectRateProfile === "mixed" ? (
             <>
-              <p className="public-ay-help">Advanced rate applies to all AP/IB subjects, Multivariable Calculus, Linear Algebra, and community college/university subjects.</p>
+              <AdvancedSubjectExplanation />
               <RateSection title="Standard Hours / Rates" options={ACADEMIC_RATE_PACKAGES.options} />
               <RateSection title="Advanced Subjects Hours / Rates" options={ACADEMIC_ADVANCED_RATE_PACKAGES.options} />
               <p className="public-ay-help">Your requested subjects include both Standard and Advanced course levels. Professional Tutoring will review the request and confirm pricing before payment.</p>
@@ -1480,14 +1510,7 @@ export function PublicAyTutoringRegistrationForm({
             <p className="public-ay-help">Professional Tutoring will review the requested subject details and confirm the tutor match and pricing before payment.</p>
           ) : null}
           <p className="public-ay-help">Tutoring sessions are two hours each. The hourly rate is only available when there is no full-time tutoring spot open or on a short-term one- to two-week trial basis. Once a full-time spot becomes available or the trial period ends, students who continue with tutoring will be considered full-time and will be accorded the lower full-time rates listed above.</p>
-          <p className="public-ay-help">** To be confirmed by PT staff.</p>
-          <p className="public-ay-help">A card is collected securely after review and kept on file for scheduled Academic Year payments. A 3.6% credit/debit card service fee applies.</p>
-          <PaymentTerms />
-        </div>
-      ) : null}
-
-      {(activeStepKey === "agreement" || (!formContent && step === 6)) ? (
-        <div className="public-ay-stack">
+          <p className="public-ay-help">To be confirmed by PT staff.</p>
           <AcademicYearPolicy />
           <label className="public-ay-check">
             <input
@@ -1500,6 +1523,19 @@ export function PublicAyTutoringRegistrationForm({
               <RequiredMark />
             </span>
           </label>
+          <p className="public-ay-help">A card is collected securely after review and kept on file for scheduled Academic Year payments. A 3.6% credit/debit card service fee applies.</p>
+          <PaymentTerms />
+        </div>
+      ) : null}
+
+      {(activeStepKey === "agreement" || (!formContent && step === 6)) ? (
+        <div className="public-ay-stack">
+          <details className="public-ay-details" open>
+            <summary>Acknowledgements and Release</summary>
+            <div className="public-ay-details-copy">
+              <p className="public-ay-source-text">{ACADEMIC_YEAR_ACKNOWLEDGEMENTS_RELEASE}</p>
+            </div>
+          </details>
           <label className="public-ay-check">
             <input
               type="checkbox"
@@ -1573,6 +1609,13 @@ export function PublicAyTutoringRegistrationForm({
             <p>
               Requested: {draft.subjectCodes.map((code) => (code === "other" && draft.otherSubject ? `Other: ${draft.otherSubject}` : academicSubjectLabel(code))).join(", ")}
             </p>
+            {draft.testPrepInterests.length ? (
+              <p>
+                Test Prep: {draft.testPrepInterests
+                  .map((id) => TEST_PREP_INTERESTS.options.find((option) => option.id === id)?.label ?? id)
+                  .join(", ")}
+              </p>
+            ) : null}
             {matchingRequiresStaff ? <p>Professional Tutoring will review the tutor match.</p> : null}
           </section>
           <section>
@@ -1607,14 +1650,22 @@ export function PublicAyTutoringRegistrationForm({
                 }
               </p>
             ) : null}
+            {subjectRateProfile === "standard" ? <p>Applicable rate section: Standard Hours/Rates</p> : null}
+            {subjectRateProfile === "advanced" ? <p>Applicable rate section: Advanced Subjects Hours/Rates</p> : null}
+            {subjectRateProfile === "mixed" ? <p>Applicable rate sections: Standard and Advanced Hours/Rates</p> : null}
             {subjectRateProfile === "mixed" || subjectRateProfile === "staff_review" ? (
               <p>Pricing will be confirmed by Professional Tutoring before payment.</p>
             ) : (
-              <p>Complete the secure card step below before your registration is confirmed. The due amount includes the 3.6% card service fee.</p>
+              <ReviewInstallmentSummary
+                paymentPlanId={draft.paymentPlanId}
+                packageCode={draft.hoursRatePackage || draft.advancedHoursRatePackage}
+              />
             )}
           </section>
           <section>
             <h2>Agreement</h2>
+            <p>Policy acknowledgement: Yes, I read &amp; understood the tutoring policy information.</p>
+            <p>Consent: I agree to the terms outlined in this Agreement.</p>
             <p>Signature Parent: {draft.parentSignature}</p>
             <p>Signature Student: {draft.studentSignature}</p>
             <p>Date: recorded when you submit this Agreement.</p>

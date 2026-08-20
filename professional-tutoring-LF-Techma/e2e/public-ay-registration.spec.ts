@@ -42,7 +42,7 @@ test.describe("public academic year registration", () => {
     return academicYearPublicFormTokenForTest();
   }
 
-  test("Path B API creates request without booking", async ({ request }) => {
+  test("Path B API creates a card-backed request without booking", async ({ request }) => {
     const formVersionToken = await currentVersionToken();
     const payload = {
       formVersionToken,
@@ -91,13 +91,18 @@ test.describe("public academic year registration", () => {
       preferredWindowIds: ["tue_1715_1915"],
       paymentPlanId: "monthly",
       hoursRatePackage: "std_2h",
-      autoCharge: "no",
-      altPaymentMethod: "Check",
+      autoCharge: "yes",
       policyAck: true,
       agreementAck: true,
       parentSignature: "Pat Martin",
       studentSignature: "Alex Martin",
     };
+
+    const legacyManualResponse = await request.post("/api/public/ay-tutoring-registration", {
+      data: { ...payload, autoCharge: "no", altPaymentMethod: "Check" },
+    });
+    expect(legacyManualResponse.status()).toBe(400);
+    expect((await legacyManualResponse.json()).error).toMatch(/secure card collection/i);
 
     const response = await request.post("/api/public/ay-tutoring-registration", { data: payload });
     const body = await response.json();
@@ -110,21 +115,36 @@ test.describe("public academic year registration", () => {
     expect(body.preferredSlotId).toBeNull();
     expect(body.invitePaths?.length).toBeGreaterThan(0);
     expect(body.payment?.token).toBeTruthy();
+    expect(body.payment?.requiresCard).toBe(true);
 
-    const prepared = await request.post("/api/public/ay-tutoring-payment/prepare", {
-      data: { token: body.payment.token },
+    const hourlyUnique = unique + 50;
+    const hourlyPhoneSuffix = String(hourlyUnique).slice(-4);
+    const hourlyResponse = await request.post("/api/public/ay-tutoring-registration", {
+      data: {
+        ...payload,
+        student: {
+          ...payload.student,
+          lastName: `Hourly${hourlyUnique}`,
+          email: `ay-hourly-student-${hourlyUnique}@example.com`,
+          cellPhone: `703555${hourlyPhoneSuffix}`,
+        },
+        parent1: {
+          ...payload.parent1,
+          email: `ay-hourly-parent-${hourlyUnique}@example.com`,
+          phone: `571555${hourlyPhoneSuffix}`,
+        },
+        billing: {
+          ...payload.billing,
+          email: `ay-hourly-bill-${hourlyUnique}@example.com`,
+          phone: `540555${hourlyPhoneSuffix}`,
+        },
+        hoursRatePackage: "std_hourly",
+      },
     });
-    expect(prepared.ok(), await prepared.text()).toBeTruthy();
-    expect((await prepared.json()).kind).toBe("manual");
-
-    const finalized = await request.post("/api/public/ay-tutoring-payment/finalize", {
-      data: { token: body.payment.token },
-    });
-    const finalizedBody = await finalized.json();
-    expect(finalized.ok(), JSON.stringify(finalizedBody)).toBeTruthy();
-    expect(finalizedBody.schedulingPath).toBe("pt_chooses");
-    expect(finalizedBody.bookingId).toBeNull();
-    expect(finalizedBody.paymentStatus).toBe("unpaid");
+    const hourlyBody = await hourlyResponse.json();
+    expect(hourlyResponse.ok(), JSON.stringify(hourlyBody)).toBeTruthy();
+    expect(hourlyBody.paymentDeferred).toBe(true);
+    expect(hourlyBody.payment).toBeNull();
   });
 
   test("Path A confirms the selected open slot on the same request", async ({ request }) => {
@@ -196,8 +216,7 @@ test.describe("public academic year registration", () => {
         slotId: slot.id,
         paymentPlanId: "monthly",
         hoursRatePackage: "std_2h",
-        autoCharge: "no",
-        altPaymentMethod: "Check",
+        autoCharge: "yes",
         policyAck: true,
         agreementAck: true,
         parentSignature: "Riley Lee",
@@ -209,29 +228,7 @@ test.describe("public academic year registration", () => {
     expect(registrationBody.tutoringRequestId).toBeTruthy();
     expect(registrationBody.preferredSlotId).toBe(slot.id);
 
-    const prepared = await request.post("/api/public/ay-tutoring-payment/prepare", {
-      data: { token: registrationBody.payment.token },
-    });
-    expect(prepared.ok(), await prepared.text()).toBeTruthy();
-    expect((await prepared.json()).kind).toBe("manual");
-
-    const finalized = await request.post("/api/public/ay-tutoring-payment/finalize", {
-      data: { token: registrationBody.payment.token },
-    });
-    const finalizedBody = await finalized.json();
-    expect(finalized.ok(), JSON.stringify(finalizedBody)).toBeTruthy();
-    expect(finalizedBody.schedulingPath).toBe("family_selected");
-    expect(finalizedBody.bookingId).toBeTruthy();
-    expect(finalizedBody.paymentStatus).toBe("unpaid");
-    expect(finalizedBody.pendingManualPayment).toBe(true);
-
-    const replay = await request.post("/api/public/ay-tutoring-payment/finalize", {
-      data: { token: registrationBody.payment.token },
-    });
-    const replayBody = await replay.json();
-    expect(replay.ok(), JSON.stringify(replayBody)).toBeTruthy();
-    expect(replayBody.bookingId).toBe(finalizedBody.bookingId);
-    expect(replayBody.alreadyCompleted).toBe(true);
+    expect(registrationBody.payment?.requiresCard).toBe(true);
   });
 
   test("mixed Standard and Advanced subjects defer pricing to Staff", async ({ request }) => {

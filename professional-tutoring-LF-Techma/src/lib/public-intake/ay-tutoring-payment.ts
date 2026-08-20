@@ -36,8 +36,7 @@ export async function createAyPublicPaymentContinuation(input: {
   paymentPlanId: string;
   hoursRatePackage?: string | null;
   advancedHoursRatePackage?: string | null;
-  autoCharge: "yes" | "no";
-  altPaymentMethod?: string | null;
+  autoCharge: "yes";
 }) {
   const paymentPlanId = asPaymentPlan(input.paymentPlanId);
   const now = new Date();
@@ -47,8 +46,8 @@ export async function createAyPublicPaymentContinuation(input: {
     advancedHoursRatePackage: input.advancedHoursRatePackage,
     now,
   });
-  const requiresCard = input.autoCharge === "yes";
-  const surchargeBps = requiresCard ? 360 : 0;
+  const requiresCard = true;
+  const surchargeBps = 360;
   const chargedInstallments = schedule.installments.map((installment) => {
     const serviceFeeCents = surchargeBps ? Math.round((installment.amountCents * surchargeBps) / 10_000) : 0;
     return {
@@ -104,7 +103,7 @@ export async function createAyPublicPaymentContinuation(input: {
     priceSnapshotId: snapshot.id,
     status: requiresCard ? ("pending" as const) : ("unpaid" as const),
     amountCents: installment.amountCents,
-    methodLabel: requiresCard ? "Card scheduled collection" : input.altPaymentMethod ?? "Manual payment",
+    methodLabel: "Card scheduled collection",
     dueAt: installment.dueAt,
     continuationTokenHash: installment.sequence === 1 ? tokenHash(token) : null,
     continuationExpiresAt: installment.sequence === 1 ? expiresAt : null,
@@ -126,8 +125,8 @@ export async function createAyPublicPaymentContinuation(input: {
       })),
       installmentLabel: installment.label,
       priceSnapshotId: snapshot.id,
-      autoCharge: input.autoCharge,
-      altPaymentMethod: input.altPaymentMethod ?? null,
+       autoCharge: input.autoCharge,
+       altPaymentMethod: null,
     }),
     updatedAt: now,
   }));
