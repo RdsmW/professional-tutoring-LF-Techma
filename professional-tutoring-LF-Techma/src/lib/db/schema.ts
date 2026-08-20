@@ -644,6 +644,8 @@ export const publicFormAuditEvents = pgTable("public_form_audit_events", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const publicFormVersionStatusEnum = pgEnum("public_form_version_status", ["draft", "published", "retired"]);
+
 export const publicFormVersions = pgTable("public_form_versions", {
   id: uuid("id").defaultRandom().primaryKey(),
   definitionId: uuid("definition_id")
@@ -658,5 +660,3 @@ export const publicFormVersions = pgTable("public_form_versions", {
   retiredAt: timestamp("retired_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
-
-export const publicFormVersionStatusEnum = pgEnum("public_form_version_status", ["draft", "published", "retired"]);
