@@ -39,3 +39,7 @@ externalPort = 80
 [[ports]]
 localPort = 22979
 externalPort = 3002
+
+[postMerge]
+path = "professional-tutoring-LF-Techma/scripts/post-merge.sh"
+timeoutMs = 300000
