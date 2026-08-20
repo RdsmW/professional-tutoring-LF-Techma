@@ -14,3 +14,17 @@ mtime_ms = 1787230577688
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/1471b3ad-fa5e-42a9-b047-96669c5e0286/51308d09-df58-4912-b832-13d8e4e45fc7"
 storage_version_token = "1787236351465192"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "_-9HAWpZ2RoCEoaCsD5A2"
+uri = "file://professional-tutoring-LF-Techma/docs/REPORT-SAME-APP-BILLING-SCHEDULER.md"
+type = "text"
+title = "Report — Same-App Billing Scheduler"
+description = "Smallest safe Reserved VM scheduling approach for the existing Professional Tutoring app."
+logical_id = "7af93fee-e69e-4da9-9956-a69949fc4a29"
+content_hash = "sha256:21bb396535f014e64dba6483234db89a3d20f14a9cfd3c48a9990e805a40324b"
+size = 5837
+mtime_ms = 1787236515739
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/7af93fee-e69e-4da9-9956-a69949fc4a29/2bfd0edb-ebba-4c71-8f00-8b6d84b7d493"
+storage_version_token = "1787236521981098"
+content_type = "text/markdown"
