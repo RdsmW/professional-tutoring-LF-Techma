@@ -53,12 +53,12 @@ type PriceBook = {
 };
 
 const TABS = [
-  { id: "policy", label: "Policy" },
-  { id: "prices", label: "Prices" },
-  { id: "courses", label: "Courses / Subjects" },
   { id: "public-forms", label: "Public Forms" },
-  { id: "history", label: "History" },
+  { id: "courses", label: "Courses / Subjects" },
+  { id: "prices", label: "Prices" },
+  { id: "policy", label: "Policy" },
   { id: "integrations", label: "Integrations" },
+  { id: "history", label: "History" },
   { id: "recycle", label: "Recycle bin" },
 ] as const;
 
