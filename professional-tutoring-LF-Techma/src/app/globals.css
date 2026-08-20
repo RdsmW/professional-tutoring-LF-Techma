@@ -4894,7 +4894,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
-.public-ay-three-grid {
+.public-ay-student-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
@@ -5021,7 +5021,7 @@ textarea.is-invalid {
 .public-ay-invites a { color: var(--navy); }
 @media (max-width: 720px) {
   .public-ay-grid,
-  .public-ay-three-grid,
+  .public-ay-student-grid,
   .public-ay-checks,
   .public-ay-choices { grid-template-columns: 1fr; }
 }

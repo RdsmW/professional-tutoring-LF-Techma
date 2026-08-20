@@ -9,7 +9,11 @@
   - concise First name and Last name labels;
   - required Phone and Email fields;
   - no Student-prefixed labels for those four fields;
-  - a three-field contact row containing Birthdate, Phone, and Email.
+  - a consistent three-column layout:
+    - First name, Last name, Gender;
+    - School, Grade, Graduation year;
+    - Birthdate, Phone, Email;
+  - an Address section heading without the redundant Student prefix.
 - Public Academic Year registration payloads now include a student email in regression coverage.
 - Server-side validation rejects a missing student email.
 

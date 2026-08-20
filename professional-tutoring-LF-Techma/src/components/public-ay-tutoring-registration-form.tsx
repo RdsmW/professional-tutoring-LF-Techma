@@ -226,12 +226,14 @@ function Field({
   required,
   invalid,
   fixedLabel = false,
+  fixedOrder = false,
   children,
 }: {
   label: string;
   required?: boolean;
   invalid?: boolean;
   fixedLabel?: boolean;
+  fixedOrder?: boolean;
   children: React.ReactNode;
 }) {
   const settings = useContext(PublicFieldSettingsContext);
@@ -244,7 +246,7 @@ function Field({
   return (
     <label
       className={invalid ? "public-ay-field is-invalid" : "public-ay-field"}
-      style={setting ? { order: setting.order } : undefined}
+      style={setting && !fixedOrder ? { order: setting.order } : undefined}
     >
       <span>
           {fixedLabel ? label : setting?.label || label}
@@ -771,37 +773,14 @@ export function PublicAyTutoringRegistrationForm({
 
       {(activeStepKey === "student" || (!formContent && step === 1)) ? (
         <div className="public-ay-stack">
-          <div className="public-ay-grid">
-            <Field label="First name" required invalid={showErrors && !draft.studentFirstName.trim()}>
+          <div className="public-ay-student-grid">
+            <Field label="First name" required fixedOrder invalid={showErrors && !draft.studentFirstName.trim()}>
               <input value={draft.studentFirstName} onChange={(event) => patch({ studentFirstName: event.target.value })} />
             </Field>
-            <Field label="Last name" required invalid={showErrors && !draft.studentLastName.trim()}>
+            <Field label="Last name" required fixedOrder invalid={showErrors && !draft.studentLastName.trim()}>
               <input value={draft.studentLastName} onChange={(event) => patch({ studentLastName: event.target.value })} />
             </Field>
-            <Field label="School" required invalid={showErrors && !draft.schoolName.trim()}>
-              <input value={draft.schoolName} onChange={(event) => patch({ schoolName: event.target.value })} />
-            </Field>
-            <Field label="Grade" required invalid={showErrors && !draft.gradeLabel}>
-              <select value={draft.gradeLabel} onChange={(event) => patch({ gradeLabel: event.target.value })}>
-                <option value="">Select</option>
-                {GRADE_LABELS.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Graduation year" required invalid={showErrors && !draft.graduationYear}>
-              <select value={draft.graduationYear} onChange={(event) => patch({ graduationYear: event.target.value })}>
-                <option value="">Select</option>
-                {GRADUATION_YEARS.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Gender" required invalid={showErrors && !draft.gender}>
+            <Field label="Gender" required fixedOrder invalid={showErrors && !draft.gender}>
               <select value={draft.gender} onChange={(event) => patch({ gender: event.target.value })}>
                 <option value="">Select</option>
                 {GENDER.options.map((option) => (
@@ -811,15 +790,37 @@ export function PublicAyTutoringRegistrationForm({
                 ))}
               </select>
             </Field>
-          </div>
-          <div className="public-ay-three-grid">
-            <Field label="Birthdate" required invalid={showErrors && !draft.birthdate}>
+            <Field label="School" required fixedOrder invalid={showErrors && !draft.schoolName.trim()}>
+              <input value={draft.schoolName} onChange={(event) => patch({ schoolName: event.target.value })} />
+            </Field>
+            <Field label="Grade" required fixedOrder invalid={showErrors && !draft.gradeLabel}>
+              <select value={draft.gradeLabel} onChange={(event) => patch({ gradeLabel: event.target.value })}>
+                <option value="">Select</option>
+                {GRADE_LABELS.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Graduation year" required fixedOrder invalid={showErrors && !draft.graduationYear}>
+              <select value={draft.graduationYear} onChange={(event) => patch({ graduationYear: event.target.value })}>
+                <option value="">Select</option>
+                {GRADUATION_YEARS.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Birthdate" required fixedOrder invalid={showErrors && !draft.birthdate}>
               <input type="date" value={draft.birthdate} onChange={(event) => patch({ birthdate: event.target.value })} />
             </Field>
             <Field
               label="Phone"
               required
               fixedLabel
+              fixedOrder
               invalid={showErrors && (!draft.studentCell.trim() || filledPhoneInvalid(draft.studentCell))}
             >
               <PhoneInput
@@ -834,6 +835,7 @@ export function PublicAyTutoringRegistrationForm({
               label="Email"
               required
               fixedLabel
+              fixedOrder
               invalid={showErrors && (!draft.studentEmail.trim() || filledEmailInvalid(draft.studentEmail))}
             >
               <input
@@ -845,7 +847,7 @@ export function PublicAyTutoringRegistrationForm({
               />
             </Field>
           </div>
-          <h2>Student address</h2>
+          <h2>Address</h2>
           <AddressFields
             street={draft.studentAddressLine1}
             city={draft.studentCity}

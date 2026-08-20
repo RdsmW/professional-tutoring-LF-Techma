@@ -15,7 +15,7 @@ test.describe("public academic year registration", () => {
   test("student step uses concise required labels and keeps contact fields together", async ({ page }) => {
     await page.goto("/register/academic-year-tutoring");
     await page.getByRole("button", { name: /Start registration/i }).click();
-    await expect(page.getByRole("heading", { name: /^Student address$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Address$/ })).toBeVisible();
     await expect(page.getByText("Other information")).toBeVisible();
     await expect(page.getByLabel(/^First name/)).toBeVisible();
     await expect(page.getByLabel(/^Last name/)).toBeVisible();
@@ -25,7 +25,7 @@ test.describe("public academic year registration", () => {
     await expect(page.getByText("Student last name")).toHaveCount(0);
     await expect(page.getByText("Student cell")).toHaveCount(0);
     await expect(page.getByText("Student email")).toHaveCount(0);
-    await expect(page.locator(".public-ay-three-grid .public-ay-field")).toHaveCount(3);
+    await expect(page.locator(".public-ay-student-grid .public-ay-field")).toHaveCount(9);
     await page.getByRole("button", { name: /Continue/i }).click();
     await expect(page.locator(".public-ay-field.is-invalid").first()).toBeVisible();
   });
