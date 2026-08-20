@@ -39,6 +39,7 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
   const menuRef = useRef<HTMLDivElement>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [embedFormId, setEmbedFormId] = useState<string | null>(null);
+  const [embedCopied, setEmbedCopied] = useState(false);
 
   const embedForm = PUBLIC_FORM_CATALOG.find((form) => form.id === embedFormId) ?? null;
 
@@ -50,6 +51,7 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
       if (event.key === "Escape") {
         setOpenMenuId(null);
         setEmbedFormId(null);
+        setEmbedCopied(false);
       }
     };
     document.addEventListener("mousedown", onPointerDown);
@@ -97,6 +99,7 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
     if (!embedForm?.publicPath) return;
     try {
       await copyText(embedCode(embedForm));
+      setEmbedCopied(true);
       toast.success("Embed code copied.");
     } catch {
       toast.error("Could not copy the embed code. Please try again.");
@@ -105,6 +108,7 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
 
   const renderActionMenu = (form: PublicFormCatalogItem) => {
     const isOpen = openMenuId === form.id;
+    const menuId = `public-form-actions-${form.id}`;
     return (
       <div className="public-form-menu" ref={isOpen ? menuRef : null}>
         <button
@@ -113,12 +117,13 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
           aria-label={`Actions for ${form.title}`}
           aria-haspopup="menu"
           aria-expanded={isOpen}
+          aria-controls={isOpen ? menuId : undefined}
           onClick={() => setOpenMenuId((current) => (current === form.id ? null : form.id))}
         >
           <span aria-hidden="true">⋮</span>
         </button>
         {isOpen ? (
-          <div className="public-form-menu-popover" role="menu" aria-label={`Actions for ${form.title}`}>
+          <div id={menuId} className="public-form-menu-popover" role="menu" aria-label={`Actions for ${form.title}`}>
             {form.publicPath ? (
               <Link
                 href={form.publicPath}
@@ -162,6 +167,7 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
               disabled={!form.publicPath}
               onClick={() => {
                 setOpenMenuId(null);
+                setEmbedCopied(false);
                 setEmbedFormId(form.id);
               }}
             >
@@ -172,7 +178,7 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
               role="menuitem"
               onClick={() => {
                 setOpenMenuId(null);
-                toast.info("The form editor is being prepared.");
+                toast.info("Form editing is not available yet.");
               }}
             >
               Edit
@@ -286,25 +292,57 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setEmbedFormId(null);
+            if (event.target === event.currentTarget) setEmbedCopied(false);
           }}
         >
-          <div className="staff-modal public-form-embed-modal" role="dialog" aria-modal="true" aria-labelledby="embed-form-title">
+          <div
+            className="staff-modal public-form-embed-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="embed-form-title"
+            aria-describedby="embed-form-description"
+          >
             <div className="family-list-modal-header">
               <div>
                 <h3 id="embed-form-title">Embed {embedForm.title}</h3>
-                <p>Paste this code into your website.</p>
+                <p id="embed-form-description">Paste this code into your website.</p>
               </div>
-              <StaffIconButton label="Close" tone="muted" onClick={() => setEmbedFormId(null)}>
+              <StaffIconButton
+                label="Close"
+                tone="muted"
+                onClick={() => {
+                  setEmbedFormId(null);
+                  setEmbedCopied(false);
+                }}
+              >
                 <IconClose size={18} />
               </StaffIconButton>
             </div>
-            <textarea aria-label={`Embed code for ${embedForm.title}`} readOnly value={embedCode(embedForm)} rows={6} />
+            <textarea
+              aria-label={`Embed code for ${embedForm.title}`}
+              readOnly
+              value={embedCode(embedForm)}
+              rows={6}
+              onFocus={(event) => event.currentTarget.select()}
+            />
+            {embedCopied ? (
+              <p className="public-form-copy-confirmation" role="status">
+                Embed code copied to your clipboard.
+              </p>
+            ) : null}
             <div className="staff-modal-actions">
-              <button type="button" className="secondary-button" onClick={() => setEmbedFormId(null)}>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  setEmbedFormId(null);
+                  setEmbedCopied(false);
+                }}
+              >
                 Close
               </button>
               <button type="button" className="primary-button" onClick={() => void copyEmbedCode()}>
-                Copy
+                {embedCopied ? "Copied" : "Copy"}
               </button>
             </div>
           </div>

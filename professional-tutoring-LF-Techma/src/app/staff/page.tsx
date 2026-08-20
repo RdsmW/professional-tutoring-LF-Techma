@@ -26,8 +26,6 @@ import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
 import {
   formatQueueDate,
-  PRIORITY_QUEUE_RECENT_LIMIT,
-  type PreviewQueueRow,
 } from "@/lib/staff/preview-requests";
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
@@ -35,11 +33,15 @@ const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Fri
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
 const OPEN_BOOKING_STATUSES = ["confirmed", "held", "pending_payment", "pending_staff_review"] as const;
 
-function greetingForHour(hour: number) {
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+type DashboardPriorityItem = {
+  id: string;
+  kind: "assignment" | "payment";
+  title: string;
+  detail: string;
+  action: string;
+  href: string;
+  createdAt: string;
+};
 
 function queuePersonName(firstName?: string | null, lastName?: string | null, displayName?: string | null) {
   return `${firstName ?? ""} ${lastName ?? ""}`.trim() || (displayName ?? "").trim();
@@ -84,9 +86,9 @@ async function loadDashboardData() {
     tutorOpeningsLive: false,
     billingExceptions: 0,
     billingExceptionsLive: false,
-    familyRequests: [] as PreviewQueueRow[],
     familyRequestsTotal: 0,
     assignmentQueue: [] as Awaited<ReturnType<typeof listTutoringAssignmentQueue>>,
+    priorityItems: [] as DashboardPriorityItem[],
     recentStudents: [] as StaffStudentDirectoryTableRow[],
     weekBars: WEEK_DAYS.map((day) => ({
       day: formatCapacityDay(weekStart, day),
@@ -166,8 +168,7 @@ async function loadDashboardData() {
         .leftJoin(guardians, eq(households.billingOwnerGuardianId, guardians.id))
         .leftJoin(students, eq(students.id, paymentRecords.relatedEntityId))
         .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"]))
-        .orderBy(desc(paymentRecords.createdAt))
-        .limit(PRIORITY_QUEUE_RECENT_LIMIT),
+        .orderBy(desc(paymentRecords.createdAt)),
       db
         .select({
           id: students.id,
@@ -184,7 +185,7 @@ async function loadDashboardData() {
         .innerJoin(households, eq(students.householdId, households.id))
         .where(ne(students.lifecycle, "archived"))
         .orderBy(desc(students.createdAt))
-        .limit(10),
+        .limit(3),
       listTutoringAssignmentQueue(),
     ]);
 
@@ -249,7 +250,7 @@ async function loadDashboardData() {
       }
     }
 
-    const familyRequests = paymentAttentionRows.map((row) => {
+    const paymentPriorityItems: DashboardPriorityItem[] = paymentAttentionRows.map((row) => {
       const payerName = queuePersonName(row.payerFirstName, row.payerLastName);
       const name = (row.householdName || "").trim() || payerName || "Family";
       const studentName =
@@ -258,13 +259,28 @@ async function loadDashboardData() {
         "";
       return {
         id: row.id,
-        name,
-        studentName,
-        amountLabel: amountLabel(row.amountCents, row.currency),
-        dateLabel: formatQueueDate(row.createdAt),
+        kind: "payment",
+        title: name,
+        detail: studentName || formatQueueDate(row.createdAt),
+        action: amountLabel(row.amountCents, row.currency),
         href: "/staff/billing",
+        createdAt: row.createdAt.toISOString(),
       };
     });
+    const priorityItems = [
+      ...assignmentQueue.map<DashboardPriorityItem>((item) => ({
+        id: item.id,
+        kind: "assignment",
+        title: item.studentName,
+        detail: item.subjectName,
+        action: item.schedulingPath === "family_selected" ? "Preferred time" : "Choose tutor",
+        href: `/staff/tutoring-requests/${item.id}`,
+        createdAt: item.createdAt,
+      })),
+      ...paymentPriorityItems,
+    ]
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, 3);
 
     const studentIds = recentStudentRows.map((row) => row.id);
     const subjectsByStudent = new Map<string, Array<{ id: string; name: string }>>();
@@ -312,9 +328,9 @@ async function loadDashboardData() {
       tutorOpeningsLive: slotRows.length > 0,
       billingExceptions: exceptionRows.length,
       billingExceptionsLive: true,
-      familyRequests,
       familyRequestsTotal: exceptionRows.length,
       assignmentQueue,
+      priorityItems,
       recentStudents,
       weekBars,
       weekBarsLive: slotRows.length > 0,
@@ -333,17 +349,12 @@ export default async function StaffDashboardPage() {
   const firstName = user?.firstName || "there";
   const data = await loadDashboardData();
 
-  const nowNy = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
-  );
   const dateLabel = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     weekday: "long",
     month: "long",
     day: "numeric",
   }).format(new Date());
-  const greeting = greetingForHour(nowNy.getHours());
-  const priorityRequests = data.familyRequests;
   const priorityRequestTotal = data.familyRequestsTotal;
 
   return (
@@ -352,7 +363,7 @@ export default async function StaffDashboardPage() {
         <div>
           <span className="eyebrow">{dateLabel}</span>
           <h2>
-            {greeting}, {firstName}.
+            Welcome, {firstName}.
           </h2>
         </div>
         <StaffHomeHeroActions />
@@ -387,8 +398,7 @@ export default async function StaffDashboardPage() {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">Capacity</span>
-              <h3 className="staff-section-title">This week</h3>
+              <h3 className="staff-section-title">This Week Capacity</h3>
             </div>
             <Link href="/staff/sessions" className="text-button">
               Open schedule
@@ -420,82 +430,30 @@ export default async function StaffDashboardPage() {
         <section className="panel dashboard-priority-panel">
           <div className="panel-heading">
             <h3 className="staff-section-title dashboard-queue-title">
-              <span>Priority Queue</span>
-              <span className="dashboard-count-badge dashboard-count-badge--total">
-                {data.assignmentQueue.length + priorityRequestTotal}
-              </span>
+              Priority Queue {data.assignmentQueue.length + priorityRequestTotal}
             </h3>
-            <Link href="/staff/tutoring-requests" className="text-button">
+            <Link href="/staff/priority-queue" className="text-button">
               Open queue
             </Link>
           </div>
-          {data.assignmentQueue.length === 0 && priorityRequests.length === 0 ? (
+          {data.priorityItems.length === 0 ? (
             <p className="dashboard-empty">No items in the priority queue.</p>
           ) : (
-            <div className="dashboard-priority-scroll">
-              {data.assignmentQueue.length > 0 ? (
-                <section className="dashboard-priority-group dashboard-priority-group--assignment">
-                  <div className="dashboard-priority-group-heading">
-                    <h4 className="dashboard-queue-title">
-                      <span className="dashboard-priority-marker dashboard-priority-marker--assignment" aria-hidden="true" />
-                      <span>New assignments</span>
-                      <span className="dashboard-count-badge dashboard-count-badge--assignment">
-                        {data.assignmentQueue.length}
-                      </span>
-                    </h4>
-                    <Link href="/staff/tutoring-requests" className="text-button">
-                      View all
-                    </Link>
-                  </div>
-                  <div className="attention-list">
-                    {data.assignmentQueue.map((item) => (
-                      <Link key={item.id} href={`/staff/tutoring-requests/${item.id}`} className="attention-row">
-                        <span
-                          className="dashboard-priority-marker dashboard-priority-marker--assignment"
-                          aria-label="New assignment"
-                        />
-                        <span className="attention-row-name">
-                          <strong>{item.studentName}</strong>
-                          <small>{item.subjectName}</small>
-                        </span>
-                        <span className="attention-row-amount">
-                          {item.schedulingPath === "family_selected" ? "Preferred time" : "Choose tutor"}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              {priorityRequests.length > 0 ? (
-                <section className="dashboard-priority-group dashboard-priority-group--payment">
-                  <div className="dashboard-priority-group-heading">
-                    <h4 className="dashboard-queue-title">
-                      <span className="dashboard-priority-marker dashboard-priority-marker--payment" aria-hidden="true" />
-                      <span>Payment issues</span>
-                      <span className="dashboard-count-badge dashboard-count-badge--payment">{priorityRequestTotal}</span>
-                    </h4>
-                    <Link href="/staff/billing" className="text-button">
-                      View all
-                    </Link>
-                  </div>
-                  <div className="attention-list">
-                    {priorityRequests.map((item) => (
-                      <Link key={item.id} href={item.href} className="attention-row">
-                        <span
-                          className="dashboard-priority-marker dashboard-priority-marker--payment"
-                          aria-label="Payment issue"
-                        />
-                        <span className="attention-row-name">
-                          <strong>{item.name}</strong>
-                          <small>{item.studentName || item.dateLabel}</small>
-                        </span>
-                        <span className="attention-row-amount">{item.amountLabel}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
+            <div className="attention-list dashboard-priority-list">
+              {data.priorityItems.map((item) => (
+                <Link key={`${item.kind}-${item.id}`} href={item.href} className="attention-row">
+                  <span
+                    className={`dashboard-priority-status dashboard-priority-status--${item.kind}`}
+                  >
+                    {item.kind === "assignment" ? "New assignment" : "Payment issue"}
+                  </span>
+                  <span className="attention-row-name">
+                    <strong>{item.title}</strong>
+                    <small>{item.detail}</small>
+                  </span>
+                  <span className="attention-row-amount">{item.action}</span>
+                </Link>
+              ))}
             </div>
           )}
         </section>

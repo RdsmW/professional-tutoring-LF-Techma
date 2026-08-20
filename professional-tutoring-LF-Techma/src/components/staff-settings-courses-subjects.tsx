@@ -58,6 +58,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
   const [courseForm, setCourseForm] = useState(emptyCourseForm);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [editorError, setEditorError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -101,6 +102,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
     setCourseForm(emptyCourseForm);
     setEditingSubjectId(null);
     setEditingCourseId(null);
+    setEditorError(null);
   }, [busyId]);
 
   useEffect(() => {
@@ -113,6 +115,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
   }, [closeEditor, editor]);
 
   function openSubjectEditor(subject?: CatalogSubject) {
+    setEditorError(null);
     setEditingCourseId(null);
     setCourseForm(emptyCourseForm);
     setEditingSubjectId(subject?.id ?? null);
@@ -125,6 +128,7 @@ export function StaffSettingsCoursesSubjectsPanel() {
   }
 
   function openCourseEditor(course?: CatalogCourse) {
+    setEditorError(null);
     setEditingSubjectId(null);
     setSubjectForm(emptySubjectForm);
     setEditingCourseId(course?.id ?? null);
@@ -147,7 +151,9 @@ export function StaffSettingsCoursesSubjectsPanel() {
     const name = subjectForm.name.trim();
     const code = subjectForm.code.trim();
     if (!name || !code) {
-      toast.error("Enter a subject name and code.");
+      const message = "Enter a subject name and code.";
+      setEditorError(message);
+      toast.error(message);
       return;
     }
     const subjectId = editingSubjectId;
@@ -164,16 +170,21 @@ export function StaffSettingsCoursesSubjectsPanel() {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        toast.error(data.error || "Unable to save subject.");
+        const message = data.error || "Unable to save subject.";
+        setEditorError(message);
+        toast.error(message);
         return;
       }
       toast.success(subjectId ? "Subject updated." : "Subject created.");
       setEditor(null);
       setSubjectForm(emptySubjectForm);
       setEditingSubjectId(null);
+      setEditorError(null);
       await reload();
     } catch {
-      toast.error("Unable to save subject.");
+      const message = "Unable to save subject.";
+      setEditorError(message);
+      toast.error(message);
     } finally {
       setBusyId(null);
     }
@@ -225,11 +236,15 @@ export function StaffSettingsCoursesSubjectsPanel() {
     const code = courseForm.code.trim();
     const capacity = Number(courseForm.capacity);
     if (!name || !code) {
-      toast.error("Enter a course name and code.");
+      const message = "Enter a course name and code.";
+      setEditorError(message);
+      toast.error(message);
       return;
     }
     if (!Number.isFinite(capacity) || capacity < 1) {
-      toast.error("Course capacity must be a positive number.");
+      const message = "Course capacity must be a positive number.";
+      setEditorError(message);
+      toast.error(message);
       return;
     }
     const courseId = editingCourseId;
@@ -249,16 +264,21 @@ export function StaffSettingsCoursesSubjectsPanel() {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        toast.error(data.error || "Unable to save course.");
+        const message = data.error || "Unable to save course.";
+        setEditorError(message);
+        toast.error(message);
         return;
       }
       toast.success(courseId ? "Course updated." : "Course created.");
       setEditor(null);
       setCourseForm(emptyCourseForm);
       setEditingCourseId(null);
+      setEditorError(null);
       await reload();
     } catch {
-      toast.error("Unable to save course.");
+      const message = "Unable to save course.";
+      setEditorError(message);
+      toast.error(message);
     } finally {
       setBusyId(null);
     }
@@ -445,18 +465,28 @@ export function StaffSettingsCoursesSubjectsPanel() {
             </div>
             <form
               className="staff-modal-form"
+              noValidate
               onSubmit={(event) => {
                 event.preventDefault();
                 void saveSubject();
               }}
             >
+              {editorError ? (
+                <p className="form-error" role="alert">
+                  {editorError}
+                </p>
+              ) : null}
               <div className="input-grid staff-modal-fields">
                 <label>
                   Name
                   <input
                     autoFocus
                     value={subjectForm.name}
-                    onChange={(event) => setSubjectForm((prev) => ({ ...prev, name: event.target.value }))}
+                    aria-invalid={Boolean(editorError && !subjectForm.name.trim())}
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setSubjectForm((prev) => ({ ...prev, name: event.target.value }));
+                    }}
                     placeholder="Algebra"
                     disabled={!!busyId}
                   />
@@ -465,7 +495,11 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Code
                   <input
                     value={subjectForm.code}
-                    onChange={(event) => setSubjectForm((prev) => ({ ...prev, code: event.target.value }))}
+                    aria-invalid={Boolean(editorError && !subjectForm.code.trim())}
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setSubjectForm((prev) => ({ ...prev, code: event.target.value }));
+                    }}
                     placeholder="ALG"
                     disabled={!!busyId}
                   />
@@ -474,7 +508,10 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Category
                   <input
                     value={subjectForm.category}
-                    onChange={(event) => setSubjectForm((prev) => ({ ...prev, category: event.target.value }))}
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setSubjectForm((prev) => ({ ...prev, category: event.target.value }));
+                    }}
                     placeholder="Math"
                     disabled={!!busyId}
                   />
@@ -510,18 +547,28 @@ export function StaffSettingsCoursesSubjectsPanel() {
             </div>
             <form
               className="staff-modal-form"
+              noValidate
               onSubmit={(event) => {
                 event.preventDefault();
                 void saveCourse();
               }}
             >
+              {editorError ? (
+                <p className="form-error" role="alert">
+                  {editorError}
+                </p>
+              ) : null}
               <div className="input-grid staff-modal-fields">
                 <label>
                   Name
                   <input
                     autoFocus
                     value={courseForm.name}
-                    onChange={(event) => setCourseForm((prev) => ({ ...prev, name: event.target.value }))}
+                    aria-invalid={Boolean(editorError && !courseForm.name.trim())}
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setCourseForm((prev) => ({ ...prev, name: event.target.value }));
+                    }}
                     placeholder="SAT Math Intensive"
                     disabled={!!busyId}
                   />
@@ -530,7 +577,11 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Code
                   <input
                     value={courseForm.code}
-                    onChange={(event) => setCourseForm((prev) => ({ ...prev, code: event.target.value }))}
+                    aria-invalid={Boolean(editorError && !courseForm.code.trim())}
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setCourseForm((prev) => ({ ...prev, code: event.target.value }));
+                    }}
                     placeholder="SAT-MATH"
                     disabled={!!busyId}
                   />
@@ -539,7 +590,10 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Term
                   <input
                     value={courseForm.termLabel}
-                    onChange={(event) => setCourseForm((prev) => ({ ...prev, termLabel: event.target.value }))}
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setCourseForm((prev) => ({ ...prev, termLabel: event.target.value }));
+                    }}
                     placeholder="Fall 2026"
                     disabled={!!busyId}
                   />
@@ -548,9 +602,10 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Schedule summary
                   <input
                     value={courseForm.scheduleSummary}
-                    onChange={(event) =>
-                      setCourseForm((prev) => ({ ...prev, scheduleSummary: event.target.value }))
-                    }
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setCourseForm((prev) => ({ ...prev, scheduleSummary: event.target.value }));
+                    }}
                     placeholder="Tue/Thu 4–5pm"
                     disabled={!!busyId}
                   />
@@ -559,9 +614,10 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Instructor
                   <input
                     value={courseForm.instructorName}
-                    onChange={(event) =>
-                      setCourseForm((prev) => ({ ...prev, instructorName: event.target.value }))
-                    }
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setCourseForm((prev) => ({ ...prev, instructorName: event.target.value }));
+                    }}
                     placeholder="Name or —"
                     disabled={!!busyId}
                   />
@@ -570,7 +626,13 @@ export function StaffSettingsCoursesSubjectsPanel() {
                   Capacity
                   <input
                     value={courseForm.capacity}
-                    onChange={(event) => setCourseForm((prev) => ({ ...prev, capacity: event.target.value }))}
+                    type="number"
+                    min="1"
+                    aria-invalid={Boolean(editorError && (!Number.isFinite(Number(courseForm.capacity)) || Number(courseForm.capacity) < 1))}
+                    onChange={(event) => {
+                      setEditorError(null);
+                      setCourseForm((prev) => ({ ...prev, capacity: event.target.value }));
+                    }}
                     inputMode="numeric"
                     disabled={!!busyId}
                   />
