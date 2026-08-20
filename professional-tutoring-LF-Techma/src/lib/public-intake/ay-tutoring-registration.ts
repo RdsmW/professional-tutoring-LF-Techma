@@ -192,7 +192,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   const supportNotes = optional(raw.student?.supportNotes);
   const otherInformation = optional(raw.student?.otherInformation);
   const studentCell = optional(raw.student?.cellPhone);
-  const studentEmail = optional(raw.student?.email);
+  const studentEmail = trim(raw.student?.email);
 
   if (!studentFirst || !studentLast || !schoolName || !gradeLabel || !graduationYear || !gender || !birthdate) {
     throw new PublicIntakeError("Student name, school, grade, graduation year, gender, and birthdate are required.");
@@ -203,7 +203,8 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthdate)) {
     throw new PublicIntakeError("Birthdate must be YYYY-MM-DD.");
   }
-  if (studentEmail && !isValidEmail(studentEmail)) throw new PublicIntakeError("Student email is not valid.");
+  if (!studentEmail) throw new PublicIntakeError("Student email is required.");
+  if (!isValidEmail(studentEmail)) throw new PublicIntakeError("Student email is not valid.");
   if (!studentCell) throw new PublicIntakeError("Student phone is required.");
   if (!isValidPhone(studentCell)) throw new PublicIntakeError("Student phone is not valid.");
 

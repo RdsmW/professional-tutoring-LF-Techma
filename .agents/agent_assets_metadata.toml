@@ -56,3 +56,17 @@ mtime_ms = 1787238114431
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/af168161-f5f0-4221-ad81-0695b92c3558/1bded4f0-ad86-449c-9bd9-3d48429b1e95"
 storage_version_token = "1787238147301658"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "zc3zOFvSvUlbqBfo5BkZJ"
+uri = "file://professional-tutoring-LF-Techma/docs/VERIFICATION-STUDENT-FORM-USABILITY.md"
+type = "text"
+title = "Verification — Student Form Usability"
+description = "Verification of concise labels, required student email, layout, registration regression coverage, and the Mapbox lookup diagnosis."
+logical_id = "9a3e92b6-2932-439d-8c2e-7d88fa33a6fe"
+content_hash = "sha256:137c55b5888ad5533dad779332397a5b9d44b5cfa14018894252d2822c7f48c4"
+size = 1218
+mtime_ms = 1787243791482
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/9a3e92b6-2932-439d-8c2e-7d88fa33a6fe/35730d1d-c5a8-4331-b64d-26d58fa3e82b"
+storage_version_token = "1787243830141500"
+content_type = "text/markdown"

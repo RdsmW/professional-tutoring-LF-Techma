@@ -33,6 +33,7 @@ async function submitPathB1Registration(request: APIRequestContext, paymentPlanI
         gender: "F",
         birthdate: "2010-04-12",
         cellPhone: `703777${phoneSuffix}`,
+        email: `billing-student-${paymentPlanId}-${unique}@example.com`,
         addressLine1: "4 Student Ln",
         city: "Burke",
         state: "VA",

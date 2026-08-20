@@ -21,8 +21,8 @@ type MapboxFeature = {
   context?: MapboxContext[];
 };
 
-type MapboxGeocodeResponse = {
-  features?: MapboxFeature[];
+type AddressAutocompleteResponse = {
+  features?: AddressSuggestion[];
   message?: string;
 };
 
@@ -52,23 +52,14 @@ export async function searchUsAddresses(
   query: string,
   signal?: AbortSignal,
 ): Promise<AddressSuggestion[]> {
-  const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  if (!token || query.trim().length < 3) return [];
+  if (query.trim().length < 3) return [];
 
-  const url = new URL(
-    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query.trim())}.json`,
-  );
-  url.searchParams.set("access_token", token);
-  url.searchParams.set("country", "us");
-  url.searchParams.set("types", "address");
-  url.searchParams.set("autocomplete", "true");
-  url.searchParams.set("limit", "5");
-
-  const response = await fetch(url.toString(), { signal });
-  const data = (await response.json()) as MapboxGeocodeResponse;
+  const url = `/api/public/address-autocomplete?q=${encodeURIComponent(query.trim())}`;
+  const response = await fetch(url, { signal });
+  const data = (await response.json()) as AddressAutocompleteResponse;
   if (!response.ok) {
-    throw new Error(data.message || "Mapbox address lookup failed");
+    throw new Error(data.message || "Address search is temporarily unavailable.");
   }
 
-  return (data.features ?? []).map(parseMapboxFeature);
+  return data.features ?? [];
 }

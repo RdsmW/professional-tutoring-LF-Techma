@@ -197,7 +197,9 @@ const FIELD_ID_BY_FALLBACK_LABEL: Record<string, string> = {
   "Graduation year": "graduation_year",
   Gender: "gender",
   Birthdate: "birthdate",
+  Phone: "student_cell",
   "Student cell": "student_cell",
+  Email: "student_email",
   "Student email": "student_email",
   "How did you hear about us?": "referral_source",
   "Payment plan": "academic_payment_plan",
@@ -223,11 +225,13 @@ function Field({
   label,
   required,
   invalid,
+  fixedLabel = false,
   children,
 }: {
   label: string;
   required?: boolean;
   invalid?: boolean;
+  fixedLabel?: boolean;
   children: React.ReactNode;
 }) {
   const settings = useContext(PublicFieldSettingsContext);
@@ -243,7 +247,7 @@ function Field({
       style={setting ? { order: setting.order } : undefined}
     >
       <span>
-        {setting?.label || label}
+          {fixedLabel ? label : setting?.label || label}
         {required ? <RequiredMark /> : null}
       </span>
       {control}
@@ -484,7 +488,8 @@ export function PublicAyTutoringRegistrationForm({
       }
       if (!draft.studentCell.trim()) return "Student phone is required.";
       if (!isValidPhone(draft.studentCell)) return "Enter a valid student phone number.";
-      if (filledEmailInvalid(draft.studentEmail)) return "Enter a valid student email.";
+      if (!draft.studentEmail.trim()) return "Student email is required.";
+      if (!isValidEmail(draft.studentEmail)) return "Enter a valid student email.";
       if (!draft.studentAddressLine1.trim() || !draft.studentCity.trim() || !draft.studentState || !draft.studentPostalCode.trim()) {
         return "Student address is required.";
       }
@@ -767,10 +772,10 @@ export function PublicAyTutoringRegistrationForm({
       {(activeStepKey === "student" || (!formContent && step === 1)) ? (
         <div className="public-ay-stack">
           <div className="public-ay-grid">
-            <Field label="Student first name" required invalid={showErrors && !draft.studentFirstName.trim()}>
+            <Field label="First name" required invalid={showErrors && !draft.studentFirstName.trim()}>
               <input value={draft.studentFirstName} onChange={(event) => patch({ studentFirstName: event.target.value })} />
             </Field>
-            <Field label="Student last name" required invalid={showErrors && !draft.studentLastName.trim()}>
+            <Field label="Last name" required invalid={showErrors && !draft.studentLastName.trim()}>
               <input value={draft.studentLastName} onChange={(event) => patch({ studentLastName: event.target.value })} />
             </Field>
             <Field label="School" required invalid={showErrors && !draft.schoolName.trim()}>
@@ -806,24 +811,34 @@ export function PublicAyTutoringRegistrationForm({
                 ))}
               </select>
             </Field>
+          </div>
+          <div className="public-ay-three-grid">
             <Field label="Birthdate" required invalid={showErrors && !draft.birthdate}>
               <input type="date" value={draft.birthdate} onChange={(event) => patch({ birthdate: event.target.value })} />
             </Field>
             <Field
-              label="Student cell"
+              label="Phone"
               required
+              fixedLabel
               invalid={showErrors && (!draft.studentCell.trim() || filledPhoneInvalid(draft.studentCell))}
             >
               <PhoneInput
                 value={draft.studentCell}
+                required
                 invalid={showErrors && (!draft.studentCell.trim() || filledPhoneInvalid(draft.studentCell))}
                 onChange={(studentCell) => patch({ studentCell })}
                 autoComplete="tel"
               />
             </Field>
-            <Field label="Student email" invalid={showErrors && filledEmailInvalid(draft.studentEmail)}>
+            <Field
+              label="Email"
+              required
+              fixedLabel
+              invalid={showErrors && (!draft.studentEmail.trim() || filledEmailInvalid(draft.studentEmail))}
+            >
               <input
                 type="email"
+                required
                 value={draft.studentEmail}
                 onChange={(event) => patch({ studentEmail: event.target.value })}
                 autoComplete="email"

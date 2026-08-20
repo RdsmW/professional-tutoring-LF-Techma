@@ -96,6 +96,7 @@ async function registerManualPathA(
         gender: "F",
         birthdate: "2010-04-12",
         cellPhone: `703222${phoneSuffix}`,
+        email: `path-a-student-${label}-${emailToken}@example.com`,
         addressLine1: "3 Student Ln",
         city: "Burke",
         state: "VA",
