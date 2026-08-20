@@ -1,0 +1,30 @@
+Phase 1 is on the right track. Do not expand the scope or change the architecture.
+
+Before considering Phase 1 ready for acceptance testing, make these small UX/data-quality corrections:
+
+Tutoring subject: do not use “first checked subject” as a hidden matching rule. Since tutor matching currently requires one primary subject, make the primary subject an explicit user choice and treat any other selected subjects as additional tutoring needs.
+Plan consistency: do not preselect both standard and advanced rate packages. Avoid contradictory billing preferences. In particular, only show/require the alternative payment method when it is actually relevant (for example when auto-charge is No), following the current AY registration rules. Do not implement Stripe yet.
+Review: replace the current raw summary with a clearly labeled summary of Student, Parents/Billing, Tutoring Needs, Schedule, Plan, and Agreement. No redesign is necessary; just make it understandable to a parent.
+Validation: validate entered email and phone formats before Continue, as well as server-side. Optional fields may remain empty, but invalid entered values should not pass.
+Schedule copy: display family-friendly time formatting (3:00–5:00 PM, not 15:00:00–17:00:00) and use clear capacity language such as 2 spots available.
+
+Also change any AY-specific wording such as “course information” to appropriate Academic Year Tutoring wording where necessary.
+
+Do not address the known Phase 1 limitations yet: no invite email, policy FK may remain null, third-party billing may remain payload-backed, typed-name signatures are acceptable for this phase, and no Stripe/Zoho/Acuity/QBO.
+
+After those corrections, do not add anything else.
+
+Run and report the three core acceptance tests:
+
+A. Path A: public new family selects tutor + slot → request stores the preference → zero booking → zero seat consumed → zero payment record.
+
+B. Path B: public new family selects “Let PT choose” → request only → no tutor/booking/seat.
+
+C. Staff assignment: Staff opens B → assigns compatible tutor + available slot → same request is updated → one booking created → exactly one seat consumed → request leaves the assignment queue.
+
+For each scenario, report the relevant record IDs/statuses and before/after seat counts so we can verify the behavior.
+
+Also run the planned regression checks on the existing Staff/Family booking flows.
+
+STOP after reporting the results.
+"
