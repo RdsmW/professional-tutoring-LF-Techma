@@ -5,7 +5,7 @@
 Turn the public Academic Year Tutoring **Plan** step from billing preferences into a real, secure payment step while preserving the Phase 1 intake contract:
 
 - a public submission creates or updates **one** `tutoring_requests` record;
-- Path A stores a selected tutor/time as a preference, not a seat hold;
+- Path A remains self-service: a valid selected tutor/time is revalidated and booked on that same request after payment authorization/setup;
 - Path B remains a request until Professional Tutoring assigns it;
 - a payment must never create a second request, a duplicate booking, or an unrequested seat reservation.
 
@@ -159,8 +159,8 @@ The public registration service remains the only creator of the Phase 1 request.
 - one household/student/request combination;
 - `pending_staff_review` status;
 - the Path A preferred slot or the Path B null slot;
-- no booking;
-- no seat increment or hold.
+- no booking at initial public submission;
+- no seat increment or hold at initial public submission.
 
 Do not replace this with the family booking endpoint. That endpoint always creates a booking, increments a seat, and writes a pending payment record, which violates the Phase 1 public-intake boundary.
 
@@ -199,30 +199,50 @@ For real payment finality and future payments, add a minimal verified Stripe web
 
 Webhook processing updates internal payment records. It does not create bookings or reserve seats.
 
-### 4. Payment gating
+### 4. Atomic booking and payment safety
 
-The assignment writer must continue to update the existing request and create the one booking atomically. Phase 2 adds a payment gate before that operation:
+The existing `assignTutoringRequest` transaction is the smallest safe booking primitive available. It already:
 
-- a paid/settled first payment is required for card-payment plans;
-- a staff-recorded manual payment, waiver, or approved alternative is required when auto-charge is `no`;
-- no payment event itself creates a booking or changes `booked_seats`.
+- updates `booked_seats` only when the slot still has capacity;
+- inserts one booking for the existing request; and
+- rejects the operation when the selected slot is no longer open.
 
-This preserves the existing Path A and Path B seat-count invariants.
+Extend that primitive with a self-service Path A mode rather than creating another reservation or hold system. The self-service mode must:
+
+- read the tutor and slot stored by Path A;
+- verify the request is Path A and has no occupying booking;
+- verify the tutor/slot/subject relationship and current schedule window;
+- use the existing atomic open-seat predicate;
+- update the same request and insert exactly one booking; and
+- omit staff assignment metadata because no staff assignment occurred.
+
+For a card payment that is due now, use Stripe authorization before the database booking and capture only after the booking transaction succeeds:
+
+1. Create a PaymentIntent with manual capture and confirm it in the browser.
+2. If the selected slot is no longer open, cancel the uncaptured PaymentIntent and return a retryable “choose another time” response. No successful charge occurs.
+3. If the slot is open, run the self-service assignment transaction. For the short interval before capture, use the existing `pending_payment` booking state and its existing booked-seat accounting; do not add `held_seats`, a hold table, or a new reservation model.
+4. Capture the PaymentIntent only after the transaction has created the booking and consumed one seat.
+5. On capture success, mark the payment paid and finalize the booking/request. On capture failure, use a compensating transaction to cancel the temporary booking, release the one seat, mark the payment failed, and leave the request retryable.
+
+For a future-due card, a successful SetupIntent has no charge to protect. After setup, run the same self-service assignment transaction and create the future schedule. For a manual/alternate payment method, no Stripe charge occurs; use the existing internal payment state and manual-payment workflow.
+
+This is not a new reservation/hold system. It reuses the existing `pending_payment` booking status only as a narrowly scoped, temporary state between the atomic booking transaction and Stripe capture. If the current writer cannot support this safely without introducing a separate hold mechanism, stop implementation and report that blocker before adding one.
 
 ---
 
 ## Path A: family selects tutor and time
 
-Path A is the straightforward Phase 2 payment path.
+Path A is self-service from selection through confirmation. Staff must not assign the tutor/time again.
 
 1. The family selects the tutor/time preference and a payment plan.
 2. Registration creates the request, price snapshot, payment record, and payment continuation.
-3. The family completes the required first charge or card-on-file setup according to the selected plan and due date.
-4. The request remains `pending_staff_review`; the selected slot remains a preference.
-5. No booking or seat change occurs from payment success.
-6. Staff assignment checks the payment gate, re-checks availability, updates that same request, creates one confirmed booking, and consumes one seat.
+3. The family completes the required first payment authorization or card-on-file setup according to the selected plan and due date.
+4. The server revalidates the stored tutor, slot, subject compatibility, schedule window, and available capacity.
+5. If the slot is still open, the server updates that same request, creates the booking, and consumes exactly one seat atomically.
+6. For a due-now card, Stripe captures only after step 5 succeeds. A capture failure compensates the booking/seat state and leaves the request retryable.
+7. The family sees confirmation only after the booking and required payment state are finalized.
 
-The public confirmation copy must say that payment has been received or scheduled, while the tutor/time is still subject to Professional Tutoring confirmation. It must not promise a reserved seat before the staff assignment transaction succeeds.
+If revalidation fails, the family is not successfully charged for that slot. The request remains available for choosing another tutor/time or for the separate Path A retry flow; no staff assignment is required for a valid Path A selection.
 
 ---
 
@@ -301,9 +321,11 @@ Extract shared Customer, payment-method ownership, and household-card persistenc
 
 ### Path A
 
-- A successful first payment/card setup creates no booking and changes no seat count.
-- The existing request keeps the selected preferred slot.
-- Staff assignment creates exactly one booking and consumes exactly one seat only after the payment gate is satisfied.
+- A due-now card is authorized but not captured until the selected slot has passed server-side revalidation.
+- A slot that fails revalidation produces no successful charge, no booking, and no seat change.
+- A valid Path A selection updates the existing request, creates exactly one booking, and consumes exactly one seat without staff assignment.
+- A capture failure compensates the temporary booking/seat state and leaves the request retryable.
+- The selected tutor and slot are not assigned a second time by Staff.
 
 ### Path B
 
@@ -327,5 +349,6 @@ Extract shared Customer, payment-method ownership, and household-card persistenc
 - No Acuity changes.
 - No QuickBooks changes.
 - No change to the Phase 1 tutor/slot preference behavior.
-- No automatic booking or seat reservation after public payment.
+- No automatic booking for Path B before the selected Path B payment-timing policy allows it.
+- No new seat-hold or reservation system unless implementation proves the existing atomic writer and Stripe authorization/capture sequence cannot satisfy the safety requirements; report that blocker before adding one.
 - No redesign of unrelated family, staff, billing, or scheduling flows.
