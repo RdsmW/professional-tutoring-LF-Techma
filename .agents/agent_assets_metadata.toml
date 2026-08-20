@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "FM-eFJFx-zFMvsYy6vp2X"
+uri = "file://professional-tutoring-LF-Techma/docs/VERIFICATION-STRIPE-PUBLIC-RETURN-URL.md"
+type = "text"
+title = "Verification Report — Stripe Public Return URL"
+description = "Verification results for the Academic Year public Stripe SetupIntent and PaymentIntent return URL fix."
+logical_id = "1471b3ad-fa5e-42a9-b047-96669c5e0286"
+content_hash = "sha256:aa132baee2aa4ab7956a45b7eab82fd58f0df2759aa8436f9dcd4d6cfdce9e7d"
+size = 1333
+mtime_ms = 1787230577688
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/1471b3ad-fa5e-42a9-b047-96669c5e0286/51308d09-df58-4912-b832-13d8e4e45fc7"
+storage_version_token = "1787236351465192"
+content_type = "text/markdown"
