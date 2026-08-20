@@ -1695,6 +1695,7 @@ export function PublicAyTutoringRegistrationForm({
                 schedulingPath: payment.schedulingPath,
                 bookingId: payment.bookingId,
                 paymentStatus: payment.paymentStatus,
+                portalInvitation: payment.portalInvitation,
                 invitePaths: paymentContinuation.invitePaths,
               }),
             );

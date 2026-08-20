@@ -8,6 +8,12 @@ type ConfirmationState = {
   schedulingPath?: "family_selected" | "pt_chooses";
   paymentStatus?: string;
   invitePaths?: Array<{ label: string; path: string }>;
+  portalInvitation?: {
+    emailSent: boolean;
+    emailAlreadySent: boolean;
+    pending: boolean;
+    failed: boolean;
+  };
 };
 
 export default function AcademicYearTutoringConfirmationPage() {
@@ -39,10 +45,15 @@ export default function AcademicYearTutoringConfirmationPage() {
               </p>
             ) : null}
             <h2>Join the family portal</h2>
-            <p>
-              Your invitation to join the family portal has been prepared. Open your invite link and finish joining
-              <strong> before </strong> opening the portal.
-            </p>
+            {state.portalInvitation?.emailSent ? (
+              <p>A family portal invitation email has been sent. You can also use the invite link below.</p>
+            ) : state.portalInvitation?.emailAlreadySent ? (
+              <p>A family portal invitation email was already sent. You can also use the invite link below.</p>
+            ) : state.portalInvitation?.pending ? (
+              <p>Your family portal invitation is still being prepared. You can use the invite link below.</p>
+            ) : (
+              <p>Your invitation has been prepared. Open your invite link and finish joining before opening the portal.</p>
+            )}
             {state.invitePaths?.length ? <ul className="public-ay-invites">
               {state.invitePaths.map((invite) => (
                 <li key={invite.path}>

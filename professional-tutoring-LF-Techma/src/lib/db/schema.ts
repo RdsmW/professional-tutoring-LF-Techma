@@ -105,6 +105,10 @@ export const guardians = pgTable("guardians", {
   canRequestServices: boolean("can_request_services").notNull().default(true),
   inviteToken: text("invite_token"),
   inviteAcceptedAt: timestamp("invite_accepted_at", { withTimezone: true }),
+  /** Clerk invitation delivery state for the existing guardian/household link. */
+  clerkInvitationId: text("clerk_invitation_id"),
+  clerkInvitationSentAt: timestamp("clerk_invitation_sent_at", { withTimezone: true }),
+  clerkInvitationReservedAt: timestamp("clerk_invitation_reserved_at", { withTimezone: true }),
   status: guardianStatusEnum("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

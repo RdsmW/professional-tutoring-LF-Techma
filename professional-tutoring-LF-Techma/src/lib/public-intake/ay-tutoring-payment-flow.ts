@@ -7,6 +7,7 @@ import {
 } from "@/lib/booking/assign-tutoring-request";
 import { requireDb } from "@/lib/db";
 import { availabilitySlots, bookings, households, paymentRecords, tutoringRequests } from "@/lib/db/schema";
+import { sendAcademicYearPortalInvitations, type PortalInvitationDelivery } from "@/lib/family/clerk-portal-invitations";
 import { findAyPublicPaymentContinuation } from "@/lib/public-intake/ay-tutoring-payment";
 import {
   getStripe,
@@ -228,6 +229,24 @@ async function confirmPendingBookingIdempotently(context: PaymentContext, bookin
   }
 }
 
+async function withPortalInvitation<T extends object>(context: PaymentContext, result: T) {
+  let portalInvitation: PortalInvitationDelivery = {
+    emailSent: false,
+    emailAlreadySent: false,
+    pending: false,
+    failed: false,
+  };
+  if (context.notes.autoCharge === "yes") {
+    try {
+      portalInvitation = await sendAcademicYearPortalInvitations({ householdId: context.household.id });
+    } catch (error) {
+      console.warn("[academic-year-payment] Clerk invitation dispatch soft-fail", error);
+      portalInvitation = { ...portalInvitation, failed: true };
+    }
+  }
+  return { ...result, portalInvitation };
+}
+
 export async function prepareAyPublicPayment(token: string) {
   const context = await loadContext(token);
   if (context.payment.continuationConsumedAt) {
@@ -346,12 +365,12 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
     (context.notes.schedulingPath === "pt_chooses" && context.payment.paymentSetupCompletedAt) ||
     (context.notes.schedulingPath === "family_selected" && existingBooking?.status === "confirmed")
   ) {
-    return {
+    return withPortalInvitation(context, {
       schedulingPath: context.notes.schedulingPath,
       bookingId: existingBooking?.id ?? null,
       paymentStatus: context.payment.status,
       alreadyCompleted: true,
-    };
+    });
   }
   if (
     context.notes.schedulingPath === "family_selected" &&
@@ -423,9 +442,17 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
       .where(eq(paymentRecords.id, context.payment.id));
     if (context.notes.schedulingPath === "family_selected") {
       const assignment = await assignPreferredSlot(context, "confirmed");
-      return { schedulingPath: context.notes.schedulingPath, bookingId: assignment.booking.id, paymentStatus: "pending" };
+      return withPortalInvitation(context, {
+        schedulingPath: context.notes.schedulingPath,
+        bookingId: assignment.booking.id,
+        paymentStatus: "pending",
+      });
     }
-    return { schedulingPath: context.notes.schedulingPath, bookingId: null, paymentStatus: "pending" };
+    return withPortalInvitation(context, {
+      schedulingPath: context.notes.schedulingPath,
+      bookingId: null,
+      paymentStatus: "pending",
+    });
   }
 
   if (context.payment.stripePaymentIntentId !== input.intentId) {
@@ -464,7 +491,11 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
         updatedAt: new Date(),
       })
       .where(eq(paymentRecords.id, context.payment.id));
-    return { schedulingPath: context.notes.schedulingPath, bookingId: null, paymentStatus: "paid" };
+    return withPortalInvitation(context, {
+      schedulingPath: context.notes.schedulingPath,
+      bookingId: null,
+      paymentStatus: "paid",
+    });
   }
 
   let assignment;
@@ -503,7 +534,11 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
       updatedAt: new Date(),
     })
     .where(eq(paymentRecords.id, context.payment.id));
-  return { schedulingPath: context.notes.schedulingPath, bookingId: finalized.booking.id, paymentStatus: "paid" };
+  return withPortalInvitation(context, {
+    schedulingPath: context.notes.schedulingPath,
+    bookingId: finalized.booking.id,
+    paymentStatus: "paid",
+  });
 }
 
 export function isAyPublicPaymentError(error: unknown): error is AyPublicPaymentError | AssignTutoringRequestError {

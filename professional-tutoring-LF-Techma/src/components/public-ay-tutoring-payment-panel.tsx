@@ -18,6 +18,12 @@ type FinalizedPayment = {
   bookingId: string | null;
   paymentStatus: string;
   pendingManualPayment?: boolean;
+  portalInvitation?: {
+    emailSent: boolean;
+    emailAlreadySent: boolean;
+    pending: boolean;
+    failed: boolean;
+  };
 };
 
 function money(amountCents: number) {

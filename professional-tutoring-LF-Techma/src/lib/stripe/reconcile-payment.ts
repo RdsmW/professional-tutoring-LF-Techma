@@ -3,6 +3,10 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { confirmPendingPaymentBooking } from "@/lib/booking/assign-tutoring-request";
 import { requireDb } from "@/lib/db";
 import { bookings, households, paymentRecords, stripeWebhookEvents } from "@/lib/db/schema";
+import {
+  isAcademicYearRegistrationPayment,
+  sendAcademicYearPortalInvitations,
+} from "@/lib/family/clerk-portal-invitations";
 import { getStripe } from "@/lib/stripe/client";
 
 type ReconciledPayment = typeof paymentRecords.$inferSelect;
@@ -219,13 +223,27 @@ export async function reconcileStripeWebhookEvent(event: Stripe.Event) {
     }
   });
 
-  if (completedBookingFor) await reconcilePendingBooking(completedBookingFor);
-  if (setupPayment) {
+  const reconciledPayment = completedBookingFor as ReconciledPayment | null;
+  const reconciledSetup = setupPayment as ReconciledPayment | null;
+  if (reconciledPayment) {
+    await reconcilePendingBooking(reconciledPayment);
+    if (isAcademicYearRegistrationPayment(reconciledPayment)) {
+      await sendAcademicYearPortalInvitations({ householdId: reconciledPayment.householdId }).catch((error) => {
+        console.warn("[stripe-reconcile] Clerk Academic Year invitation soft-fail", error);
+      });
+    }
+  }
+  if (reconciledSetup) {
     const setupIntent = event.data.object as Stripe.SetupIntent;
     await storeSetupPaymentMethod({
-      payment: setupPayment,
+      payment: reconciledSetup,
       customerId: stripeId(setupIntent.customer),
       paymentMethodId: stripeId(setupIntent.payment_method),
     });
+    if (isAcademicYearRegistrationPayment(reconciledSetup)) {
+      await sendAcademicYearPortalInvitations({ householdId: reconciledSetup.householdId }).catch((error) => {
+        console.warn("[stripe-reconcile] Clerk Academic Year invitation soft-fail", error);
+      });
+    }
   }
 }

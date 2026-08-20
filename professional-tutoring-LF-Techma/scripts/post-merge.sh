@@ -15,6 +15,8 @@ if [[ -n "${DATABASE_URL:-}" ]]; then
   fi
   echo "Applying public-form migration…"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0024_public_form_versions.sql
+  echo "Applying Clerk portal invitation migration…"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0025_guardian_clerk_portal_invitation.sql
 else
   echo "DATABASE_URL is not configured; skipping database migrations."
 fi
