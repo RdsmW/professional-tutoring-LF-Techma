@@ -158,7 +158,7 @@ export const FIELD_CATALOG: FieldDef[] = [
     control: "text",
     owner: "guardian",
     forms: ALL,
-    required: "pending",
+    required: true,
     mapsTo: "guardians (second)",
   },
   {

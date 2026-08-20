@@ -1,23 +1,41 @@
-# Academic Year Registration Reliability Verification
+# Academic Year Registration Reliability — Verification
 
-**Verified:** 2026-08-20  
-**Environment:** Development
+## Environment
 
-## Results
+- Verified locally on the development database and configured Next.js workflow.
+- Verification date: 2026-08-20.
 
-| Check | Result | Evidence |
-| --- | --- | --- |
-| TypeScript | Passed | `npx tsc --noEmit` completed successfully. |
-| Lint | Passed | `npm run lint -- --quiet` completed successfully. |
-| Focused Academic Year tests | Passed | `npx playwright test e2e/public-ay-registration.spec.ts e2e/ay-billing-schedule.spec.ts e2e/path-a-finalization-safety.spec.ts --reporter=line` completed with 16 passed. |
-| Public registration page | Passed | `GET /register/academic-year-tutoring` returned HTTP 200 after workflow restart. |
-| Rendered form token | Passed | The rendered hidden form-version field contained a signed token; the token value is intentionally not recorded here. |
-| Parent contact requirements | Passed | Browser coverage verifies Parent 1 and Parent 2 headings, required parent email fields, parent-specific phone labels, and removal of the optional Parent 2 wording. API coverage rejects a missing Parent 2. |
-| Current schedule availability | Passed | The development fixture returned at least one Algebra tutor for each of the eight Academic Year schedule windows. |
-| Application workflow | Passed | The `Start application` workflow restarted and remained running. |
+## Static checks
 
-## Observations
+| Check | Result |
+| --- | --- |
+| `npx tsc --noEmit --pretty false` | Passed |
+| `npm run lint` | Passed with 7 pre-existing warnings and no errors |
+| `git diff --check` | Passed |
 
-- A pre-existing invalid published Academic Year form record was encountered during verification. It was retained as a retired version, and the application published a protected baseline version with an audit event. The public page then rendered a signed current version token.
-- The schedule fixture is explicitly development-only and labels its tutor and slots as test availability.
-- Existing Clerk development-key and structural-CSS notices remain in browser/workflow output. They do not affect the registration checks above.
+## Focused browser and API coverage
+
+Command:
+
+```sh
+npx playwright test e2e/public-ay-registration.spec.ts e2e/path-a-finalization-safety.spec.ts e2e/ay-billing-schedule.spec.ts --reporter=list
+```
+
+Result: **18 passed**.
+
+Observed outcomes:
+
+- The public form’s parent contact controls use specific Parent 1 / Parent 2 names and are marked required.
+- The client blocks incomplete parent contact details before it advances.
+- The registration API rejects missing Parent 2, invalid Parent 2 phone data, missing form tokens, and tampered form tokens.
+- A token read from the rendered registration page successfully submitted valid Path A and Path B registration payloads.
+- A Parent 2 already associated with another household was rejected with the recoverable `parent2_conflict` response.
+- All advertised Academic Year scheduling windows returned a tutor and a selectable slot from the explicitly seeded non-production fixture.
+- A fixture slot made full in the test remained unavailable through public availability reads; its original capacity and hold values were restored by test cleanup.
+- Existing slot finalization safety and Academic Year billing schedule coverage passed with the required Parent 2 payload.
+
+## Runtime verification
+
+- The `Start application` workflow restarted successfully and reported `Ready`.
+- The public `/register/academic-year-tutoring` page rendered in preview with the registration welcome step and start action visible.
+- Fresh workflow logs contained no application startup error.

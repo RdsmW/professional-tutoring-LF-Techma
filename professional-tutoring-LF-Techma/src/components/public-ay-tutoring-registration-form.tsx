@@ -527,6 +527,7 @@ export function PublicAyTutoringRegistrationForm({
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [paymentContinuation, setPaymentContinuation] = useState<PaymentContinuation | null>(null);
+  const [formVersionNeedsRefresh, setFormVersionNeedsRefresh] = useState(false);
   const fieldSettings = useMemo<PublicFieldSettings>(
     () =>
       Object.fromEntries(
@@ -788,6 +789,11 @@ export function PublicAyTutoringRegistrationForm({
       toast.error(problem);
       return;
     }
+    if (!formVersionToken) {
+      setFormVersionNeedsRefresh(true);
+      toast.error("The current registration form could not be verified. Refresh the page before submitting.");
+      return;
+    }
     setSaving(true);
     const studentMailing = studentAddressFrom(draft);
     const parent1Mailing = mailingFrom(
@@ -892,6 +898,9 @@ export function PublicAyTutoringRegistrationForm({
         if (response.status === 409 && data.code === "slot_unavailable") {
           setStep(Math.max(0, stepIndexFor("schedule")));
         }
+        if (response.status === 409 && data.code === "form_version_expired") {
+          setFormVersionNeedsRefresh(true);
+        }
         toast.error(data.error || "Unable to submit.");
         return;
       }
@@ -930,6 +939,12 @@ export function PublicAyTutoringRegistrationForm({
       <p className="public-ay-kicker">{formContent?.title || title}</p>
        <h1>{activeStepKey === "payment_stage" ? "Payment" : visibleSteps[step]?.name ?? STEPS[step]}</h1>
       {formContent?.description ? <p className="public-ay-description">{formContent.description}</p> : null}
+      {formVersionNeedsRefresh ? (
+        <div className="public-ay-help" role="alert">
+          <p>This registration form has changed or expired. Refresh before submitting so you can review the current version.</p>
+          <button type="button" onClick={() => window.location.reload()}>Refresh registration form</button>
+        </div>
+      ) : null}
       <ol className="public-ay-steps" aria-label="Registration steps">
          {visibleSteps.map((item, index) => (
            <li
@@ -1074,23 +1089,24 @@ export function PublicAyTutoringRegistrationForm({
         <div className="public-ay-stack">
           <h2>Parent 1</h2>
           <div className="public-ay-grid">
-            <Field label="Parent 1 first name" fixedLabel required invalid={showErrors && !draft.p1FirstName.trim()}>
-              <input value={draft.p1FirstName} onChange={(event) => patch({ p1FirstName: event.target.value })} />
+            <Field label="Parent 1 first name" required fixedLabel invalid={showErrors && !draft.p1FirstName.trim()}>
+              <input required value={draft.p1FirstName} onChange={(event) => patch({ p1FirstName: event.target.value })} />
             </Field>
-            <Field label="Parent 1 last name" fixedLabel required invalid={showErrors && !draft.p1LastName.trim()}>
-              <input value={draft.p1LastName} onChange={(event) => patch({ p1LastName: event.target.value })} />
+            <Field label="Parent 1 last name" required fixedLabel invalid={showErrors && !draft.p1LastName.trim()}>
+              <input required value={draft.p1LastName} onChange={(event) => patch({ p1LastName: event.target.value })} />
             </Field>
-            <Field label="Parent 1 email" fixedLabel required invalid={showErrors && (!draft.p1Email.trim() || filledEmailInvalid(draft.p1Email))}>
-              <input type="email" value={draft.p1Email} onChange={(event) => patch({ p1Email: event.target.value })} autoComplete="email" />
+            <Field label="Parent 1 email" required fixedLabel invalid={showErrors && (!draft.p1Email.trim() || filledEmailInvalid(draft.p1Email))}>
+              <input type="email" required value={draft.p1Email} onChange={(event) => patch({ p1Email: event.target.value })} autoComplete="email" />
             </Field>
             <Field
-              label="Parent 1 cell phone"
-              fixedLabel
+              label="Parent 1 phone"
               required
+              fixedLabel
               invalid={showErrors && (!draft.p1Phone.trim() || filledPhoneInvalid(draft.p1Phone))}
             >
               <PhoneInput
                 value={draft.p1Phone}
+                required
                 invalid={showErrors && (!draft.p1Phone.trim() || filledPhoneInvalid(draft.p1Phone))}
                 onChange={(p1Phone) => patch({ p1Phone })}
               />
@@ -1138,28 +1154,19 @@ export function PublicAyTutoringRegistrationForm({
           ) : null}
           <h2>Parent 2</h2>
           <div className="public-ay-grid">
-            <Field label="Parent 2 first name" fixedLabel required invalid={showErrors && !draft.p2FirstName.trim()}>
-              <input value={draft.p2FirstName} onChange={(event) => patch({ p2FirstName: event.target.value })} />
+            <Field label="Parent 2 first name" required fixedLabel invalid={showErrors && !draft.p2FirstName.trim()}>
+              <input required value={draft.p2FirstName} onChange={(event) => patch({ p2FirstName: event.target.value })} />
             </Field>
-            <Field label="Parent 2 last name" fixedLabel required invalid={showErrors && !draft.p2LastName.trim()}>
-              <input value={draft.p2LastName} onChange={(event) => patch({ p2LastName: event.target.value })} />
+            <Field label="Parent 2 last name" required fixedLabel invalid={showErrors && !draft.p2LastName.trim()}>
+              <input required value={draft.p2LastName} onChange={(event) => patch({ p2LastName: event.target.value })} />
             </Field>
-            <Field
-              label="Parent 2 email"
-              fixedLabel
-              required
-              invalid={showErrors && (!draft.p2Email.trim() || filledEmailInvalid(draft.p2Email))}
-            >
-              <input type="email" value={draft.p2Email} onChange={(event) => patch({ p2Email: event.target.value })} autoComplete="email" />
+            <Field label="Parent 2 email" required fixedLabel invalid={showErrors && (!draft.p2Email.trim() || filledEmailInvalid(draft.p2Email))}>
+              <input type="email" required value={draft.p2Email} onChange={(event) => patch({ p2Email: event.target.value })} autoComplete="email" />
             </Field>
-            <Field
-              label="Parent 2 cell phone"
-              fixedLabel
-              required
-              invalid={showErrors && (!draft.p2Phone.trim() || filledPhoneInvalid(draft.p2Phone))}
-            >
+            <Field label="Parent 2 phone" required fixedLabel invalid={showErrors && (!draft.p2Phone.trim() || filledPhoneInvalid(draft.p2Phone))}>
               <PhoneInput
                 value={draft.p2Phone}
+                required
                 invalid={showErrors && (!draft.p2Phone.trim() || filledPhoneInvalid(draft.p2Phone))}
                 onChange={(p2Phone) => patch({ p2Phone })}
               />

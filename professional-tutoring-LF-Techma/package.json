@@ -9,7 +9,6 @@
     "lint": "eslint .",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "db:seed:ay-test-availability": "tsx scripts/seed-academic-year-test-availability.mts",
     "test:smoke": "playwright test",
     "test:public-forms": "tsx scripts/verify-public-form-schema.ts"
   },

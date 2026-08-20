@@ -1,9 +1,10 @@
-import { test, expect } from "@playwright/test";
-import { academicYearPublicFormTokenForTest } from "./public-form-token";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+import postgres from "postgres";
 import {
   ACADEMIC_YEAR_PAYMENT_TERMS,
   ACADEMIC_YEAR_POLICY_SECTIONS,
 } from "../src/lib/academic-year/source-content";
+import { ACADEMIC_SCHEDULE_WINDOWS } from "../src/lib/forms/options";
 
 const unique = Date.now();
 const phoneSuffix = String(unique).slice(-4);
@@ -14,7 +15,6 @@ test.describe("public academic year registration", () => {
     expect(response?.ok()).toBeTruthy();
     await expect(page.getByRole("heading", { name: /Welcome/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Start registration/i })).toBeVisible();
-    await expect(page.locator('input[name="formVersionToken"]')).toHaveValue(/.+\..+/);
     await expect(page.getByText(/tutoring_request/i)).toHaveCount(0);
   });
 
@@ -57,33 +57,40 @@ test.describe("public academic year registration", () => {
     await expect(page.locator(".public-ay-field.is-invalid").first()).toBeVisible();
   });
 
-  test("parents step requires two parents and uses parent-specific contact labels", async ({ page }) => {
+  test("parent contact labels are explicit and required", async ({ page }) => {
     await page.goto("/register/academic-year-tutoring");
     await page.getByRole("button", { name: /Start registration/i }).click();
-    await page.getByLabel(/^First name/).fill("Avery");
-    await page.getByLabel(/^Last name/).fill("Student");
+    await page.getByLabel(/^First name/).fill("Alex");
+    await page.getByLabel(/^Last name/).fill("Martin");
+    await page.getByLabel(/^Gender/).selectOption("M");
     await page.getByLabel(/^School/).fill("Test High");
     await page.getByLabel(/^Grade/).selectOption("grade_9");
     await page.getByLabel(/^Graduation year/).selectOption(String(new Date().getFullYear() + 3));
-    await page.getByLabel(/^Gender/).selectOption("F");
     await page.getByLabel(/^Birthdate/).fill("2010-04-12");
-    await page.getByLabel(/^Phone/).fill("7035551111");
-    await page.getByLabel(/^Email/).fill("avery.student@example.com");
-    await page.getByLabel(/^Street/).fill("1 Student Lane");
+    await page.getByLabel(/^Phone/).fill("7035550100");
+    await page.getByLabel(/^Email/).fill(`label-student-${unique}@example.com`);
+    await page.getByLabel(/^Street/).fill("1 Student Ln");
     await page.getByLabel(/^City/).fill("Burke");
     await page.getByLabel(/^State/).selectOption("VA");
     await page.getByLabel(/^ZIP/).fill("22015");
     await page.getByRole("button", { name: /Continue/i }).click();
 
-    await expect(page.getByRole("heading", { name: /^Parent 1$/ })).toBeVisible();
-    await expect(page.getByRole("heading", { name: /^Parent 2$/ })).toBeVisible();
-    await expect(page.getByText("Parent 2 (optional)")).toHaveCount(0);
-    await expect(page.getByLabel("Parent 1 email")).toBeVisible();
-    await expect(page.getByLabel("Parent 1 cell phone")).toBeVisible();
-    await expect(page.getByLabel("Parent 2 email")).toBeVisible();
-    await expect(page.getByLabel("Parent 2 cell phone")).toBeVisible();
-    await expect(page.getByText("Student cell phone")).toHaveCount(0);
-    await expect(page.getByText("Student email")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Parent 2", exact: true })).toBeVisible();
+    for (const label of [
+      "Parent 1 first name",
+      "Parent 1 last name",
+      "Parent 1 email",
+      "Parent 1 phone",
+      "Parent 2 first name",
+      "Parent 2 last name",
+      "Parent 2 email",
+      "Parent 2 phone",
+    ]) {
+      await expect(page.getByLabel(label)).toHaveAttribute("required", "");
+    }
+    await expect(page.getByText(/Parent 2 \(optional\)/i)).toHaveCount(0);
+    await page.getByRole("button", { name: /Continue/i }).click();
+    await expect(page.getByText("Parent 1 name and email are required.")).toBeVisible();
   });
 
   test("family portal remains protected", async ({ page }) => {
@@ -91,13 +98,21 @@ test.describe("public academic year registration", () => {
     await expect(page).toHaveURL(/sign-in/);
   });
 
-  async function currentVersionToken() {
+  async function currentVersionToken(request: APIRequestContext) {
     test.skip(!process.env.DATABASE_URL, "DATABASE_URL is required for API registration tests");
-    return academicYearPublicFormTokenForTest();
+    const response = await request.get("/register/academic-year-tutoring");
+    const page = await response.text();
+    expect(response.ok(), page).toBeTruthy();
+    const tokenInput =
+      page.match(/<input[^>]*name="formVersionToken"[^>]*>/)?.[0] ??
+      page.match(/<input[^>]*value="[^"]+"[^>]*name="formVersionToken"[^>]*>/)?.[0];
+    const token = tokenInput?.match(/value="([^"]+)"/)?.[1];
+    expect(token).toBeTruthy();
+    return token!;
   }
 
   test("Path B API creates a card-backed request without booking", async ({ request }) => {
-    const formVersionToken = await currentVersionToken();
+    const formVersionToken = await currentVersionToken(request);
     const payload = {
       formVersionToken,
       student: {
@@ -123,10 +138,10 @@ test.describe("public academic year registration", () => {
         phone: `571555${phoneSuffix}`,
       },
       parent2: {
-        firstName: "Casey",
+        firstName: "Morgan",
         lastName: "Martin",
         email: `ay-parent2-b-${unique}@example.com`,
-        phone: `572555${phoneSuffix}`,
+        phone: `571556${phoneSuffix}`,
         sameAsStudentAddress: true,
       },
       householdAddress: {
@@ -165,6 +180,28 @@ test.describe("public academic year registration", () => {
     expect(legacyManualResponse.status()).toBe(400);
     expect((await legacyManualResponse.json()).error).toMatch(/secure card collection/i);
 
+    const missingParent2 = await request.post("/api/public/ay-tutoring-registration", {
+      data: { ...payload, parent2: null },
+    });
+    expect(missingParent2.status()).toBe(400);
+    expect((await missingParent2.json()).error).toMatch(/Parent 2 first name, last name, and email are required/i);
+
+    const invalidParent2Phone = await request.post("/api/public/ay-tutoring-registration", {
+      data: { ...payload, parent2: { ...payload.parent2, phone: "not-a-phone" } },
+    });
+    expect(invalidParent2Phone.status()).toBe(400);
+    expect((await invalidParent2Phone.json()).error).toMatch(/Parent 2 phone is not valid/i);
+
+    for (const invalidToken of [undefined, `${formVersionToken}tampered`]) {
+      const invalidTokenResponse = await request.post("/api/public/ay-tutoring-registration", {
+        data: { ...payload, formVersionToken: invalidToken },
+      });
+      expect(invalidTokenResponse.status()).toBe(409);
+      const invalidTokenBody = await invalidTokenResponse.json();
+      expect(invalidTokenBody.code).toBe("form_version_expired");
+      expect(invalidTokenBody.error).toMatch(/Refresh the page/i);
+    }
+
     const response = await request.post("/api/public/ay-tutoring-registration", { data: payload });
     const body = await response.json();
     if (response.status() === 500) {
@@ -178,11 +215,31 @@ test.describe("public academic year registration", () => {
     expect(body.payment?.token).toBeTruthy();
     expect(body.payment?.requiresCard).toBe(true);
 
-    const missingParent2Response = await request.post("/api/public/ay-tutoring-registration", {
-      data: { ...payload, parent2: null },
+    const parent2ConflictUnique = unique + 25;
+    const parent2ConflictPhoneSuffix = String(parent2ConflictUnique).slice(-4);
+    const parent2ConflictResponse = await request.post("/api/public/ay-tutoring-registration", {
+      data: {
+        ...payload,
+        student: {
+          ...payload.student,
+          lastName: `Parent2Conflict${parent2ConflictUnique}`,
+          email: `ay-parent2-conflict-student-${parent2ConflictUnique}@example.com`,
+          cellPhone: `703557${parent2ConflictPhoneSuffix}`,
+        },
+        parent1: {
+          ...payload.parent1,
+          email: `ay-parent2-conflict-parent-${parent2ConflictUnique}@example.com`,
+          phone: `571557${parent2ConflictPhoneSuffix}`,
+        },
+        billing: {
+          ...payload.billing,
+          email: `ay-parent2-conflict-bill-${parent2ConflictUnique}@example.com`,
+          phone: `540557${parent2ConflictPhoneSuffix}`,
+        },
+      },
     });
-    expect(missingParent2Response.status()).toBe(400);
-    expect((await missingParent2Response.json()).error).toMatch(/Parent 2 first name, last name, and email are required/i);
+    expect(parent2ConflictResponse.status()).toBe(409);
+    expect((await parent2ConflictResponse.json()).code).toBe("parent2_conflict");
 
     const hourlyUnique = unique + 50;
     const hourlyPhoneSuffix = String(hourlyUnique).slice(-4);
@@ -200,6 +257,11 @@ test.describe("public academic year registration", () => {
           email: `ay-hourly-parent-${hourlyUnique}@example.com`,
           phone: `571555${hourlyPhoneSuffix}`,
         },
+        parent2: {
+          ...payload.parent2,
+          email: `ay-hourly-parent2-${hourlyUnique}@example.com`,
+          phone: `571556${hourlyPhoneSuffix}`,
+        },
         billing: {
           ...payload.billing,
           email: `ay-hourly-bill-${hourlyUnique}@example.com`,
@@ -215,7 +277,7 @@ test.describe("public academic year registration", () => {
   });
 
   test("Path A confirms the selected open slot on the same request", async ({ request }) => {
-    const formVersionToken = await currentVersionToken();
+    const formVersionToken = await currentVersionToken(request);
     const availability = await request.get(
       "/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915",
     );
@@ -259,10 +321,10 @@ test.describe("public academic year registration", () => {
           phone: `571444${pathAPhoneSuffix}`,
         },
         parent2: {
-          firstName: "Morgan",
+          firstName: "Casey",
           lastName: "Lee",
           email: `ay-parent2-a-${pathAUnique}@example.com`,
-          phone: `572444${pathAPhoneSuffix}`,
+          phone: `571445${pathAPhoneSuffix}`,
           sameAsStudentAddress: true,
         },
         householdAddress: {
@@ -306,7 +368,7 @@ test.describe("public academic year registration", () => {
   });
 
   test("mixed Standard and Advanced subjects defer pricing to Staff", async ({ request }) => {
-    const formVersionToken = await currentVersionToken();
+    const formVersionToken = await currentVersionToken(request);
     const mixedUnique = unique + 2;
     const response = await request.post("/api/public/ay-tutoring-registration", {
       data: {
@@ -336,7 +398,7 @@ test.describe("public academic year registration", () => {
           firstName: "Second",
           lastName: "Parent",
           email: `ay-mixed-parent2-${mixedUnique}@example.com`,
-          phone: `572333${String(mixedUnique).slice(-4)}`,
+          phone: `571334${String(mixedUnique).slice(-4)}`,
           sameAsStudentAddress: true,
         },
         householdAddress: { addressLine1: "3 Main St", city: "Burke", state: "VA", postalCode: "22015" },
@@ -367,5 +429,90 @@ test.describe("public academic year registration", () => {
     expect(body.paymentDeferred).toBe(true);
     expect(body.payment).toBeNull();
     expect(body.invitePaths?.length).toBeGreaterThan(0);
+  });
+
+  test("non-production fixture exposes every advertised Academic Year window", async ({ request }) => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL is required for availability fixture tests");
+    test.skip(process.env.NODE_ENV === "production", "Production availability must never be fabricated.");
+
+    for (const window of ACADEMIC_SCHEDULE_WINDOWS.options) {
+      const tutorResponse = await request.get(
+        `/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=${window.id}`,
+      );
+      expect(tutorResponse.ok(), `${window.id}: ${await tutorResponse.text()}`).toBeTruthy();
+      const tutorBody = await tutorResponse.json();
+      expect(tutorBody.tutors.length, window.id).toBeGreaterThan(0);
+
+      const slotResponse = await request.get(
+        `/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=${window.id}&tutorId=${tutorBody.tutors[0].id}`,
+      );
+      expect(slotResponse.ok(), `${window.id}: ${await slotResponse.text()}`).toBeTruthy();
+      const slotBody = await slotResponse.json();
+      expect(slotBody.slots.length, window.id).toBeGreaterThan(0);
+    }
+  });
+
+  test("non-production availability respects a saturated fixture slot", async ({ request }) => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL is required for availability fixture tests");
+    test.skip(process.env.NODE_ENV === "production", "Production availability must never be fabricated.");
+
+    const tutorsResponse = await request.get(
+      "/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915",
+    );
+    expect(tutorsResponse.ok(), await tutorsResponse.text()).toBeTruthy();
+    const fixtureTutor = (await tutorsResponse.json()).tutors.find(
+      (tutor: { displayName: string }) => tutor.displayName === "Academic Year Test Tutor",
+    );
+    expect(fixtureTutor).toBeTruthy();
+
+    const slotsResponse = await request.get(
+      `/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915&tutorId=${fixtureTutor.id}`,
+    );
+    expect(slotsResponse.ok(), await slotsResponse.text()).toBeTruthy();
+    const fixtureSlot = (await slotsResponse.json()).slots[0];
+    expect(fixtureSlot).toBeTruthy();
+
+    const sql = postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
+    let originalCapacity = 25;
+    let originalHeldSeats = 0;
+    try {
+      const [originalSlot] = await sql`
+        SELECT capacity_seats, held_seats
+        FROM availability_slots
+        WHERE id = ${fixtureSlot.id}::uuid
+      `;
+      expect(originalSlot).toBeTruthy();
+      originalCapacity = originalSlot.capacity_seats;
+      originalHeldSeats = originalSlot.held_seats;
+
+      await sql`
+        UPDATE availability_slots
+        SET capacity_seats = 1, held_seats = 1
+        WHERE id = ${fixtureSlot.id}::uuid
+      `;
+
+      const saturatedTutorsResponse = await request.get(
+        "/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915",
+      );
+      expect(saturatedTutorsResponse.ok(), await saturatedTutorsResponse.text()).toBeTruthy();
+      const saturatedTutor = (await saturatedTutorsResponse.json()).tutors.find(
+        (tutor: { id: string }) => tutor.id === fixtureTutor.id,
+      );
+      expect(saturatedTutor).toBeFalsy();
+
+      const saturatedSlotsResponse = await request.get(
+        `/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915&tutorId=${fixtureTutor.id}`,
+      );
+      expect(saturatedSlotsResponse.ok(), await saturatedSlotsResponse.text()).toBeTruthy();
+      const saturatedSlots = (await saturatedSlotsResponse.json()).slots;
+      expect(saturatedSlots.some((slot: { id: string }) => slot.id === fixtureSlot.id)).toBeFalsy();
+    } finally {
+      await sql`
+        UPDATE availability_slots
+        SET capacity_seats = ${originalCapacity}, held_seats = ${originalHeldSeats}
+        WHERE id = ${fixtureSlot.id}::uuid
+      `;
+      await sql.end({ timeout: 5 });
+    }
   });
 });

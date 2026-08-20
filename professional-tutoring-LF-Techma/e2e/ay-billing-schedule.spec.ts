@@ -48,8 +48,8 @@ async function submitPathB1Registration(
       parent2: {
         firstName: "Second",
         lastName: "Parent",
-        email: `billing-plan-parent2-${paymentPlanId}-${unique}@example.com`,
-        phone: `572777${phoneSuffix}`,
+        email: `billing-plan-second-${paymentPlanId}-${unique}@example.com`,
+        phone: `571778${phoneSuffix}`,
         sameAsStudentAddress: true,
       },
       householdAddress: {

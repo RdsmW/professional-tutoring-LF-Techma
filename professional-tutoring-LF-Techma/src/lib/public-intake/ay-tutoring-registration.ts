@@ -124,7 +124,7 @@ function inviteToken() {
 function requireContact(label: string, contact: ContactInput | null | undefined, requirePhone = false) {
   const firstName = trim(contact?.firstName);
   const lastName = trim(contact?.lastName);
-  const email = normalizeEmail(contact?.email ?? "");
+  const email = normalizeEmail(trim(contact?.email));
   const phone = trim(contact?.phone ?? "");
   if (!firstName || !lastName || !email) {
     throw new PublicIntakeError(`${label} first name, last name, and email are required.`);
@@ -344,10 +344,8 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
 
   const staffBlock = await assertNotStaffAsGuardian({ email: parent1.email });
   if (staffBlock) throw new PublicIntakeError(staffBlock, 400, "staff_email");
-  if (parent2) {
-    const secondBlock = await assertNotStaffAsGuardian({ email: parent2.email });
-    if (secondBlock) throw new PublicIntakeError(secondBlock, 400, "staff_email");
-  }
+  const secondBlock = await assertNotStaffAsGuardian({ email: parent2.email });
+  if (secondBlock) throw new PublicIntakeError(secondBlock, 400, "staff_email");
 
   const subject = await resolveCatalogSubjectRow(primarySubjectCode);
   if (!subject) {
@@ -429,17 +427,21 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
   let identityReview: string | undefined;
   if (emailMatches.length === 1) identityReview = "student_unverified";
 
-  let parent2Conflict = false;
-  if (parent2) {
-    const parent2Matches = await findHouseholdMatchCandidates({ email: parent2.email });
-    const otherHousehold = parent2Matches.find(
-      (row) =>
-        row.guardian.matchOn.includes("email") &&
-        row.householdStatus !== "archived" &&
-        (emailMatches.length === 0 || row.householdId !== emailMatches[0]!.householdId),
+  const parent2Matches = await findHouseholdMatchCandidates({ email: parent2.email });
+  const otherHousehold = parent2Matches.find(
+    (row) =>
+      row.guardian.matchOn.includes("email") &&
+      row.householdStatus !== "archived" &&
+      (emailMatches.length === 0 || row.householdId !== emailMatches[0]!.householdId),
+  );
+  if (otherHousehold) {
+    throw new PublicIntakeError(
+      "Parent 2 is already linked to another family. Please contact Professional Tutoring so we can safely place this registration.",
+      409,
+      "parent2_conflict",
     );
-    if (otherHousehold) parent2Conflict = true;
   }
+  const parent2Conflict = false;
 
   const subjectLabels = ACADEMIC_SUBJECTS.options
     .filter((option) => subjectCodes.includes(option.id))

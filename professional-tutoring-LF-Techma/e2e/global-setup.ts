@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import postgres from "postgres";
-import { createDefaultPublicFormContent } from "../src/lib/forms/public-form-schema";
+import { createDefaultPublicFormContent, parsePublicFormContent } from "../src/lib/forms/public-form-schema";
+import { seedNonProductionAcademicYearAvailability } from "../src/lib/booking/non-production-academic-year-availability";
 
 export default async function globalSetup() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -11,6 +12,8 @@ export default async function globalSetup() {
   try {
     const migrationPath = path.join(process.cwd(), "drizzle", "0024_public_form_versions.sql");
     await sql.unsafe(fs.readFileSync(migrationPath, "utf8"));
+    const parent2MigrationPath = path.join(process.cwd(), "drizzle", "0026_academic_year_parent2_required.sql");
+    await sql.unsafe(fs.readFileSync(parent2MigrationPath, "utf8"));
 
     const [definition] = await sql`
       SELECT id
@@ -30,18 +33,25 @@ export default async function globalSetup() {
     if (!definitionId) throw new Error("Unable to initialize the Academic Year public form definition.");
 
     const [published] = await sql`
-      SELECT id
+      SELECT id, content
       FROM public_form_versions
       WHERE definition_id = ${definitionId}::uuid
         AND status = 'published'
       LIMIT 1
     `;
-    if (!published) {
+    if (!published || !parsePublicFormContent("academic_year_tutoring", published.content).content) {
       const [latest] = await sql`
         SELECT COALESCE(MAX(version_number), 0)::int AS version
         FROM public_form_versions
         WHERE definition_id = ${definitionId}::uuid
       `;
+      if (published) {
+        await sql`
+          UPDATE public_form_versions
+          SET status = 'retired', retired_at = now()
+          WHERE id = ${published.id}::uuid
+        `;
+      }
       await sql`
         INSERT INTO public_form_versions (
           definition_id,
@@ -61,6 +71,8 @@ export default async function globalSetup() {
         )
       `;
     }
+    process.env.AY_TUTORING_TEST_AVAILABILITY = "true";
+    await seedNonProductionAcademicYearAvailability();
   } finally {
     await sql.end({ timeout: 5 });
   }

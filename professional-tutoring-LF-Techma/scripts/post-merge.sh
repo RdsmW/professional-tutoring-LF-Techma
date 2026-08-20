@@ -17,6 +17,10 @@ if [[ -n "${DATABASE_URL:-}" ]]; then
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0024_public_form_versions.sql
   echo "Applying Clerk portal invitation migration…"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0025_guardian_clerk_portal_invitation.sql
+  echo "Applying Academic Year Parent 2 compatibility migration…"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0026_academic_year_parent2_required.sql
+  echo "Publishing a renderable Academic Year public-form compatibility version…"
+  npx tsx scripts/upgrade-academic-year-public-form.mts
 else
   echo "DATABASE_URL is not configured; skipping database migrations."
 fi

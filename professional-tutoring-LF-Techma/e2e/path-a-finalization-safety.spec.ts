@@ -108,8 +108,8 @@ async function registerPathASafetyCase(
       parent2: {
         firstName: "Second",
         lastName: "Safety",
-        email: `path-a-second-safety-${label}-${emailToken}@example.com`,
-        phone: `572222${phoneSuffix}`,
+        email: `path-a-second-${label}-${emailToken}@example.com`,
+        phone: `571223${phoneSuffix}`,
         sameAsStudentAddress: true,
       },
       householdAddress: {
