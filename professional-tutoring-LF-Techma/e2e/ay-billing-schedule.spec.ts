@@ -1,6 +1,7 @@
 import { config } from "dotenv";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import postgres from "postgres";
+import { academicYearPublicFormTokenForTest } from "./public-form-token";
 
 config({ path: ".env.local" });
 config();
@@ -9,15 +10,15 @@ const databaseUrl = process.env.DATABASE_URL;
 const database = databaseUrl ? postgres(databaseUrl, { max: 1, prepare: false }) : null;
 
 async function currentFormVersionToken(request: APIRequestContext) {
-  const response = await request.get("/register/academic-year-tutoring");
-  expect(response.ok()).toBeTruthy();
-  const html = await response.text();
-  const token = html.match(/name="formVersionToken" value="([^"]+)"/)?.[1];
-  expect(token).toBeTruthy();
-  return token!;
+  void request;
+  return academicYearPublicFormTokenForTest();
 }
 
-async function submitPathB1Registration(request: APIRequestContext, paymentPlanId: "full_year" | "semester" | "monthly") {
+async function submitPathB1Registration(
+  request: APIRequestContext,
+  paymentPlanId: "full_year" | "semester" | "monthly",
+  autoCharge: "yes" | "no" = "no",
+) {
   const unique = `${Date.now()}${Math.floor(Math.random() * 10_000)}`;
   const phoneSuffix = unique.slice(-4);
   const formVersionToken = await currentFormVersionToken(request);
@@ -68,8 +69,8 @@ async function submitPathB1Registration(request: APIRequestContext, paymentPlanI
       preferredWindowIds: ["tue_1715_1915"],
       paymentPlanId,
       hoursRatePackage: "std_2h",
-      autoCharge: "no",
-      altPaymentMethod: "Check",
+       autoCharge,
+       ...(autoCharge === "no" ? { altPaymentMethod: "Check" } : {}),
       policyAck: true,
       agreementAck: true,
       parentSignature: "Billing Parent",
@@ -127,6 +128,29 @@ test.describe("Academic Year billing schedules", () => {
 
       const dueTimes = rows.map((row) => new Date(row.due_at).getTime());
       expect(dueTimes).toEqual([...dueTimes].sort((left, right) => left - right));
+      const amounts = rows.map((row) => Number(row.amount_cents));
+      if (planId === "full_year") expect(amounts).toEqual([393300]);
+      if (planId === "semester") expect(amounts).toEqual([218500, 196650]);
+      if (planId === "monthly") {
+        expect(amounts.slice(0, 9)).toEqual(Array(9).fill(46000));
+        expect(amounts[9]).toBe(23000);
+      }
     });
   }
+
+  test("includes the 3.6% card fee in card-collected installments", async ({ request }) => {
+    const sql = database;
+    if (!sql) throw new Error("DATABASE_URL missing");
+    const registration = await submitPathB1Registration(request, "monthly", "yes");
+    const rows = await sql`
+      SELECT amount_cents, notes
+      FROM payment_records
+      WHERE id = ${registration.payment.paymentRecordId}::uuid
+    `;
+    expect(rows).toHaveLength(1);
+    expect(Number(rows[0].amount_cents)).toBe(47656);
+    const notes = JSON.parse(rows[0].notes);
+    expect(notes.installmentSchedule[0].baseAmountCents).toBe(46000);
+    expect(notes.installmentSchedule[0].serviceFeeCents).toBe(1656);
+  });
 });

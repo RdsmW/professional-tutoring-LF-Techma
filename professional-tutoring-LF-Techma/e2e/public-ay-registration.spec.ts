@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { academicYearPublicFormTokenForTest } from "./public-form-token";
 
 const unique = Date.now();
 const phoneSuffix = String(unique).slice(-4);
@@ -36,15 +37,13 @@ test.describe("public academic year registration", () => {
     await expect(page).toHaveURL(/sign-in/);
   });
 
-  async function currentVersionToken(page: import("@playwright/test").Page) {
-    await page.goto("/register/academic-year-tutoring");
-    const token = await page.locator('input[name="formVersionToken"]').inputValue();
-    expect(token).toBeTruthy();
-    return token;
+  async function currentVersionToken() {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL is required for API registration tests");
+    return academicYearPublicFormTokenForTest();
   }
 
-  test("Path B API creates request without booking", async ({ request, page }) => {
-    const formVersionToken = await currentVersionToken(page);
+  test("Path B API creates request without booking", async ({ request }) => {
+    const formVersionToken = await currentVersionToken();
     const payload = {
       formVersionToken,
       student: {
@@ -128,8 +127,8 @@ test.describe("public academic year registration", () => {
     expect(finalizedBody.paymentStatus).toBe("unpaid");
   });
 
-  test("Path A confirms the selected open slot on the same request", async ({ request, page }) => {
-    const formVersionToken = await currentVersionToken(page);
+  test("Path A confirms the selected open slot on the same request", async ({ request }) => {
+    const formVersionToken = await currentVersionToken();
     const availability = await request.get(
       "/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915",
     );
@@ -233,5 +232,62 @@ test.describe("public academic year registration", () => {
     expect(replay.ok(), JSON.stringify(replayBody)).toBeTruthy();
     expect(replayBody.bookingId).toBe(finalizedBody.bookingId);
     expect(replayBody.alreadyCompleted).toBe(true);
+  });
+
+  test("mixed Standard and Advanced subjects defer pricing to Staff", async ({ request }) => {
+    const formVersionToken = await currentVersionToken();
+    const mixedUnique = unique + 2;
+    const response = await request.post("/api/public/ay-tutoring-registration", {
+      data: {
+        formVersionToken,
+        student: {
+          firstName: "Mixed",
+          lastName: `Subject${mixedUnique}`,
+          schoolName: "Test High",
+          gradeLabel: "grade_9",
+          graduationYear: String(new Date().getFullYear() + 3),
+          gender: "F",
+          birthdate: "2010-04-12",
+          cellPhone: `703333${String(mixedUnique).slice(-4)}`,
+          email: `ay-mixed-${mixedUnique}@example.com`,
+          addressLine1: "3 Student Ln",
+          city: "Burke",
+          state: "VA",
+          postalCode: "22015",
+        },
+        parent1: {
+          firstName: "Mixed",
+          lastName: "Parent",
+          email: `ay-mixed-parent-${mixedUnique}@example.com`,
+          phone: `571333${String(mixedUnique).slice(-4)}`,
+        },
+        householdAddress: { addressLine1: "3 Main St", city: "Burke", state: "VA", postalCode: "22015" },
+        billing: {
+          firstName: "Mixed",
+          lastName: "Parent",
+          email: `ay-mixed-bill-${mixedUnique}@example.com`,
+          phone: `540333${String(mixedUnique).slice(-4)}`,
+          addressLine1: "3 Billing Rd",
+          city: "Burke",
+          state: "VA",
+          postalCode: "22015",
+        },
+        subjectCodes: ["algebra_1", "ap_statistics"],
+        referralSource: "friend",
+        schedulingPath: "pt_chooses",
+        preferredWindowIds: ["tue_1715_1915"],
+        paymentPlanId: "monthly",
+        policyAck: true,
+        agreementAck: true,
+        parentSignature: "Mixed Parent",
+        studentSignature: "Mixed Subject",
+      },
+    });
+    const body = await response.json();
+    expect(response.ok(), JSON.stringify(body)).toBeTruthy();
+    expect(body.subjectRateProfile).toBe("mixed");
+    expect(body.paymentDeferred).toBe(true);
+    expect(body.payment).toBeNull();
+    expect(body.invitePaths?.length).toBeGreaterThan(0);
   });
 });
