@@ -192,7 +192,10 @@ async function assignPreferredSlot(context: PaymentContext, bookingStatus: "conf
       bookingStatus,
     });
   } catch (error) {
-    if (error instanceof AssignTutoringRequestError && error.code === "already_assigned") {
+    if (
+      error instanceof AssignTutoringRequestError &&
+      (error.code === "already_assigned" || error.code === "slot_unavailable")
+    ) {
       const existing = await findActiveBooking(context.request.id);
       if (existing) {
         return {

@@ -43,3 +43,8 @@ externalPort = 3002
 [postMerge]
 path = "professional-tutoring-LF-Techma/scripts/post-merge.sh"
 timeoutMs = 300000
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["bash", "-c", "cd professional-tutoring-LF-Techma && npm run start -- -H 0.0.0.0 -p $PORT"]
+build = ["bash", "-c", "cd professional-tutoring-LF-Techma && npm run build"]
