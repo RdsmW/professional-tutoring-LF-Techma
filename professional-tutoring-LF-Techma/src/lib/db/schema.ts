@@ -409,6 +409,11 @@ export const paymentRecords = pgTable("payment_records", {
   householdId: uuid("household_id").notNull(),
   relatedEntityType: text("related_entity_type"),
   relatedEntityId: uuid("related_entity_id"),
+  /** Groups the fixed Academic Year installments created from one registration. */
+  billingScheduleId: uuid("billing_schedule_id"),
+  installmentSequence: integer("installment_sequence"),
+  installmentCount: integer("installment_count"),
+  priceSnapshotId: uuid("price_snapshot_id"),
   status: paymentStatusEnum("status").notNull().default("unpaid"),
   amountCents: integer("amount_cents").notNull().default(0),
   currency: varchar("currency", { length: 8 }).notNull().default("USD"),
@@ -418,14 +423,28 @@ export const paymentRecords = pgTable("payment_records", {
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   stripeSetupIntentId: text("stripe_setup_intent_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  stripeChargeId: text("stripe_charge_id"),
   stripeCustomerId: text("stripe_customer_id"),
   dueAt: timestamp("due_at", { withTimezone: true }),
   paymentSetupCompletedAt: timestamp("payment_setup_completed_at", { withTimezone: true }),
   continuationTokenHash: text("continuation_token_hash"),
   continuationExpiresAt: timestamp("continuation_expires_at", { withTimezone: true }),
+  continuationConsumedAt: timestamp("continuation_consumed_at", { withTimezone: true }),
+  collectionAttempts: integer("collection_attempts").notNull().default(0),
+  lastCollectionAttemptAt: timestamp("last_collection_attempt_at", { withTimezone: true }),
+  nextCollectionAttemptAt: timestamp("next_collection_attempt_at", { withTimezone: true }),
+  stripeFailureCode: text("stripe_failure_code"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Stripe delivery ids make payment reconciliation safe to replay. */
+export const stripeWebhookEvents = pgTable("stripe_webhook_events", {
+  id: text("id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  stripeObjectId: text("stripe_object_id"),
+  processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const changeRequestStatusEnum = pgEnum("change_request_status", [

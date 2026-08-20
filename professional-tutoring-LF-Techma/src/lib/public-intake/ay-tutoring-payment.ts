@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
 import { paymentRecords, type PriceQuoteBreakdown } from "@/lib/db/schema";
@@ -16,6 +16,7 @@ export type AyPublicPaymentContinuation = {
   dueAt: string;
   label: string;
   requiresCard: boolean;
+  installmentCount: number;
 };
 
 function tokenHash(token: string) {
@@ -60,7 +61,7 @@ export async function createAyPublicPaymentContinuation(input: {
     subtotalCents: schedule.monthlyAmountCents * 10,
     discountCents: schedule.monthlyAmountCents * 10 - totalCents,
     registrationFeeCents: 0,
-    totalCents: firstInstallment.amountCents,
+    totalCents,
     surchargeBps: 0,
     assumedPackage: false,
   };
@@ -68,39 +69,49 @@ export async function createAyPublicPaymentContinuation(input: {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(now.getTime() + CONTINUATION_TTL_MS);
   const requiresCard = input.autoCharge === "yes";
+  const billingScheduleId = randomUUID();
   const database = requireDb();
-  const [payment] = await database
+  const installments = schedule.installments.map((installment) => ({
+    householdId: input.householdId,
+    relatedEntityType: "tutoring_request",
+    relatedEntityId: input.tutoringRequestId,
+    billingScheduleId,
+    installmentSequence: installment.sequence,
+    installmentCount: schedule.installments.length,
+    priceSnapshotId: snapshot.id,
+    status: requiresCard ? ("pending" as const) : ("unpaid" as const),
+    amountCents: installment.amountCents,
+    methodLabel: requiresCard ? "Card scheduled collection" : input.altPaymentMethod ?? "Manual payment",
+    dueAt: installment.dueAt,
+    continuationTokenHash: installment.sequence === 1 ? tokenHash(token) : null,
+    continuationExpiresAt: installment.sequence === 1 ? expiresAt : null,
+    nextCollectionAttemptAt: requiresCard ? installment.dueAt : null,
+    notes: JSON.stringify({
+      source: "public_ay_tutoring",
+      schedulingPath: input.schedulingPath,
+      paymentPlanId,
+      packageCode: schedule.packageCode,
+      rateTier: schedule.rateTier,
+      monthlyAmountCents: schedule.monthlyAmountCents,
+      installmentSchedule: schedule.installments.map((entry) => ({
+        sequence: entry.sequence,
+        amountCents: entry.amountCents,
+        dueAt: entry.dueAt.toISOString(),
+        label: entry.label,
+      })),
+      installmentLabel: installment.label,
+      priceSnapshotId: snapshot.id,
+      autoCharge: input.autoCharge,
+      altPaymentMethod: input.altPaymentMethod ?? null,
+    }),
+    updatedAt: now,
+  }));
+  const payments = await database
     .insert(paymentRecords)
-    .values({
-      householdId: input.householdId,
-      relatedEntityType: "tutoring_request",
-      relatedEntityId: input.tutoringRequestId,
-      status: requiresCard ? "pending" : "unpaid",
-      amountCents: firstInstallment.amountCents,
-      methodLabel: requiresCard ? "Card pending setup" : input.altPaymentMethod ?? "Manual payment",
-      dueAt: firstInstallment.dueAt,
-      continuationTokenHash: tokenHash(token),
-      continuationExpiresAt: expiresAt,
-      notes: JSON.stringify({
-        source: "public_ay_tutoring",
-        schedulingPath: input.schedulingPath,
-        paymentPlanId,
-        packageCode: schedule.packageCode,
-        rateTier: schedule.rateTier,
-        monthlyAmountCents: schedule.monthlyAmountCents,
-        installmentSchedule: schedule.installments.map((installment) => ({
-          sequence: installment.sequence,
-          amountCents: installment.amountCents,
-          dueAt: installment.dueAt.toISOString(),
-          label: installment.label,
-        })),
-        priceSnapshotId: snapshot.id,
-        autoCharge: input.autoCharge,
-        altPaymentMethod: input.altPaymentMethod ?? null,
-      }),
-      updatedAt: now,
-    })
-    .returning({ id: paymentRecords.id });
+    .values(installments)
+    .returning({ id: paymentRecords.id, installmentSequence: paymentRecords.installmentSequence });
+  const payment = payments.find((entry) => entry.installmentSequence === 1);
+  if (!payment) throw new Error("Unable to create the first Academic Year payment installment.");
 
   return {
     token,
@@ -111,6 +122,7 @@ export async function createAyPublicPaymentContinuation(input: {
     dueAt: firstInstallment.dueAt.toISOString(),
     label: firstInstallment.label,
     requiresCard,
+    installmentCount: schedule.installments.length,
   } satisfies AyPublicPaymentContinuation;
 }
 

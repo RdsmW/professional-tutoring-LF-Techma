@@ -5,7 +5,7 @@ import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 
 type PreparedPayment =
-  | { kind: "manual"; paymentRecordId: string }
+  | { kind: "manual" | "completed"; paymentRecordId: string }
   | {
       kind: "payment_intent" | "setup_intent";
       clientSecret: string | null;
@@ -118,7 +118,7 @@ export function PublicAyTutoringPaymentPanel({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const stripePromise = useMemo(() => {
-    if (!prepared || prepared.kind === "manual") return null;
+    if (!prepared || (prepared.kind !== "payment_intent" && prepared.kind !== "setup_intent")) return null;
     return loadStripe(prepared.publishableKey) as Promise<Stripe | null>;
   }, [prepared]);
 
@@ -183,7 +183,15 @@ export function PublicAyTutoringPaymentPanel({
           </button>
         </>
       ) : null}
-      {!loading && !error && prepared && prepared.kind !== "manual" && stripePromise && prepared.clientSecret ? (
+      {!loading && !error && prepared?.kind === "completed" ? (
+        <p>This payment step was already completed. You can safely return to your registration confirmation.</p>
+      ) : null}
+      {!loading &&
+      !error &&
+      prepared &&
+      (prepared.kind === "payment_intent" || prepared.kind === "setup_intent") &&
+      stripePromise &&
+      prepared.clientSecret ? (
         <Elements stripe={stripePromise} options={{ clientSecret: prepared.clientSecret }}>
           <CardConfirmation mode={prepared} token={token} onCompleted={onCompleted} />
         </Elements>

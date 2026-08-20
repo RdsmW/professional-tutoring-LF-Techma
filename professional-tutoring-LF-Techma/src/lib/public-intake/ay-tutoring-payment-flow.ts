@@ -149,6 +149,20 @@ async function storeCardOnHousehold(input: {
     .where(eq(households.id, input.householdId));
 }
 
+async function markBillingSchedulePaymentMethodReady(payment: typeof paymentRecords.$inferSelect) {
+  if (!payment.billingScheduleId) return;
+  const now = new Date();
+  await requireDb()
+    .update(paymentRecords)
+    .set({ paymentSetupCompletedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(paymentRecords.billingScheduleId, payment.billingScheduleId),
+        inArray(paymentRecords.status, ["pending", "unpaid"]),
+      ),
+    );
+}
+
 async function findActiveBooking(requestId: string) {
   const [booking] = await requireDb()
     .select()
@@ -170,16 +184,52 @@ async function assignPreferredSlot(context: PaymentContext, bookingStatus: "conf
   if (!slot) {
     throw new AyPublicPaymentError("That time is no longer available. Choose another tutor and time.", 409, "slot_unavailable");
   }
-  return assignTutoringRequest({
-    requestId: context.request.id,
-    tutorId: slot.tutorId,
-    slotId: context.request.preferredSlotId,
-    bookingStatus,
-  });
+  try {
+    return await assignTutoringRequest({
+      requestId: context.request.id,
+      tutorId: slot.tutorId,
+      slotId: context.request.preferredSlotId,
+      bookingStatus,
+    });
+  } catch (error) {
+    if (error instanceof AssignTutoringRequestError && error.code === "already_assigned") {
+      const existing = await findActiveBooking(context.request.id);
+      if (existing) {
+        return {
+          request: context.request,
+          booking: existing,
+        };
+      }
+    }
+    throw error;
+  }
+}
+
+async function confirmPendingBookingIdempotently(context: PaymentContext, bookingId: string) {
+  try {
+    return await confirmPendingPaymentBooking({
+      requestId: context.request.id,
+      bookingId,
+    });
+  } catch (error) {
+    if (error instanceof AssignTutoringRequestError && error.code === "pending_booking_not_found") {
+      const existing = await findActiveBooking(context.request.id);
+      if (existing?.status === "confirmed") {
+        return {
+          request: context.request,
+          booking: existing,
+        };
+      }
+    }
+    throw error;
+  }
 }
 
 export async function prepareAyPublicPayment(token: string) {
   const context = await loadContext(token);
+  if (context.payment.continuationConsumedAt) {
+    return { kind: "completed" as const, paymentRecordId: context.payment.id };
+  }
   if (!isStripeConfigured()) {
     throw new AyPublicPaymentError("Card payment is not available right now.", 503, "stripe_unavailable");
   }
@@ -317,7 +367,11 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
   if (context.notes.autoCharge === "no") {
     await requireDb()
       .update(paymentRecords)
-      .set({ paymentSetupCompletedAt: new Date(), updatedAt: new Date() })
+      .set({
+        paymentSetupCompletedAt: new Date(),
+        continuationConsumedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(paymentRecords.id, context.payment.id));
     if (context.notes.schedulingPath === "family_selected") {
       const assignment = await assignPreferredSlot(context, "pending_payment");
@@ -354,9 +408,15 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
       throw new AyPublicPaymentError("Card setup is missing a payment method.", 409, "setup_incomplete");
     }
     await storeCardOnHousehold({ householdId: context.household.id, customerId, paymentMethodId });
+    await markBillingSchedulePaymentMethodReady(context.payment);
     await requireDb()
       .update(paymentRecords)
-      .set({ paymentSetupCompletedAt: new Date(), status: "pending", updatedAt: new Date() })
+      .set({
+        paymentSetupCompletedAt: new Date(),
+        continuationConsumedAt: new Date(),
+        status: "pending",
+        updatedAt: new Date(),
+      })
       .where(eq(paymentRecords.id, context.payment.id));
     if (context.notes.schedulingPath === "family_selected") {
       const assignment = await assignPreferredSlot(context, "confirmed");
@@ -383,14 +443,23 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
   }
 
   if (context.notes.schedulingPath === "pt_chooses") {
-    const captured = await stripe.paymentIntents.capture(paymentIntent.id);
+    const captured = await stripe.paymentIntents.capture(paymentIntent.id, {}, {
+      idempotencyKey: `ay-public-capture-${context.payment.id}`,
+    });
     if (captured.status !== "succeeded") {
       throw new AyPublicPaymentError("We could not complete the payment. Please try again.", 409, "capture_failed");
     }
     await storeCardOnHousehold({ householdId: context.household.id, customerId, paymentMethodId });
+    await markBillingSchedulePaymentMethodReady(context.payment);
     await requireDb()
       .update(paymentRecords)
-      .set({ status: "paid", paidAt: new Date(), paymentSetupCompletedAt: new Date(), updatedAt: new Date() })
+      .set({
+        status: "paid",
+        paidAt: new Date(),
+        paymentSetupCompletedAt: new Date(),
+        continuationConsumedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(paymentRecords.id, context.payment.id));
     return { schedulingPath: context.notes.schedulingPath, bookingId: null, paymentStatus: "paid" };
   }
@@ -403,7 +472,9 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
     throw error;
   }
   try {
-    const captured = await stripe.paymentIntents.capture(paymentIntent.id);
+    const captured = await stripe.paymentIntents.capture(paymentIntent.id, {}, {
+      idempotencyKey: `ay-public-capture-${context.payment.id}`,
+    });
     if (captured.status !== "succeeded") {
       throw new Error("Stripe did not return a successful capture.");
     }
@@ -416,14 +487,18 @@ export async function finalizeAyPublicPayment(input: { token: string; intentId?:
       .where(eq(paymentRecords.id, context.payment.id));
     throw new AyPublicPaymentError("We could not complete the payment. Your time was not booked.", 409, "capture_failed");
   }
-  const finalized = await confirmPendingPaymentBooking({
-    requestId: context.request.id,
-    bookingId: assignment.booking.id,
-  });
+  const finalized = await confirmPendingBookingIdempotently(context, assignment.booking.id);
   await storeCardOnHousehold({ householdId: context.household.id, customerId, paymentMethodId });
+  await markBillingSchedulePaymentMethodReady(context.payment);
   await requireDb()
     .update(paymentRecords)
-    .set({ status: "paid", paidAt: new Date(), paymentSetupCompletedAt: new Date(), updatedAt: new Date() })
+    .set({
+      status: "paid",
+      paidAt: new Date(),
+      paymentSetupCompletedAt: new Date(),
+      continuationConsumedAt: new Date(),
+      updatedAt: new Date(),
+    })
     .where(eq(paymentRecords.id, context.payment.id));
   return { schedulingPath: context.notes.schedulingPath, bookingId: finalized.booking.id, paymentStatus: "paid" };
 }

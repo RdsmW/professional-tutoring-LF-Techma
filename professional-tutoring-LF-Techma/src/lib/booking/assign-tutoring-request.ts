@@ -1,6 +1,13 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { requireDb } from "@/lib/db";
-import { availabilitySlots, bookings, paymentRecords, tutoringRequests } from "@/lib/db/schema";
+import {
+  availabilitySlots,
+  bookings,
+  paymentRecords,
+  tutorSubjects,
+  tutors,
+  tutoringRequests,
+} from "@/lib/db/schema";
 
 const OCCUPYING_BOOKING_STATUSES = ["held", "pending_payment", "pending_staff_review", "confirmed"] as const;
 
@@ -86,20 +93,54 @@ export async function assignTutoringRequest(input: {
       throw new AssignTutoringRequestError("This registration already has a confirmed time.", 409, "already_assigned");
     }
 
+    if (!isStaffAssignment) {
+      if (!request.scheduleWindowId) {
+        throw new AssignTutoringRequestError(
+          "The originally selected scheduling window is no longer available. Choose another tutor or time.",
+          409,
+          "slot_unavailable",
+        );
+      }
+
+      const [eligibleTutor] = await tx
+        .select({ id: tutors.id })
+        .from(tutors)
+        .innerJoin(tutorSubjects, eq(tutorSubjects.tutorId, tutors.id))
+        .where(
+          and(
+            eq(tutors.id, input.tutorId),
+            eq(tutors.active, true),
+            eq(tutorSubjects.subjectId, request.subjectId),
+          ),
+        )
+        .limit(1);
+
+      if (!eligibleTutor) {
+        throw new AssignTutoringRequestError(
+          "That tutor is no longer available for this subject. Choose another tutor or time.",
+          409,
+          "tutor_unavailable",
+        );
+      }
+    }
+
+    const slotClaimConditions = [
+      eq(availabilitySlots.id, input.slotId),
+      eq(availabilitySlots.tutorId, input.tutorId),
+      eq(availabilitySlots.active, true),
+      sql`${availabilitySlots.bookedSeats} + ${availabilitySlots.heldSeats} < ${availabilitySlots.capacitySeats}`,
+    ];
+    if (!isStaffAssignment) {
+      slotClaimConditions.push(eq(availabilitySlots.scheduleWindowId, request.scheduleWindowId!));
+    }
+
     const [claimed] = await tx
       .update(availabilitySlots)
       .set({
         bookedSeats: sql`${availabilitySlots.bookedSeats} + 1`,
         updatedAt: now,
       })
-      .where(
-        and(
-          eq(availabilitySlots.id, input.slotId),
-          eq(availabilitySlots.tutorId, input.tutorId),
-          eq(availabilitySlots.active, true),
-          sql`${availabilitySlots.bookedSeats} + ${availabilitySlots.heldSeats} < ${availabilitySlots.capacitySeats}`,
-        ),
-      )
+      .where(and(...slotClaimConditions))
       .returning({
         id: availabilitySlots.id,
         scheduleWindowId: availabilitySlots.scheduleWindowId,

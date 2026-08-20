@@ -1,0 +1,1 @@
+- [Academic Year collections](academic-year-collections.md) — fixed Academic Year plans use persisted installments and server-side off-session collection, not open-ended subscriptions.
