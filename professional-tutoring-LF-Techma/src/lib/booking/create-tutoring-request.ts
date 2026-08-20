@@ -23,6 +23,7 @@ export async function createTutoringRequest(
     policyVersionId?: string | null;
     agreementAcceptedAt?: Date | null;
     formId: string;
+    formVersionId?: string | null;
     scheduleWindowId?: string | null;
     paymentPlanId?: string | null;
     payload: TutoringRequestPayload;
@@ -47,6 +48,7 @@ export async function createTutoringRequest(
       policyVersionId: input.policyVersionId ?? null,
       agreementAcceptedAt: input.agreementAcceptedAt ?? null,
       formId: input.formId,
+      formVersionId: input.formVersionId ?? null,
       scheduleWindowId: input.scheduleWindowId ?? null,
       paymentPlanId: input.paymentPlanId ?? null,
       payload: input.payload,

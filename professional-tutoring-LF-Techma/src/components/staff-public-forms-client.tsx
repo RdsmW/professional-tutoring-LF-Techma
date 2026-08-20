@@ -132,11 +132,11 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
                 role="menuitem"
                 onClick={() => setOpenMenuId(null)}
               >
-                Open
+                Open form
               </Link>
             ) : (
               <button type="button" role="menuitem" disabled>
-                Open
+                Open form
               </button>
             )}
             <button
@@ -173,16 +173,9 @@ export function StaffPublicFormsClient({ embedded = false }: { embedded?: boolea
             >
               Embed
             </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpenMenuId(null);
-                toast.info("Form editing is not available yet.");
-              }}
-            >
-              Edit
-            </button>
+            <Link href={`/staff/public-forms/${form.id}/edit`} role="menuitem" onClick={() => setOpenMenuId(null)}>
+              Edit form
+            </Link>
           </div>
         ) : null}
       </div>

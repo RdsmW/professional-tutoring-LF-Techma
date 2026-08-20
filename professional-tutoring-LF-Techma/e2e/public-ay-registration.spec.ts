@@ -26,8 +26,17 @@ test.describe("public academic year registration", () => {
     await expect(page).toHaveURL(/sign-in/);
   });
 
-  test("Path B API creates request without booking", async ({ request }) => {
+  async function currentVersionToken(page: import("@playwright/test").Page) {
+    await page.goto("/register/academic-year-tutoring");
+    const token = await page.locator('input[name="formVersionToken"]').inputValue();
+    expect(token).toBeTruthy();
+    return token;
+  }
+
+  test("Path B API creates request without booking", async ({ request, page }) => {
+    const formVersionToken = await currentVersionToken(page);
     const payload = {
+      formVersionToken,
       student: {
         firstName: "Alex",
         lastName: `Martin${unique}`,
@@ -108,7 +117,8 @@ test.describe("public academic year registration", () => {
     expect(finalizedBody.paymentStatus).toBe("unpaid");
   });
 
-  test("Path A confirms the selected open slot on the same request", async ({ request }) => {
+  test("Path A confirms the selected open slot on the same request", async ({ request, page }) => {
+    const formVersionToken = await currentVersionToken(page);
     const availability = await request.get(
       "/api/public/ay-tutoring-availability?subjectCode=algebra_1&windowId=tue_1715_1915",
     );
@@ -129,6 +139,7 @@ test.describe("public academic year registration", () => {
     const pathAPhoneSuffix = String(pathAUnique).slice(-4);
     const registration = await request.post("/api/public/ay-tutoring-registration", {
       data: {
+        formVersionToken,
         student: {
           firstName: "Jordan",
           lastName: `Lee${pathAUnique}`,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { cloneElement, createContext, isValidElement, useContext, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AddressAutocompleteInput } from "@/components/address-autocomplete-input";
 import { AppToastHost, useAppToast } from "@/components/app-toast";
@@ -21,6 +21,7 @@ import {
   US_STATES,
   YES_NO,
 } from "@/lib/forms/options";
+import type { PublicFormContent } from "@/lib/forms/public-form-schema";
 import type { AddressSuggestion } from "@/lib/mapbox/geocode";
 import { formatTimeRange12h } from "@/lib/ui/datetime";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
@@ -188,6 +189,28 @@ type PaymentContinuation = {
   requiresCard: boolean;
 };
 
+type PublicFieldSettings = Record<string, { label: string; placeholder: string; visible: boolean; order: number }>;
+
+const FIELD_ID_BY_FALLBACK_LABEL: Record<string, string> = {
+  School: "school",
+  Grade: "grade",
+  "Graduation year": "graduation_year",
+  Gender: "gender",
+  Birthdate: "birthdate",
+  "Student cell": "student_cell",
+  "Student email": "student_email",
+  "How did you hear about us?": "referral_source",
+  "Payment plan": "academic_payment_plan",
+  "Hours / rates (standard)": "academic_rate_package",
+  "Hours / rates (advanced)": "academic_advanced_rate_package",
+  "Automatically charge a card for scheduled payments?": "auto_charge",
+  "Alternative form of payment": "alt_payment_method",
+  "Parent signature (type your full name)": "consent_agreement",
+  "Student signature (type full name)": "consent_agreement",
+};
+
+const PublicFieldSettingsContext = createContext<PublicFieldSettings>({});
+
 function RequiredMark() {
   return (
     <span className="public-ay-req" aria-hidden="true">
@@ -207,13 +230,23 @@ function Field({
   invalid?: boolean;
   children: React.ReactNode;
 }) {
+  const settings = useContext(PublicFieldSettingsContext);
+  const setting = settings[FIELD_ID_BY_FALLBACK_LABEL[label] ?? ""];
+  if (setting && !setting.visible) return null;
+  const control =
+    setting?.placeholder && isValidElement(children) && (children.type === "input" || children.type === "textarea")
+      ? cloneElement(children as React.ReactElement<{ placeholder?: string }>, { placeholder: setting.placeholder })
+      : children;
   return (
-    <label className={invalid ? "public-ay-field is-invalid" : "public-ay-field"}>
+    <label
+      className={invalid ? "public-ay-field is-invalid" : "public-ay-field"}
+      style={setting ? { order: setting.order } : undefined}
+    >
       <span>
-        {label}
+        {setting?.label || label}
         {required ? <RequiredMark /> : null}
       </span>
-      {children}
+      {control}
     </label>
   );
 }
@@ -329,7 +362,15 @@ function filledPhoneInvalid(value: string) {
   return Boolean(trimmed) && !isValidPhone(trimmed);
 }
 
-export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
+export function PublicAyTutoringRegistrationForm({
+  title,
+  formContent,
+  formVersionToken,
+}: {
+  title: string;
+  formContent?: PublicFormContent;
+  formVersionToken?: string | null;
+}) {
   const router = useRouter();
   const toast = useAppToast();
   const [step, setStep] = useState(0);
@@ -340,6 +381,27 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [paymentContinuation, setPaymentContinuation] = useState<PaymentContinuation | null>(null);
+  const fieldSettings = useMemo<PublicFieldSettings>(
+    () =>
+      Object.fromEntries(
+        (formContent?.steps ?? []).flatMap((formStep) =>
+          formStep.fields.map((field) => [
+            field.id,
+            { label: field.label, placeholder: field.placeholder, visible: field.visible, order: field.order },
+          ]),
+        ),
+      ),
+    [formContent],
+  );
+  const formSteps = useMemo(
+    () =>
+      formContent?.steps?.length === STEPS.length
+        ? [...formContent.steps].sort((left, right) => left.order - right.order)
+        : STEPS.map((name, order) => ({ key: `legacy_${order}`, name, helpText: "", order, fields: [] })),
+    [formContent],
+  );
+  const activeStepKey = formSteps[step]?.key;
+  const stepIndexFor = (key: string) => formSteps.findIndex((item) => item.key === key);
 
   const primarySubject = draft.primarySubjectCode;
 
@@ -408,7 +470,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   }
 
   function validateStep() {
-    if (step === 1) {
+    if (activeStepKey === "student" || (!formContent && step === 1)) {
       if (
         !draft.studentFirstName.trim() ||
         !draft.studentLastName.trim() ||
@@ -427,7 +489,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         return "Student address is required.";
       }
     }
-    if (step === 2) {
+    if (activeStepKey === "contacts" || (!formContent && step === 2)) {
       const studentMailing = studentAddressFrom(draft);
       const parent2Started = Boolean(
         draft.p2FirstName.trim() || draft.p2LastName.trim() || draft.p2Email.trim() || draft.p2Phone.trim(),
@@ -486,7 +548,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         return "Billing name, email, and address are required.";
       }
     }
-    if (step === 3) {
+    if (activeStepKey === "needs" || (!formContent && step === 3)) {
       if (draft.subjectCodes.length === 0) return "Select at least one subject.";
       if (!draft.primarySubjectCode) return "Choose a primary subject so we can match a tutor.";
       if (!draft.subjectCodes.includes(draft.primarySubjectCode)) {
@@ -494,7 +556,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
       }
       if (!draft.referralSource) return "Please tell us how you heard about us.";
     }
-    if (step === 4) {
+    if (activeStepKey === "schedule" || (!formContent && step === 4)) {
       if (!draft.schedulingPath) return "Choose how you’d like us to schedule.";
       if (draft.schedulingPath === "family_selected" && !draft.slotId) {
         return "Choose a preferred tutor and time, or let Professional Tutoring choose.";
@@ -507,7 +569,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         return "Select at least one preferred time or add a note.";
       }
     }
-    if (step === 5) {
+    if (activeStepKey === "payment" || (!formContent && step === 5)) {
       if (!draft.paymentPlanId) return "Select a payment plan.";
       if (!draft.hoursRatePackage && !draft.advancedHoursRatePackage) {
         return "Choose a standard or advanced hours/rate package.";
@@ -520,7 +582,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         return "Choose an alternative payment method.";
       }
     }
-    if (step === 6) {
+    if (activeStepKey === "agreement" || (!formContent && step === 6)) {
       if (!draft.policyAck || !draft.agreementAck) return "Please acknowledge the policy and agreement.";
       if (!draft.parentSignature.trim() || !draft.studentSignature.trim()) {
         return "Parent and student signatures are required.";
@@ -537,7 +599,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
       return;
     }
     setShowErrors(false);
-    setStep((value) => Math.min(value + 1, STEPS.length - 1));
+    setStep((value) => Math.min(value + 1, formSteps.length - 1));
   }
 
   const selectedTutorName = useMemo(
@@ -591,6 +653,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          formVersionToken,
           student: {
             firstName: draft.studentFirstName,
             lastName: draft.studentLastName,
@@ -661,7 +724,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
       const data = await response.json();
       if (!response.ok || !data.ok) {
         if (response.status === 409 && data.code === "slot_unavailable") {
-          setStep(4);
+          setStep(Math.max(0, stepIndexFor("schedule")));
         }
         toast.error(data.error || "Unable to submit.");
         return;
@@ -679,26 +742,29 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
   }
 
   return (
+    <PublicFieldSettingsContext.Provider value={fieldSettings}>
     <div className="public-ay-card">
       <AppToastHost toasts={toast.toasts} onDismiss={toast.dismiss} />
-      <p className="public-ay-kicker">{title}</p>
-      <h1>{STEPS[step]}</h1>
+      <input type="hidden" name="formVersionToken" value={formVersionToken ?? ""} readOnly />
+      <p className="public-ay-kicker">{formContent?.title || title}</p>
+      <h1>{formSteps[step]?.name ?? STEPS[step]}</h1>
+      {formContent?.description ? <p className="public-ay-description">{formContent.description}</p> : null}
       <ol className="public-ay-steps" aria-label="Registration steps">
-        {STEPS.map((label, index) => (
-          <li key={label} className={index === step ? "is-current" : index < step ? "is-done" : undefined}>
-            {label}
+        {formSteps.map((item, index) => (
+          <li key={item.key} className={index === step ? "is-current" : index < step ? "is-done" : undefined}>
+            {item.name}
           </li>
         ))}
       </ol>
 
-      {step === 0 ? (
+      {(activeStepKey === "welcome" || (!formContent && step === 0)) ? (
         <div className="public-ay-copy">
-          <p>Register for Academic Year Tutoring. We’ll save your information and invite you to the family portal.</p>
-          <p>Your payment setup or required payment is completed before your registration is confirmed.</p>
+          <p>{formContent?.introduction || "Register for Academic Year Tutoring. We’ll save your information and invite you to the family portal."}</p>
+          <p>{formContent?.helpText || "Your payment setup or required payment is completed before your registration is confirmed."}</p>
         </div>
       ) : null}
 
-      {step === 1 ? (
+      {(activeStepKey === "student" || (!formContent && step === 1)) ? (
         <div className="public-ay-stack">
           <div className="public-ay-grid">
             <Field label="Student first name" required invalid={showErrors && !draft.studentFirstName.trim()}>
@@ -800,7 +866,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         </div>
       ) : null}
 
-      {step === 2 ? (
+      {(activeStepKey === "contacts" || (!formContent && step === 2)) ? (
         <div className="public-ay-stack">
           <h2>Parent 1</h2>
           <div className="public-ay-grid">
@@ -997,7 +1063,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         </div>
       ) : null}
 
-      {step === 3 ? (
+      {(activeStepKey === "needs" || (!formContent && step === 3)) ? (
         <div className="public-ay-stack">
           <p>Select every subject that applies. Then choose one primary subject for tutor matching.</p>
           <div className="public-ay-checks">
@@ -1062,7 +1128,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         </div>
       ) : null}
 
-      {step === 4 ? (
+      {(activeStepKey === "schedule" || (!formContent && step === 4)) ? (
         <div className="public-ay-stack">
           <div className="public-ay-choices">
             <button
@@ -1177,7 +1243,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         </div>
       ) : null}
 
-      {step === 5 ? (
+      {(activeStepKey === "payment" || (!formContent && step === 5)) ? (
         <div className="public-ay-stack">
           <p>Choose your plan and payment preference. Your secure payment step follows your review.</p>
           <Field label="Payment plan" required invalid={showErrors && !draft.paymentPlanId}>
@@ -1252,7 +1318,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         </div>
       ) : null}
 
-      {step === 6 ? (
+      {(activeStepKey === "agreement" || (!formContent && step === 6)) ? (
         <div className="public-ay-stack">
           <label className="public-ay-check">
             <input
@@ -1285,7 +1351,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         </div>
       ) : null}
 
-      {step === 7 ? (
+      {(activeStepKey === "review" || (!formContent && step === 7)) ? (
         <div className="public-ay-stack">
           <section>
             <h2>Student</h2>
@@ -1437,7 +1503,7 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         ) : (
           <span />
         )}
-        {step < STEPS.length - 1 ? (
+        {step < formSteps.length - 1 ? (
           <button type="button" className="public-ay-primary" onClick={next}>
             {step === 0 ? "Start registration" : "Continue"}
           </button>
@@ -1448,5 +1514,6 @@ export function PublicAyTutoringRegistrationForm({ title }: { title: string }) {
         )}
       </div> : null}
     </div>
+    </PublicFieldSettingsContext.Provider>
   );
 }

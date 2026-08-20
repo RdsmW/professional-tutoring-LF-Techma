@@ -164,6 +164,7 @@ export const staffProfiles = pgTable("staff_profiles", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const publicFormStatusEnum = pgEnum("public_form_status", ["active", "inactive", "archived"]);
 export const tutoringRequestStatusEnum = pgEnum("tutoring_request_status", [
   "draft",
   "submitted",
@@ -373,6 +374,8 @@ export const tutoringRequests = pgTable("tutoring_requests", {
   policyVersionId: uuid("policy_version_id"),
   agreementAcceptedAt: timestamp("agreement_accepted_at", { withTimezone: true }),
   formId: text("form_id"),
+  /** Immutable public form version presented when this request was submitted. */
+  formVersionId: uuid("form_version_id").references(() => publicFormVersions.id),
   scheduleWindowId: varchar("schedule_window_id", { length: 64 }),
   paymentPlanId: varchar("payment_plan_id", { length: 64 }),
   payload: jsonb("payload"),
@@ -616,3 +619,44 @@ export const tutorNotes = pgTable("tutor_notes", {
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   deletedByStaffId: uuid("deleted_by_staff_id").references(() => staffProfiles.id),
 });
+
+/** Stable public journey identity. Content belongs to immutable version rows. */
+export const publicFormDefinitions = pgTable("public_form_definitions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  formKey: text("form_key").notNull().unique(),
+  publicPath: text("public_path"),
+  status: publicFormStatusEnum("status").notNull().default("inactive"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const publicFormAuditEvents = pgTable("public_form_audit_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  definitionId: uuid("definition_id")
+    .notNull()
+    .references(() => publicFormDefinitions.id, { onDelete: "cascade" }),
+  versionId: uuid("version_id").references(() => publicFormVersions.id),
+  action: text("action").notNull(),
+  reason: text("reason"),
+  staffId: uuid("staff_id").references(() => staffProfiles.id),
+  staffName: text("staff_name"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const publicFormVersions = pgTable("public_form_versions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  definitionId: uuid("definition_id")
+    .notNull()
+    .references(() => publicFormDefinitions.id, { onDelete: "cascade" }),
+  versionNumber: integer("version_number").notNull(),
+  status: publicFormVersionStatusEnum("status").notNull().default("draft"),
+  content: jsonb("content").notNull(),
+  changeReason: text("change_reason"),
+  createdByStaffId: uuid("created_by_staff_id").references(() => staffProfiles.id),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  retiredAt: timestamp("retired_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const publicFormVersionStatusEnum = pgEnum("public_form_version_status", ["draft", "published", "retired"]);

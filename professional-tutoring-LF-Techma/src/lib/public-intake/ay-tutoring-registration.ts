@@ -16,6 +16,7 @@ import {
 import { loadActiveCancellationPolicy } from "@/lib/policy/cancellation";
 import { createAyPublicPaymentContinuation } from "@/lib/public-intake/ay-tutoring-payment";
 import { findHouseholdMatchCandidates } from "@/lib/staff/family-match";
+import { resolveIssuedPublicFormVersionId } from "@/lib/staff/public-forms";
 import { buildHouseholdDisplayName, HOUSEHOLD_COUNTRY_US, MAX_GUARDIANS_PER_HOUSEHOLD } from "@/lib/staff/household-display-name";
 import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 import { isValidEmail, isValidPhone } from "@/lib/validation/contact";
@@ -53,6 +54,8 @@ type AddressInput = {
 };
 
 export type AyTutoringRegistrationInput = {
+  /** Signed server-issued token for the immutable version rendered to this family. */
+  formVersionToken?: string;
   student: {
     firstName: string;
     lastName: string;
@@ -430,6 +433,13 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
 
   const database = requireDb();
 
+  // Bind the request to the immutable version that rendered this journey.
+  // The browser cannot choose an arbitrary version, and publishing mid-flow
+  // cannot rewrite what this family reviewed.
+  const formVersionId = await resolveIssuedPublicFormVersionId("academic_year_tutoring", raw.formVersionToken);
+  if (!formVersionId) {
+    throw new PublicIntakeError("This registration form has expired. Refresh the page and review the current form before submitting.", 409, "form_version_expired");
+  }
   const result = await database.transaction(async (tx) => {
     let householdId: string;
     let requesterId: string;
@@ -640,6 +650,7 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
         policyVersionId: null,
         agreementAcceptedAt,
         formId: "academic_year_tutoring",
+        formVersionId,
         scheduleWindowId,
         paymentPlanId,
         payload,
