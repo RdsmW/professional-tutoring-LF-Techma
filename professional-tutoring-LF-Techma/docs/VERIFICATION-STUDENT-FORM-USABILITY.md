@@ -14,6 +14,9 @@
     - School, Grade, Graduation year;
     - Birthdate, Phone, Email;
   - an Address section heading without the redundant Student prefix.
+- The optional 504 / IEP / testing accommodations and Other information fields were verified as:
+  - two equal-width, equal-height text areas aligned side by side on desktop;
+  - two full-width text areas stacked vertically on mobile.
 - Public Academic Year registration payloads now include a student email in regression coverage.
 - Server-side validation rejects a missing student email.
 
@@ -23,3 +26,7 @@
 - The application now uses a public server route for address lookup and returns a friendly unavailable message rather than exposing Mapbox's raw Forbidden response.
 - The currently configured Mapbox public token returned HTTP 403 Forbidden for requests from unapproved Replit origins.
 - When the lookup route forwarded the token's approved `http://localhost:3000` origin, Mapbox returned HTTP 200 with five normalized address suggestions. This confirms that the token supports address search and is blocked only by its URL restrictions.
+
+## Latest Focused Regression Check
+
+- The public Academic Year registration Playwright suite completed with 4 passed and 1 conditional scenario skipped.

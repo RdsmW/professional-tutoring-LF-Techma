@@ -4899,6 +4899,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
+.public-ay-notes-grid .public-ay-field > span {
+  min-height: 48px;
+}
 .public-ay-span { grid-column: 1 / -1; }
 .public-ay-field {
   display: flex;
@@ -5024,6 +5027,7 @@ textarea.is-invalid {
   .public-ay-student-grid,
   .public-ay-checks,
   .public-ay-choices { grid-template-columns: 1fr; }
+  .public-ay-notes-grid .public-ay-field > span { min-height: 0; }
 }
 
 /* Shared hierarchy: labels 16 > values 12; titles 20/24/32; filters change color, not weight. */

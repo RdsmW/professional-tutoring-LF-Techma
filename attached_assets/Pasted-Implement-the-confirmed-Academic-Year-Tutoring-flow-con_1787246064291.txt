@@ -1,0 +1,549 @@
+Implement the confirmed Academic Year Tutoring flow/content updates now. Do not start another broad audit or redesign.
+
+
+
+Before changing anything, quickly inspect the current Academic Year public flow and verify the exact current implementation of:
+
+
+
+ Subject selection; 
+
+ Standard vs Advanced rate handling; 
+
+ Plan; 
+
+ Agreement; 
+
+ Review; 
+
+ Payment; 
+
+ Confirmation; 
+
+ invitation trigger. 
+
+
+
+This is a targeted verification only. Then proceed with the implementation below.
+
+1. Final public flow
+
+Use exactly:
+
+
+
+Welcome → Student → Parents & Billing Information → Tutoring Needs → Schedule → Plan → Agreement → Review → Payment → Confirmation
+
+
+
+Payment must remain after Review.
+
+
+
+After successful Stripe payment/setup:
+
+
+
+Stripe → return to app → Confirmation
+
+
+
+The Confirmation page must show the successful registration/payment state and tell the family that they will receive an invitation to join the Professional Tutoring portal.
+
+
+
+Do not automatically redirect the family from Confirmation to the portal.
+
+2. Subject handling
+
+Do not invent a new business concept that is not present in the current Academic Year form.
+
+
+
+The existing form uses a Subject area where families can provide the subjects they need help with.
+
+
+
+Improve this in the app into one clean Subject(s) experience:
+
+
+
+ allow multiple subjects; 
+
+ make the selection visually clear and easy to use; 
+
+ allow an Other / free-text subject for subjects not available in the predefined list; 
+
+ do not require the family to enter the same information twice; 
+
+ do not introduce a family-facing Primary Subject requirement unless the current implementation absolutely depends on it. 
+
+
+
+If the backend currently requires one primary subject_id, preserve compatibility internally for now, but do not silently present it as an established client business rule.
+
+
+
+For cases where multiple subjects create ambiguous tutor matching, preserve the safe Let Professional Tutoring choose / Staff review path rather than inventing a tutor-selection rule.
+
+3. Standard vs Advanced subject classification
+
+The following subjects are Advanced:
+
+
+
+ All AP/IB subjects 
+
+ Multivariable Calculus 
+
+ Linear Algebra
+
+Any community college or university class 
+
+
+
+Display this explanation clearly in the Plan when Advanced pricing is relevant.
+
+
+
+Each known subject should be classified internally as Standard or Advanced where the current source data allows it.
+
+
+
+Do not invent classifications for unclear subjects. Use Other / Staff review where necessary.
+
+4. Applicable Hours/Rates display
+
+Preserve the current Academic Year rate structures.
+
+Standard Hours/Rates
+
+ 2 hours per week: $460/month 
+
+ 4 hours per week: $910/month 
+
+ 6 hours per week: $1360/month 
+
+ 8 hours per week: $1810/month 
+
+ $65/hour 
+
+Advanced Subjects Hours/Rates
+
+ 2 hours per week: $600/month 
+
+ 4 hours per week: $1200/month
+
+6 hours per week: $1800/month 
+
+ 8 hours per week: $2400/month 
+
+ $85/hour 
+
+
+
+Display logic:
+
+
+
+ only Standard subjects selected → show Standard Hours/Rates; 
+
+ only Advanced subjects selected → show Advanced Hours/Rates + Advanced subject explanation; 
+
+ mix of Standard and Advanced subjects → show both Standard and Advanced Hours/Rates + Advanced subject explanation. 
+
+
+
+In the mixed case, do not invent how the final combined tuition should be calculated.
+
+
+
+The UI may display both applicable rate sections, but final automatic pricing for the mixed Standard + Advanced case must remain blocked/deferred to Staff until the business rule is confirmed.
+
+
+
+Do not silently charge the entire request at either Standard or Advanced.
+
+5. Tutoring session explanation
+
+Restore the existing information immediately after the rate sections:
+
+
+
+Tutoring sessions are two hours each. The hourly rate is only available when there is no full-time tutoring spot open or on a short-term one- to two-week trial basis. Once a full-time spot becomes available or the trial period ends, students who continue with tutoring will be considered full-time and will be accorded the lower full-time rates listed above.
+
+
+
+Present it clearly without overwhelming the page.
+
+6. Tutoring Policy
+
+Restore the full relevant Academic Year Tutoring Policy inside the new flow.
+
+
+
+It must include the existing sections:
+
+
+
+ Business Hours 
+
+ Tutoring Year and Rates 
+
+ Tutoring Appointments 
+
+ Holiday Schedule 
+
+ Federal/School Holidays 
+
+ Student Cancellations 
+
+ Banking a Session 
+
+ Weather Cancellations 
+
+ Instructor Information and Cancellation Policy
+
+Terminating Services or Decreasing Hours 
+
+
+
+Use a clean expandable UI:
+
+
+
+Tutoring Policy → summary / See more → full policy
+
+
+
+The full policy must remain accessible in the form.
+
+
+
+Keep the required acknowledgement:
+
+
+
+Yes, I read & understood the tutoring policy information
+
+
+
+Do not replace the policy with an external link only.
+
+
+
+Important:
+
+
+
+Some old wording may conflict with the new app, particularly appointment booking through the office vs booking through the app.
+
+
+
+Preserve the existing approved text for now unless there is already an approved updated version in the repository.
+
+
+
+Do not silently rewrite contractual/legal language.
+
+
+
+Flag contradictory wording in the report.
+
+7. Payment Plan
+
+Keep:
+
+
+
+ Full Year 
+
+ Semester 
+
+ Monthly 
+
+
+
+Preserve the current Academic Year rules:
+
+
+
+ Full Year: Sept. through June 10, 9.5 months, due 9/1/2026, 10% discount; 
+
+ Semester: Fall 5 months + Spring 4.5 months, 5% discount; 
+
+ Monthly: due the first of each month. 
+
+
+
+Verify the current Stripe schedule implementation against these exact rules.
+
+
+
+Specifically verify:
+
+
+
+ Full Year uses 9.5 months, not 10; 
+
+ Semester uses 5 + 4.5 months; 
+
+ Monthly has September–May full installments plus June half-month; 
+
+ the 10th monthly installment, if represented as a tenth record, is half a month rather than a full month. 
+
+
+
+Do not change working Stripe architecture unnecessarily.
+
+
+
+If current code is wrong, correct only the amount/schedule calculation and preserve the existing PaymentIntent / SetupIntent / webhook / scheduler architecture.
+
+8. Payment Terms
+
+Restore the existing payment terms in the Plan, including:
+
+
+
+ accepted payment-method wording from the current agreement; 
+
+ 3.6% credit/debit card service fee; 
+
+ payment due date; 
+
+ $25 late fee after the seventh; 
+
+ $35 returned-check fee; 
+
+ collection costs; 
+
+ 1.5% monthly / 18% annual interest; 
+
+ credit-card-on-file requirement; 
+
+ existing guarantee/nonpayment language. 
+
+
+
+Use an expandable presentation if needed, but keep the full text accessible.
+
+
+
+Do not restore the family-facing:
+
+
+
+Would you like us to automatically charge your credit card? 
+
+ alternative payment-method selection 
+
+
+
+because those were removed from the new Stripe flow.
+
+
+
+However, if the old contractual wording conflicts with automatic scheduled Stripe collection, flag that wording explicitly instead of silently rewriting it.
+
+9. Agreement
+
+Preserve the existing Acknowledgements and Release content.
+
+
+
+Keep:
+
+
+
+ acknowledgement of the agreement; 
+
+ authorization/consent language; 
+
+ Parent Signature; 
+
+ Student Signature; 
+
+ Date. 
+
+
+
+Agreement must happen before Review and Payment.
+
+10. Review
+
+Review must clearly show:
+
+
+
+ student; 
+
+ parent/billing; 
+
+ selected subjects;
+
+schedule choice; 
+
+ tutor/slot for Path A or Professional Tutoring chooses for Path B; 
+
+ applicable Standard and/or Advanced rate section; 
+
+ selected hours/rate option(s); 
+
+ payment plan; 
+
+ amount due now; 
+
+ future installment structure where applicable; 
+
+ policy/agreement accepted. 
+
+
+
+Do not allow an ambiguous mixed Standard + Advanced request to generate an invented final tuition.
+
+11. Payment / Stripe
+
+Preserve all verified Stripe behavior:
+
+
+
+ SetupIntent; 
+
+ PaymentIntent; 
+
+ card on file; 
+
+return_url; 
+
+redirect: "if_required"; 
+
+ webhook reconciliation; 
+
+ idempotency; 
+
+ Path A booking finalization;
+
+Path B B1 behavior; 
+
+ internal due-payment scheduler. 
+
+
+
+Also verify whether the 3.6% service fee is currently included in the Stripe amount where required.
+
+
+
+If it is missing, report the current behavior before changing it and implement the smallest correction consistent with the existing form rule.
+
+12. Confirmation + invitation
+
+After successful Stripe completion, return automatically to the app Confirmation step.
+
+
+
+Do not redirect automatically to the family portal.
+
+
+
+Verify whether the existing invitation system already:
+
+
+
+ creates/queues the invitation after successful registration/payment setup; 
+
+ attaches it to the existing household/guardian; 
+
+ avoids duplicate household creation; 
+
+ remains idempotent on repeated finalization/webhook delivery; 
+
+ works for both Path A and Path B. 
+
+
+
+If the invitation connection exists, test it.
+
+
+
+If the only missing piece is connecting successful registration/payment to the existing invitation mechanism, implement only that connection.
+
+
+
+If outbound email delivery is not yet implemented, do not pretend it is. Report the exact gap.
+
+13. Do not block the rest of the project
+
+The unresolved mixed Standard + Advanced billing rule must not block implementation of all confirmed behavior.
+
+
+
+Implement everything that is certain now.
+
+
+
+For mixed Standard + Advanced requests, use a safe Staff-review/payment-deferred state if necessary until the pricing rule is confirmed.
+
+
+
+Do not invent the mixed pricing formula.
+
+Verification
+
+Run targeted tests only:
+
+
+
+ Standard-only subjects → Standard rates only;
+
+Advanced-only subjects → Advanced rates + explanation; 
+
+ mixed Standard + Advanced → both rate sections visible and no invented automatic final price; 
+
+Other subject works; 
+
+ Tutoring Policy is fully accessible; 
+
+ policy acknowledgement required; 
+
+ Payment Terms fully accessible; 
+
+ Plan → Agreement → Review → Payment → Confirmation order works; 
+
+ Full Year = 9.5-month calculation; 
+
+ Semester = 5 + 4.5 months; 
+
+ Monthly = 9 full months + half June; 
+
+ 3.6% fee behavior verified; 
+
+ Path A still works; 
+
+ Path B still works; 
+
+ Stripe return to Confirmation works; 
+
+ invitation flow verified or exact missing email/invitation link reported; 
+
+ TypeScript/build pass. 
+
+
+
+Report:
+
+
+
+ exact files changed; 
+
+ exact pricing behavior before vs after; 
+
+ invitation status; 
+
+ contractual wording conflicts that still need client approval; 
+
+ targeted test results. 
+
+
+
+STOP when this Academic Year update is complete. Do not start Zoho, QuickBooks, or Acuity inside this task.

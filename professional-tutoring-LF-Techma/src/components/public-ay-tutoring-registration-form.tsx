@@ -864,22 +864,24 @@ export function PublicAyTutoringRegistrationForm({
               })
             }
           />
-          <label className="public-ay-field">
-            <span>504 / IEP / testing accommodations (optional)</span>
-            <textarea
-              value={draft.supportNotes}
-              onChange={(event) => patch({ supportNotes: event.target.value })}
-              rows={4}
-            />
-          </label>
-          <label className="public-ay-field public-ay-span-field">
-            <span>Other information</span>
-            <textarea
-              value={draft.otherInformation}
-              onChange={(event) => patch({ otherInformation: event.target.value })}
-              rows={4}
-            />
-          </label>
+          <div className="public-ay-grid public-ay-notes-grid">
+            <label className="public-ay-field">
+              <span>504 / IEP / testing accommodations (optional)</span>
+              <textarea
+                value={draft.supportNotes}
+                onChange={(event) => patch({ supportNotes: event.target.value })}
+                rows={4}
+              />
+            </label>
+            <label className="public-ay-field">
+              <span>Other information</span>
+              <textarea
+                value={draft.otherInformation}
+                onChange={(event) => patch({ otherInformation: event.target.value })}
+                rows={4}
+              />
+            </label>
+          </div>
         </div>
       ) : null}
 

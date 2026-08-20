@@ -26,6 +26,7 @@ test.describe("public academic year registration", () => {
     await expect(page.getByText("Student cell")).toHaveCount(0);
     await expect(page.getByText("Student email")).toHaveCount(0);
     await expect(page.locator(".public-ay-student-grid .public-ay-field")).toHaveCount(9);
+    await expect(page.locator(".public-ay-notes-grid .public-ay-field")).toHaveCount(2);
     await page.getByRole("button", { name: /Continue/i }).click();
     await expect(page.locator(".public-ay-field.is-invalid").first()).toBeVisible();
   });
