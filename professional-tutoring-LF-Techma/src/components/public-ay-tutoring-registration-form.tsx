@@ -27,7 +27,6 @@ import {
   academicSubjectLabel,
   academicSubjectRateProfile,
   requiresAcademicYearStaffReview,
-  type AcademicSubjectRateProfile,
 } from "@/lib/academic-year/subject-pricing";
 
 const STEPS = [
@@ -280,7 +279,7 @@ function AcademicYearPolicy() {
         </section>
         <section>
           <h3>Student Cancellations</h3>
-          <p>Current cancellation rules require 24 hours’ notice. Eligible cancelled sessions are generally banked as a credit for up to 90 days; no-shows do not receive a credit unless Professional Tutoring authorizes an exception.</p>
+          <p>The approved full policy text for this heading is not configured in the public form.</p>
         </section>
         <section>
           <h3>Banking a Session</h3>
@@ -308,13 +307,7 @@ function PaymentTerms() {
     <details className="public-ay-details">
       <summary>Payment Terms — See more</summary>
       <div className="public-ay-details-copy">
-        <ul>
-          <li>A 3.6% credit/debit card service fee is included in card amounts shown at payment.</li>
-          <li>Payments are due on the scheduled due date; a $25 late fee applies after the seventh.</li>
-          <li>A $35 returned-check fee, collection costs, and 1.5% monthly / 18% annual interest may apply where permitted.</li>
-          <li>A credit card is kept on file for scheduled Academic Year payments.</li>
-          <li>Payment and nonpayment obligations remain subject to the approved agreement language provided by Professional Tutoring.</li>
-        </ul>
+        <p>The complete approved Payment Terms wording was not included in the supplied source.</p>
       </div>
     </details>
   );
@@ -1477,6 +1470,7 @@ export function PublicAyTutoringRegistrationForm({
           ) : null}
           {subjectRateProfile === "mixed" ? (
             <>
+              <p className="public-ay-help">Advanced rate applies to all AP/IB subjects, Multivariable Calculus, Linear Algebra, and community college/university subjects.</p>
               <RateSection title="Standard Hours / Rates" options={ACADEMIC_RATE_PACKAGES.options} />
               <RateSection title="Advanced Subjects Hours / Rates" options={ACADEMIC_ADVANCED_RATE_PACKAGES.options} />
               <p className="public-ay-help">Your requested subjects include both Standard and Advanced course levels. Professional Tutoring will review the request and confirm pricing before payment.</p>
@@ -1485,6 +1479,8 @@ export function PublicAyTutoringRegistrationForm({
           {subjectRateProfile === "staff_review" ? (
             <p className="public-ay-help">Professional Tutoring will review the requested subject details and confirm the tutor match and pricing before payment.</p>
           ) : null}
+          <p className="public-ay-help">Tutoring sessions are two hours each. The hourly rate is only available when there is no full-time tutoring spot open or on a short-term one- to two-week trial basis. Once a full-time spot becomes available or the trial period ends, students who continue with tutoring will be considered full-time and will be accorded the lower full-time rates listed above.</p>
+          <p className="public-ay-help">** To be confirmed by PT staff.</p>
           <p className="public-ay-help">A card is collected securely after review and kept on file for scheduled Academic Year payments. A 3.6% credit/debit card service fee applies.</p>
           <PaymentTerms />
         </div>
@@ -1500,7 +1496,7 @@ export function PublicAyTutoringRegistrationForm({
               onChange={(event) => patch({ policyAck: event.target.checked })}
             />
             <span>
-              I acknowledge the Academic Year Tutoring Policy.
+              Yes, I read &amp; understood the tutoring policy information.
               <RequiredMark />
             </span>
           </label>
@@ -1511,16 +1507,17 @@ export function PublicAyTutoringRegistrationForm({
               onChange={(event) => patch({ agreementAck: event.target.checked })}
             />
             <span>
-              I agree to the Parent/Student Agreement and Liability Release.
+              I agree to the terms outlined in this Agreement.
               <RequiredMark />
             </span>
           </label>
-          <Field label="Parent signature (type your full name)" required invalid={showErrors && !draft.parentSignature.trim()}>
+          <Field label="Signature Parent" required invalid={showErrors && !draft.parentSignature.trim()}>
             <input value={draft.parentSignature} onChange={(event) => patch({ parentSignature: event.target.value })} />
           </Field>
-          <Field label="Student signature (type full name)" required invalid={showErrors && !draft.studentSignature.trim()}>
+          <Field label="Signature Student" required invalid={showErrors && !draft.studentSignature.trim()}>
             <input value={draft.studentSignature} onChange={(event) => patch({ studentSignature: event.target.value })} />
           </Field>
+          <p className="public-ay-help"><strong>Date:</strong> recorded when you submit this Agreement.</p>
         </div>
       ) : null}
 
@@ -1618,8 +1615,9 @@ export function PublicAyTutoringRegistrationForm({
           </section>
           <section>
             <h2>Agreement</h2>
-            <p>Parent signature: {draft.parentSignature}</p>
-            <p>Student signature: {draft.studentSignature}</p>
+            <p>Signature Parent: {draft.parentSignature}</p>
+            <p>Signature Student: {draft.studentSignature}</p>
+            <p>Date: recorded when you submit this Agreement.</p>
           </section>
         </div>
       ) : null}

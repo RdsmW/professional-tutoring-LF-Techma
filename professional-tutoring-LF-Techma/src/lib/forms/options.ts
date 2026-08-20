@@ -213,31 +213,31 @@ export const SUMMER_SCHEDULE_WINDOWS: OptionList = {
 export const ACADEMIC_RATE_PACKAGES: OptionList = {
   id: "ACADEMIC_RATE_PACKAGES",
   options: optsWithIds([
-    ["std_2h", "2 hours per week: $460/month"],
-    ["std_4h", "4 hours per week: $910/month"],
-    ["std_6h", "6 hours per week: $1360/month"],
-    ["std_8h", "8 hours per week: $1810/month"],
-    ["std_hourly", "$65.00 per hour"],
+    ["std_2h", "2 hours/week — $460/month"],
+    ["std_4h", "4 hours/week — $910/month"],
+    ["std_6h", "6 hours/week — $1,360/month"],
+    ["std_8h", "8 hours/week — $1,810/month"],
+    ["std_hourly", "Hourly — $65/hour"],
   ]),
 };
 
 export const ACADEMIC_ADVANCED_RATE_PACKAGES: OptionList = {
   id: "ACADEMIC_ADVANCED_RATE_PACKAGES",
   options: optsWithIds([
-    ["adv_2h", "2 hours per week: $600/month"],
-    ["adv_4h", "4 hours per week: $1200/month"],
-    ["adv_6h", "6 hours per week: $1800/month"],
-    ["adv_8h", "8 hours per week: $2400/month"],
-    ["adv_hourly", "$85.00 per hour"],
+    ["adv_2h", "2 hours/week — $600/month"],
+    ["adv_4h", "4 hours/week — $1,200/month"],
+    ["adv_6h", "6 hours/week — $1,800/month"],
+    ["adv_8h", "8 hours/week — $2,400/month"],
+    ["adv_hourly", "Hourly — $85/hour"],
   ]),
 };
 
 export const ACADEMIC_PAYMENT_PLANS: OptionList = {
   id: "ACADEMIC_PAYMENT_PLANS",
   options: optsWithIds([
-    ["full_year", "Full Year: September through June 10 (9.5 months), due 9/1 — 10% discount"],
-    ["semester", "Semester: Fall 5 months + Spring 4.5 months, due 9/1 and 2/1 — 5% discount"],
-    ["monthly", "Monthly: September–May in full, June half-month; due the first of each month"],
+    ["full_year", "Full Year: Sept. through June 10; full payment due 9/1/2026; 10% discount; 9.5 months"],
+    ["semester", "Semester: 9/1/2026 and/or 2/1/2027; 5% discount; Fall = 5 months; Spring = 4.5 months"],
+    ["monthly", "Monthly: Due the first of each month"],
   ]),
 };
 

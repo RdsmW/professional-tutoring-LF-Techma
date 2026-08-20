@@ -2,7 +2,7 @@
 
 ## Scope
 
-This report covers verification of the current Academic Year Tutoring registration flow only. No policy, payment-term, invitation-email, Zoho, Acuity, or QuickBooks behavior was changed as part of this verification.
+This report covers the current Academic Year Tutoring registration flow. No Zoho, Acuity, QuickBooks, or invitation-email behavior was changed.
 
 ## Passed checks
 
@@ -23,6 +23,11 @@ This report covers verification of the current Academic Year Tutoring registrati
   - Path A reuses one booking under concurrent finalization.
   - Path A rejects a tutor that no longer teaches the chosen subject.
   - Path A rejects a slot moved outside the original schedule window.
+- After the latest Plan/Agreement content updates:
+  - `npx tsc --noEmit`
+  - `npx eslint src/components/public-ay-tutoring-registration-form.tsx src/lib/forms/options.ts`
+  - `npx playwright test e2e/ay-billing-schedule.spec.ts e2e/public-ay-registration.spec.ts e2e/path-a-finalization-safety.spec.ts`
+  - 13 passed; 1 skipped only because no open public tutor slot was available for the opportunistic Path A page-level scenario.
 
 ## Test-environment correction
 
@@ -35,13 +40,24 @@ Playwright now applies the public-form migration and creates a published Academi
 - The repository has no outbound-email provider, queue, mail transport, or delivery call for invitations. No email-send behavior was added or connected.
 - The current Agreement remains displayed and acknowledgement-gated in the public flow. The current card setup/payment behavior, Stripe return/finalization flow, and invitation-link retention remain in place.
 
-## Contractual-text blocker
+## Supplied source and contractual-text blocker
 
-The approved Academic Year policy, payment terms, agreement/release, billing, cancellation, appointment-booking, and accepted-payment-method source text was not present in the accessible workspace. A request for the exact source was declined. Therefore:
+The later attached source supplied exact rate amounts, payment-plan dates, the two-hour-session explanation, the PT-staff confirmation note, and acknowledgement/signature labels. Those items are now reflected in the public flow.
 
-- No contractual wording was added, rephrased, or invented.
-- Exact source-vs-application conflicts cannot be evaluated or reported.
-- Existing placeholder notices remain unchanged until the approved text is supplied.
+However, despite describing itself as complete, the file does not include the body text for:
+
+- the Academic Year Tutoring Policy;
+- Payment Terms and accepted-payment-method language;
+- card-on-file guarantee and authorization-to-charge wording; or
+- Acknowledgements and Release.
+
+No missing clause was invented or paraphrased. The previous unsourced cancellation and payment-term summaries were removed, and the visible placeholders now state that the approved wording was not supplied.
+
+## Source/application differences requiring approved wording
+
+- The source says the hourly rate is available only when no full-time tutoring spot is open or for a short one- to two-week trial. The current app sends hourly requests to Staff for a staff-set amount before payment instead of automatically charging a family-selected hourly rate.
+- The source requires accepted-payment-method, card-on-file, and authorization-to-charge wording. The app preserves its existing Stripe PaymentIntent/SetupIntent and scheduled card-collection behavior, but the supplied file does not contain the approved contractual text needed to compare that behavior to the agreement.
+- The supplied Full Year and Semester dates are 2026–27, while the installment engine determines the applicable academic year from the current date. They align for the current 2026–27 registration year; a future-year legal copy must be supplied before those visible dates are reused after that year.
 
 ## Files changed for this verification
 
@@ -51,4 +67,7 @@ The approved Academic Year policy, payment terms, agreement/release, billing, ca
 - `e2e/ay-billing-schedule.spec.ts`
 - `e2e/public-ay-registration.spec.ts`
 - `e2e/path-a-finalization-safety.spec.ts`
+- `src/lib/forms/options.ts`
+- `src/components/public-ay-tutoring-registration-form.tsx`
+- `docs/WORK-ACADEMIC-YEAR-TUTORING.md`
 - `docs/VERIFICATION-ACADEMIC-YEAR-TUTORING.md`
