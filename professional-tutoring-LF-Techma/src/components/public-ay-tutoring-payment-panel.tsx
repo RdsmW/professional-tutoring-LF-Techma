@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import {
+  Elements,
+  LinkAuthenticationElement,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 
 type PreparedPayment =
@@ -11,6 +17,7 @@ type PreparedPayment =
       clientSecret: string | null;
       publishableKey: string;
       paymentRecordId: string;
+      billingEmail: string | null;
     };
 
 type FinalizedPayment = {
@@ -101,16 +108,22 @@ function CardConfirmation({
 
   return (
     <div className="public-ay-stack">
+      <details className="public-ay-link-choice">
+        <summary>Save your information for faster checkout with Link (optional)</summary>
+        <p className="public-ay-help">
+          Link is optional. If you choose it, Stripe may remember your checkout information. Your Academic Year
+          payment method is still securely retained by Stripe for approved scheduled charges under your selected plan.
+        </p>
+        <LinkAuthenticationElement
+          options={mode.billingEmail ? { defaultValues: { email: mode.billingEmail } } : undefined}
+        />
+      </details>
       <div className="stripe-card-box">
         <PaymentElement options={{ layout: "tabs" }} />
       </div>
       {error ? <p className="validation-hint">{error}</p> : null}
       <button type="button" className="public-ay-primary" onClick={() => void confirm()} disabled={saving}>
-        {saving
-          ? "Confirming…"
-          : mode.kind === "payment_intent"
-            ? "Authorize and confirm registration"
-            : "Save card and confirm registration"}
+        {saving ? "Completing registration…" : "Complete registration"}
       </button>
     </div>
   );
@@ -222,7 +235,7 @@ export function PublicAyTutoringPaymentPanel({
             You selected an alternative payment method. Confirm that selection to finish your registration.
           </p>
           <button type="button" className="public-ay-primary" onClick={() => void completeManualPayment()} disabled={saving}>
-            {saving ? "Confirming…" : "Confirm payment method and registration"}
+            {saving ? "Completing registration…" : "Complete registration"}
           </button>
         </>
       ) : null}

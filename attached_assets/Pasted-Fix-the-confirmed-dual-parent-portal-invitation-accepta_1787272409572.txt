@@ -1,0 +1,170 @@
+Fix the confirmed dual-parent portal invitation acceptance defect. Work from the current verified green main baseline. Do not start another broad audit.
+
+Current baseline:
+
+main is clean and synchronized with origin/main.
+Task #22 is fully verified.
+TypeScript passes.
+Production build passes.
+19 focused Academic Year / Clerk tests pass.
+The 4 Path A finalization safety tests pass.
+CLERK_INVITATION_REDIRECT_ORIGIN is available to the development runtime and passes canonical HTTPS-origin validation.
+
+Do not change or weaken this baseline configuration.
+
+Confirmed defect
+
+The live E2E proved Clerk invitation creation, email delivery, CTA routing, authentication, and Clerk acceptance.
+
+The remaining confirmed defect is:
+
+after authentication/acceptance, the application created a new Guardian and a new empty Household instead of linking the Clerk identity to the Guardian and Household already created by the Academic Year registration.
+
+Fix this defect.
+
+Required Academic Year state
+
+A completed Academic Year registration must result in:
+
+exactly one Household;
+Parent 1 as one Guardian;
+Parent 2 as a separate Guardian;
+one Student;
+the appropriate tutoring request / booking state;
+the payment records.
+
+Parent 1 and Parent 2 must have different normalized email addresses.
+
+Before changing the acceptance flow, perform only this targeted prerequisite verification:
+
+verify whether the current registration creates both Guardian records in the same Household;
+verify whether the current invitation dispatcher sends one independent Clerk invitation to each Guardian.
+
+If either requirement is missing, complete it as part of this task.
+
+Do not create a second Household for Parent 2.
+
+Parent email validation
+
+Enforce client-side and API-side that:
+
+Parent 1 email is required;
+Parent 2 email is required;
+both are normalized by trimming and case-insensitive comparison;
+the two normalized emails must be different.
+
+Reject the registration if they are the same.
+
+Invitation dispatch
+
+After the Stripe step required by the registration successfully completes — either the required payment or successful card/payment-method setup — send:
+
+exactly one Clerk invitation to Parent 1;
+exactly one separate Clerk invitation to Parent 2.
+
+Do not wait for a future scheduled installment.
+
+Do not dispatch either portal invitation until both Guardian records exist in the same Household and have distinct normalized emails.
+
+If that invariant is not satisfied, stop with a recoverable error rather than partially onboarding the family.
+
+Store invitation state independently per Guardian.
+
+If one invitation succeeds and the other fails:
+
+preserve the successful invitation;
+retry only the Guardian whose invitation is still missing or failed;
+never resend the successful Guardian's invitation;
+keep finalization/webhook replay idempotent independently for each Guardian.
+
+Do not report that both invitations were successfully sent unless both succeeded.
+
+Invitation acceptance
+
+For an authenticated user arriving with a valid invitation token:
+
+validate the invitation token;
+load the existing Guardian referenced by that token;
+load that Guardian's existing Household;
+verify the authenticated Clerk email matches the invited Guardian email;
+verify this Clerk user ID is not already linked to the other Guardian;
+link the Clerk user ID to the existing Guardian;
+mark only that Guardian's invitation accepted;
+consume only that Guardian's invitation token;
+preserve the Guardian's existing household_id;
+continue to the Family Portal for that same existing Household.
+
+Invitation linking must occur before any generic family/guardian bootstrap logic.
+
+While processing an invitation route, never fall back to generic Household or Guardian creation.
+
+If the invitation is invalid, expired, mismatched, already linked to a conflicting identity, or otherwise unusable, return a recoverable error. Do not create a new Household or Guardian.
+
+Required identity invariant
+
+The final state must be:
+
+Parent 1 Guardian → Clerk User A
+
+Parent 2 Guardian → Clerk User B
+
+A != B
+
+both Guardians → same existing Household
+
+Never:
+
+create a new Household for an invited Guardian;
+create another Guardian for the same invitation;
+move a Guardian to another Household;
+automatically merge households;
+link the same Clerk user ID to both Guardians;
+consume Parent 2's invitation when Parent 1 accepts;
+consume Parent 1's invitation when Parent 2 accepts.
+
+If an authenticated Clerk identity conflicts with an existing Guardian/Household linkage, return a recoverable conflict instead of creating, moving, or merging records.
+
+Acceptance idempotency
+
+If the same already-accepted invitation is replayed by the same Clerk user, return the existing successful linkage without creating or modifying Household/Guardian records.
+
+If a different Clerk user attempts to reuse that accepted invitation, reject it.
+
+Previous failed E2E duplicate
+
+A previous controlled E2E created one empty duplicate test Household/Guardian.
+
+Do not use that duplicate as the basis of the fix.
+
+If cleanup is required, first verify that this specific non-production duplicate contains no Student, tutoring request, booking, or payment records. Only then may that known duplicate be removed.
+
+Do not perform broad cleanup or automatic household merging.
+
+Verification
+
+Add/run targeted tests proving:
+
+registration creates Parent 1 and Parent 2 as separate Guardians in the same Household;
+identical normalized parent emails are rejected;
+exactly one independent invitation is dispatched per Guardian;
+partial delivery failure retries only the failed Guardian;
+valid acceptance links Clerk to the existing Guardian;
+the original Household ID remains unchanged;
+no new Guardian or Household is created during invitation acceptance;
+the correct invitation token is consumed;
+acceptance state is stored;
+Parent 1 and Parent 2 can accept independently;
+accepting one does not invalidate the other's invitation;
+both end with distinct Clerk user IDs;
+both remain attached to the same existing Household;
+replay by the same accepted Clerk identity is idempotent;
+email mismatch is rejected;
+conflicting Clerk identity is rejected rather than merged or recreated.
+
+Then run one controlled live E2E proving:
+
+Academic Year registration → Stripe payment/setup → 1 Household + 2 existing Guardians → 2 Clerk invitations → Parent 1 authentication/acceptance → Parent 2 authentication/acceptance → both linked to the original Household → Family Portal for that Household → no duplicate Guardian or Household
+
+Do not change Stripe billing architecture, Zoho, Acuity, QuickBooks, Summer Tutoring, or Courses.
+
+Stop when this dual-parent onboarding and existing-Guardian linking flow is implemented and verified.

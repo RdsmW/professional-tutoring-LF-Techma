@@ -1719,7 +1719,7 @@ export function PublicAyTutoringRegistrationForm({
           </button>
         ) : (
           <button type="button" className="public-ay-primary" onClick={() => void submit()} disabled={saving}>
-            {saving ? "Submitting…" : "Submit registration"}
+            {saving ? "Preparing secure payment…" : "Continue to secure payment"}
           </button>
         )}
       </div> : null}

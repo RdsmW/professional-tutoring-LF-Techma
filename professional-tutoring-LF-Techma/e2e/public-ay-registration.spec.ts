@@ -5,6 +5,7 @@ import {
   ACADEMIC_YEAR_POLICY_SECTIONS,
 } from "../src/lib/academic-year/source-content";
 import { ACADEMIC_SCHEDULE_WINDOWS } from "../src/lib/forms/options";
+import { academicYearPaymentStatusCopy } from "../src/lib/public-intake/ay-payment-status";
 
 const unique = Date.now();
 const phoneSuffix = String(unique).slice(-4);
@@ -36,6 +37,49 @@ test.describe("public academic year registration", () => {
     expect(ACADEMIC_YEAR_PAYMENT_TERMS).not.toContain("Make checks payable to Professional Tutoring");
     expect(ACADEMIC_YEAR_PAYMENT_TERMS).not.toContain("Pay Now");
     expect(ACADEMIC_YEAR_PAYMENT_TERMS).not.toContain("without explicit authorization in the case of late payment");
+  });
+
+  test("keeps paid initial installments distinct from future pending installments", () => {
+    expect(academicYearPaymentStatusCopy("paid")).toEqual({
+      label: "Paid",
+      detail: "Your first scheduled payment was completed successfully.",
+    });
+    expect(academicYearPaymentStatusCopy("pending")).toEqual({
+      label: "Pending",
+      detail: "Your card setup is complete. Future scheduled installments remain pending until their due dates.",
+    });
+  });
+
+  test("confirmation explains payment state and separate parent portal invitations", async ({ page }) => {
+    await page.goto("/register/academic-year-tutoring");
+    await page.evaluate(() => {
+      sessionStorage.setItem(
+        "ayTutoringConfirmation",
+        JSON.stringify({
+          message: "Your registration is complete.",
+          paymentStatus: "paid",
+          portalInvitation: { emailSent: true, emailAlreadySent: false, pending: false, failed: false, sentCount: 2 },
+        }),
+      );
+    });
+    await page.goto("/register/academic-year-tutoring/confirmation");
+    await expect(page.getByText(/Payment status:/)).toContainText("Paid");
+    await expect(page.getByText(/first scheduled payment was completed successfully/i)).toBeVisible();
+    await expect(page.getByText(/Separate invitations have been sent to both parents/i)).toBeVisible();
+    await expect(page.getByText(/same family portal/i)).toBeVisible();
+
+    await page.evaluate(() => {
+      sessionStorage.setItem(
+        "ayTutoringConfirmation",
+        JSON.stringify({
+          message: "Your card is ready.",
+          paymentStatus: "pending",
+        }),
+      );
+    });
+    await page.reload();
+    await expect(page.getByText(/Payment status:/)).toContainText("Pending");
+    await expect(page.getByText(/Future scheduled installments remain pending until their due dates/i)).toBeVisible();
   });
 
   test("student step uses concise required labels and keeps contact fields together", async ({ page }) => {

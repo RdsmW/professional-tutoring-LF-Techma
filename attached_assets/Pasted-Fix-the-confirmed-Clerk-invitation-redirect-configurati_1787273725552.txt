@@ -1,0 +1,45 @@
+Fix the confirmed Clerk invitation redirect configuration and resume the existing dual-parent live test. Keep responses concise: no narrative, no repeated explanations, no verbose progress reports. Report only actions, blockers, and verification results.
+
+The current Parent 1 and Parent 2 test emails must be reused. Do not ask me for new email addresses or create new aliases.
+
+Fix
+Identify the correct publicly reachable HTTPS origin for the currently tested Professional Tutoring app.
+Correct CLERK_INVITATION_REDIRECT_ORIGIN so invitation links open the application instead of the stale .replit.it host.
+Keep the existing strict HTTPS/origin validation. Do not add a fallback or weaken validation.
+Restart the application if required and verify the running process receives the corrected origin.
+
+If there is no valid reachable app origin suitable for this controlled test, stop and tell me exactly what is missing.
+
+Reissue the existing test invitations
+
+The two existing Clerk invitations are pending and unaccepted.
+
+invalidate/delete only those two pending Clerk test invitations;
+preserve the same Parent 1 and Parent 2 email addresses;
+preserve the existing Household, both Guardians, Student, tutoring/payment records, and app invite context;
+clear/reset only the invitation-delivery state required to resend;
+use the existing dispatcher to send exactly one replacement invitation to each existing Guardian.
+
+Do not create:
+
+another registration;
+another Household;
+another Guardian;
+another Student;
+new test email addresses.
+Verify before I continue manually
+
+Confirm:
+
+exactly one Household still exists;
+both original Guardians still exist in that Household;
+neither Guardian is Clerk-linked yet;
+exactly two replacement invitations exist, one for each existing Guardian;
+both use the corrected app origin;
+no duplicate business records were created.
+
+Then STOP and ask me to test Parent 1's new invitation manually.
+
+Do not accept either invitation yourself.
+Do not proceed to Parent 2 until I confirm Parent 1 is complete.
+Do not modify application source code unless the corrected redirect exposes a separate concrete defect.

@@ -1,0 +1,58 @@
+Complete the final controlled live E2E for the dual-parent invitation flow. Do not modify application code unless this live run exposes a concrete defect.
+
+The implementation and automated verification are already green:
+
+TypeScript passes.
+Production build passes.
+25 focused Academic Year / Clerk / Path A / origin tests pass.
+Migration 0027_guardian_clerk_identity_unique.sql is applied.
+The application is running.
+Automated coverage confirms independent Parent 1 / Parent 2 invitations, existing-Guardian linking, identity uniqueness, idempotency, conflict handling, and no Household/Guardian creation during acceptance.
+
+The only remaining verification is the real controlled dual-parent acceptance flow.
+
+Controlled live E2E
+
+Use one fresh isolated non-production Academic Year registration with:
+
+Parent 1 email and Parent 2 email different after normalization;
+both mailboxes independently controllable;
+two different Clerk identities;
+unique test data that does not collide with existing guardians, households, phone numbers, students, or prior Clerk invitations;
+Stripe test mode only.
+
+Complete:
+
+registration → Stripe payment/setup → existing Household + Parent 1 Guardian + Parent 2 Guardian → two independent Clerk invitations
+
+Then:
+
+Parent 1 opens their own invitation.
+Parent 1 authenticates with Clerk.
+Verify Parent 1 links to the existing Parent 1 Guardian.
+Verify the original Household ID is unchanged.
+Verify Parent 2's invitation remains pending and valid.
+Parent 2 opens their own invitation.
+Parent 2 authenticates using a different Clerk identity.
+Verify Parent 2 links to the existing Parent 2 Guardian.
+Verify Parent 1 and Parent 2 have different Clerk user IDs.
+Verify both Guardians remain attached to the exact same original Household.
+Verify both access the Family Portal for that same Household.
+Verify no new Guardian or Household was created.
+
+Also verify after both acceptances:
+
+both invitation tokens/states are correctly consumed/accepted;
+no duplicate Clerk invitation was sent;
+no Student, tutoring request, booking, or payment record was duplicated;
+replaying an already-completed acceptance does not create or relink records.
+
+Do not reuse a mailbox, phone number, guardian, Household, Clerk identity, or invitation involved in previous failed controlled runs if doing so would compromise isolation.
+
+Do not clean up or merge unrelated records.
+
+Do not change Stripe, billing, Zoho, Acuity, QuickBooks, Summer Tutoring, or Courses.
+
+If the live run passes, mark the dual-parent onboarding/linking task fully verified and stop.
+
+If it fails, report the exact failing step and evidence before making any code change.

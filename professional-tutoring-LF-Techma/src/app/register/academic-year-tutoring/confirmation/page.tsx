@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { academicYearPaymentStatusCopy } from "@/lib/public-intake/ay-payment-status";
 
 type ConfirmationState = {
   message: string;
@@ -18,6 +19,7 @@ type ConfirmationState = {
 
 export default function AcademicYearTutoringConfirmationPage() {
   const [state, setState] = useState<ConfirmationState | null>(null);
+  const paymentStatus = academicYearPaymentStatusCopy(state?.paymentStatus);
 
   useEffect(() => {
     try {
@@ -36,7 +38,11 @@ export default function AcademicYearTutoringConfirmationPage() {
         {state ? (
           <>
             <p>{state.message}</p>
-            {state.paymentStatus ? <p>Payment status: <strong>{state.paymentStatus}</strong>.</p> : null}
+            {paymentStatus ? (
+              <p>
+                Payment status: <strong>{paymentStatus.label}</strong>. {paymentStatus.detail}
+              </p>
+            ) : null}
             {state.schedulingPath ? (
               <p>
                 {state.schedulingPath === "family_selected"
@@ -46,13 +52,13 @@ export default function AcademicYearTutoringConfirmationPage() {
             ) : null}
             <h2>Join the family portal</h2>
             {(state.portalInvitation?.sentCount ?? 0) + (state.portalInvitation?.alreadySentCount ?? 0) >= 2 ? (
-              <p>Family portal invitations have been sent to both parent email addresses.</p>
+              <p>Separate invitations have been sent to both parents. Each parent can use their own invitation to access the same family portal.</p>
             ) : state.portalInvitation?.emailSent || state.portalInvitation?.emailAlreadySent ? (
-              <p>Family portal invitations are being sent to both parent email addresses.</p>
+              <p>Separate invitations are being sent to both parents. Each parent will use their own invitation to access the same family portal.</p>
             ) : state.portalInvitation?.pending ? (
-              <p>Your family portal invitations are still being prepared.</p>
+              <p>Separate invitations for both parents are still being prepared. Each parent will access the same family portal.</p>
             ) : (
-              <p>Family portal invitations will be sent after secure card setup is complete.</p>
+              <p>After secure card setup is complete, both parents will receive separate invitations to access the same family portal.</p>
             )}
           </>
         ) : (

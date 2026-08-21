@@ -1,0 +1,110 @@
+Complete the final controlled dual-parent live E2E with manual user verification. Work on the current main baseline. Do not modify application code unless this test exposes a concrete defect.
+
+The implementation is already green:
+
+TypeScript passes.
+Production build passes.
+25 focused Academic Year / Clerk / Path A / origin tests pass.
+Migration 0027_guardian_clerk_identity_unique.sql is applied.
+The application is running.
+Automated tests cover independent Parent 1 / Parent 2 invitations, existing-Guardian linking, identity uniqueness, idempotency, conflicts, and prevention of Household/Guardian creation during acceptance.
+
+The only remaining verification is the real human dual-parent onboarding flow.
+
+Important testing boundary
+
+I will manually perform all mailbox, invitation-click, Clerk sign-up/sign-in, password, verification-code, and browser-session interactions.
+
+Do not invent or substitute Parent 1 or Parent 2 email addresses. Do not create the test registration until I have supplied or explicitly confirmed the two test email addresses I control.
+
+Your role is to:
+
+verify the test data is isolated;
+prepare/observe the application state;
+verify database and Clerk state at each checkpoint;
+stop and tell me exactly when my manual action is required.
+Before registration
+
+Once I provide the two test parent emails, verify that the proposed test identities/data do not collide with existing:
+
+Guardians;
+Households;
+Clerk identities/invitations;
+phone numbers;
+students;
+previous controlled test registrations.
+
+Use Stripe test mode only.
+
+If there is a collision, stop and report it before creating anything.
+
+Registration and Stripe
+
+Complete the normal Academic Year registration and required Stripe test payment/setup flow using the confirmed test data.
+
+Before either parent accepts an invitation, verify:
+
+exactly one Household;
+exactly two Guardians: Parent 1 and Parent 2;
+both Guardians have the same original household_id;
+Student and tutoring/payment records exist once;
+exactly one independent Clerk invitation was dispatched to each Parent;
+neither Guardian is linked to a Clerk user yet.
+
+Then stop and ask me to manually complete Parent 1's invitation.
+
+Checkpoint 1 — Parent 1
+
+I will manually:
+
+open Parent 1's email;
+click Parent 1's invitation;
+complete Clerk authentication;
+enter the Family Portal.
+
+After I confirm that is complete, verify:
+
+Parent 1 is linked to the existing Parent 1 Guardian;
+Parent 1's original Guardian ID is unchanged;
+Parent 1 invitation is accepted/consumed;
+original Household ID is unchanged;
+no new Guardian or Household exists;
+Parent 2 remains unlinked;
+Parent 2's invitation remains valid and pending.
+
+Then stop and ask me to manually complete Parent 2's invitation.
+
+Checkpoint 2 — Parent 2
+
+I will use a separate/private browser session and manually:
+
+open Parent 2's own email;
+click Parent 2's invitation;
+authenticate using a different Clerk identity;
+enter the Family Portal.
+
+After I confirm completion, verify:
+
+Parent 2 is linked to the existing Parent 2 Guardian;
+Parent 2 invitation is accepted/consumed;
+Parent 1 and Parent 2 have different Clerk user IDs;
+both original Guardian IDs remain unchanged;
+both Guardians retain the exact same original household_id;
+both resolve to the Family Portal for that same existing Household;
+no new Household or Guardian was created;
+no Student, tutoring request, booking, or payment record was duplicated;
+no duplicate Clerk invitation was sent.
+Final verification
+
+Verify the supported acceptance replay/idempotency behavior without creating new records or sending another invitation.
+
+If every checkpoint passes, mark the dual-parent onboarding/linking flow fully verified and stop.
+
+If any concrete defect occurs:
+
+stop at that exact step;
+preserve the current state and evidence;
+report expected vs. observed behavior;
+do not implement a fix until I authorize it.
+
+Do not modify Stripe billing architecture, Zoho, Acuity, QuickBooks, Summer Tutoring, or Courses.

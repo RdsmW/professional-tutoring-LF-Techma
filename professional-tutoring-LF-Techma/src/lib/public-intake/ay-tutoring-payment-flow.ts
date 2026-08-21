@@ -286,6 +286,7 @@ export async function prepareAyPublicPayment(token: string) {
           clientSecret: existing.client_secret,
           publishableKey: getStripePublishableKey(),
           paymentRecordId: context.payment.id,
+          billingEmail: billingDetails(context.request).email ?? null,
         };
       }
     }
@@ -325,6 +326,7 @@ export async function prepareAyPublicPayment(token: string) {
       clientSecret: intent.client_secret,
       publishableKey: getStripePublishableKey(),
       paymentRecordId: context.payment.id,
+      billingEmail: billingDetails(context.request).email ?? null,
     };
   }
 
@@ -336,6 +338,7 @@ export async function prepareAyPublicPayment(token: string) {
         clientSecret: existing.client_secret,
         publishableKey: getStripePublishableKey(),
         paymentRecordId: context.payment.id,
+      billingEmail: billingDetails(context.request).email ?? null,
       };
     }
   }
@@ -369,6 +372,7 @@ export async function prepareAyPublicPayment(token: string) {
     clientSecret: intent.client_secret,
     publishableKey: getStripePublishableKey(),
     paymentRecordId: context.payment.id,
+    billingEmail: billingDetails(context.request).email ?? null,
   };
 }
 
