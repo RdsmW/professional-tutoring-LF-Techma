@@ -39,15 +39,15 @@ export default function StaffLoading() {
       </div>
       <div className="dashboard-main-row" aria-hidden>
         <section className="panel">
-          <S style={{ width: 180 }} />
-          {[1, 2, 3].map((i) => (
-            <S key={i} style={{ height: 48, marginTop: 13 }} />
-          ))}
-        </section>
-        <section className="panel">
           <S style={{ width: 130 }} />
           {[1, 2, 3, 4, 5].map((i) => (
             <S key={i} style={{ height: 25, marginTop: 10 }} />
+          ))}
+        </section>
+        <section className="panel">
+          <S style={{ width: 180 }} />
+          {[1, 2, 3].map((i) => (
+            <S key={i} style={{ height: 48, marginTop: 13 }} />
           ))}
         </section>
       </div>

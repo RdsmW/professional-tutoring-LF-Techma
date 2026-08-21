@@ -160,6 +160,22 @@ button { color: inherit; }
   gap: 0;
   min-width: 0;
 }
+.brand-lockup-toggle {
+  border: 0;
+  background: none;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.brand-lockup-toggle:hover { background: rgba(255,255,255,.06); }
+.brand-lockup-toggle:focus-visible {
+  outline: 2px solid rgba(255,255,255,.5);
+  outline-offset: 2px;
+}
 .brand-logo {
   width: auto;
   height: 40px;
@@ -758,7 +774,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .kpi-card-panel strong {
   display: block;
-  font: 700 28px/1 Georgia, serif;
+  font: 700 34px/1 Georgia, serif;
   letter-spacing: -.02em;
   color: var(--ink);
 }
@@ -1061,8 +1077,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .filter-chip.active { background: var(--navy); color: #fff; border-color: var(--navy); }
 .table-panel { padding: 0; overflow: hidden; margin-bottom: 16px; border-radius: var(--radius); }
 .table-head,.table-row { display: grid; align-items: center; gap: 16px; }
-.table-head { background: var(--canvas); min-height: 38px; padding: 10px 20px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; font-weight: 800; }
-.table-row { width: 100%; min-height: 60px; border: 0; border-top: 1px solid var(--line); background: var(--paper); padding: 10px 20px; text-align: left; cursor: pointer; font-size: 14px; font-weight: 400; color: var(--ink); }
+.table-head { background: var(--canvas); min-height: 38px; padding: 10px 20px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 13px; font-weight: 800; }
+.table-row { width: 100%; min-height: 60px; border: 0; border-top: 1px solid var(--line); background: var(--paper); padding: 10px 20px; text-align: left; cursor: pointer; font-size: 12px; font-weight: 400; color: var(--ink); }
 .table-row:hover { background: var(--surface-lift); }
 .compact-table .table-head { min-height: 32px; padding: 0 16px; }
 .compact-table .table-row {
@@ -1253,12 +1269,21 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .staff-dir-card-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 16px 16px 0;
 }
+.staff-dir-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font: 700 16px/1.2 Georgia, serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .staff-dir-card-status {
   min-width: 0;
+  flex: 0 0 auto;
 }
 .staff-dir-card-body {
   flex: 1;
@@ -1656,8 +1681,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: minmax(0, 1fr);
 }
 .student-payment-learning-band {
-  /* Tutoring | Payment | Learning needs ~48% / 20% / 32% */
-  grid-template-columns: minmax(0, 48fr) minmax(0, 20fr) minmax(0, 32fr);
+  /* Tutoring | Payment ~70% / 30% — Learning needs moved to the info band below. */
+  grid-template-columns: minmax(0, 12fr) minmax(0, 5fr);
 }
 .tutor-capacity-subjects-band {
   display: grid;
@@ -1722,6 +1747,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .tutor-profile-dense .family-household-upper {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+/* Tutor Profile now shares a 3-col row with Subjects + Integrations: wrap fields 2x2. */
+.tutor-profile-dense .family-household-upper.tutor-profile-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .tutor-subjects-control {
   display: flex;
@@ -1942,7 +1971,8 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   background: var(--paper);
 }
 .student-payment-learning-band .family-household-summary,
-.student-payment-learning-band .student-learning-needs-body {
+.student-payment-learning-band .student-learning-needs-body,
+.family-activity-band .student-learning-needs-body {
   flex: 1 1 auto;
 }
 .student-learning-needs-body {
@@ -2318,14 +2348,14 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   gap: 12px;
   margin: 0 0 12px;
 }
-/* Card names: gold Georgia sentence case (not ALL-CAPS sans). */
+/* Card names: gold Georgia sentence case (not ALL-CAPS sans). Kept below section heads (22px). */
 .staff-section-title,
 .family-panel-heading h2,
 .guardian-edit-section-label,
 .staff-edit-section-label {
   margin: 0;
   color: var(--title-gold);
-  font: 700 20px/1.2 Georgia, serif;
+  font: 700 18px/1.2 Georgia, serif;
   letter-spacing: -0.015em;
   text-transform: none;
 }
@@ -2378,7 +2408,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-dense {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   width: 100%;
   min-width: 0;
 }
@@ -2854,6 +2884,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 .family-household-lower {
   grid-template-columns: minmax(0, 1fr);
 }
+.family-household-billing-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .family-household-upper > span,
 .family-household-lower > span {
   display: flex;
@@ -3128,6 +3161,13 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .staff-icon-btn-edit {
   color: var(--navy);
+}
+.staff-icon-btn--labeled {
+  width: auto;
+  padding: 0 12px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
 }
 .staff-icon-btn-edit:hover:not(:disabled),
 .staff-icon-btn-edit:focus-visible {
@@ -3518,7 +3558,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   grid-template-columns: minmax(0, 1fr);
 }
 .staff-record-primary-row.staff-record-primary-row--household-wide {
-  grid-template-columns: minmax(0, 2.35fr) minmax(12.5rem, 1fr);
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
 }
 .staff-record-primary-row--profile-wide {
   grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
@@ -3572,6 +3612,10 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .staff-record-info-card .family-household-dense strong:empty {
   min-height: 1.25em;
+}
+.staff-detail-empty {
+  color: var(--muted);
+  font-weight: 400;
 }
 .staff-record-integrations-fields strong {
   min-height: 1.25em;
@@ -4010,7 +4054,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .family-notes-layout.family-notes-layout-list{grid-template-columns:minmax(0,1fr)}
   /* Tablet: Tutoring | Payment on row 1; Learning needs full width below */
   .student-payment-learning-band{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .student-payment-learning-band > .panel:last-child{grid-column:1 / -1}
   .tutor-capacity-subjects-band{grid-template-columns:minmax(0,1fr)}
   .tutor-profile-dense .family-household-upper{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tutor-open-hours-add{flex-direction:column;align-items:stretch}
@@ -4062,11 +4105,11 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   background: var(--auth-light);
 }
 .auth-brand {
-  background: var(--auth-navy);
+  background: radial-gradient(120% 90% at 0% 0%, #1a2370 0%, var(--auth-navy) 55%);
   color: #fff;
   display: flex;
   align-items: stretch;
-  padding: 32px 48px 28px;
+  padding: 48px 48px 32px;
   animation: auth-brand-in 0.55s ease-out both;
 }
 .auth-brand-inner {
@@ -4084,7 +4127,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .auth-brand-mark {
   width: auto;
-  height: 48px;
+  height: 88px;
   object-fit: contain;
   object-position: left center;
   flex: 0 0 auto;
@@ -4093,7 +4136,7 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
 }
 .auth-brand-wordmark {
   display: block;
-  font: 500 16px/1.2 Georgia, "Times New Roman", serif;
+  font: 500 20px/1.2 Georgia, "Times New Roman", serif;
   letter-spacing: -0.015em;
   color: #fff;
 }
@@ -4106,24 +4149,24 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   padding: 16px 0;
 }
 .auth-brand-headline {
-  margin: 0 0 20px;
-  font: 500 40px/1.2 Georgia, "Times New Roman", serif;
+  margin: 0 0 24px;
+  font: 500 44px/1.2 Georgia, "Times New Roman", serif;
   color: #fff;
   letter-spacing: -0.02em;
 }
 .auth-brand-stats {
-  margin: 0 0 20px;
+  margin: 0 0 24px;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 .auth-brand-stats li {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 40px minmax(0, 1fr);
   gap: 12px;
-  align-items: start;
+  align-items: center;
   font-size: 20px;
   line-height: 1.4;
   color: rgba(255, 255, 255, 0.94);
@@ -4132,8 +4175,14 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   color: var(--auth-gold);
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.auth-brand-stat-icon svg {
+  width: 22px;
+  height: 22px;
 }
 .auth-brand-close {
   margin: 0 0 8px;
@@ -4292,6 +4341,9 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .auth-brand {
     padding: 24px 20px 20px;
     min-height: auto;
+  }
+  .auth-brand-mark {
+    height: 64px;
   }
   .auth-brand-main {
     padding: 16px 0;

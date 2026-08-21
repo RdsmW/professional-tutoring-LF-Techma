@@ -11,7 +11,14 @@ export function SidebarBrand({
 }) {
   return (
     <div className="brand">
-      <div className="brand-lockup" title="Professional Tutoring, LLC">
+      <button
+        type="button"
+        className="brand-lockup brand-lockup-toggle"
+        onClick={onToggleCollapsed}
+        aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+        title={collapsed ? "Expand navigation" : "Collapse navigation"}
+        aria-expanded={!collapsed}
+      >
         <Image
           src="/brand/professional-tutoring-logo.png"
           alt="Professional Tutoring, LLC"
@@ -29,7 +36,7 @@ export function SidebarBrand({
           </strong>
           {portalLabel ? <small>{portalLabel}</small> : null}
         </span>
-      </div>
+      </button>
       <button
         type="button"
         className="nav-collapse-toggle"

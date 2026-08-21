@@ -765,11 +765,10 @@ export function StaffGuardianDetailClient({ guardianId }: { guardianId: string }
                 ? `/staff/guardians/${guardianId}/edit?from=family`
                 : `/staff/guardians/${guardianId}/edit`
             }
-            className="staff-icon-btn staff-icon-btn-edit"
-            aria-label="Edit"
-            title="Edit"
+            className="staff-icon-btn staff-icon-btn-edit staff-icon-btn--labeled"
           >
             <IconPencil size={15} />
+            <span>Edit</span>
           </Link>
           {isArchived ? (
             <StaffIconButton

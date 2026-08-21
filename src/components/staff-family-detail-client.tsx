@@ -1173,11 +1173,10 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
         <div className="family-detail-topbar-actions">
           <Link
             href={`/staff/families/${familyId}/edit`}
-            className="staff-icon-btn staff-icon-btn-edit"
-            aria-label="Edit"
-            title="Edit"
+            className="staff-icon-btn staff-icon-btn-edit staff-icon-btn--labeled"
           >
             <IconPencil size={15} />
+            <span>Edit</span>
           </Link>
           {householdLifecycleButtons.map((action) => (
             <StaffIconButton
@@ -1217,39 +1216,9 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense">
-              <StaffDetailFieldGroup className="family-household-upper family-household-payment-row">
-                <StaffDetailField label="Phone" className="family-household-field-phone">
+              <StaffDetailFieldGroup className="family-household-upper">
+                <StaffDetailField label="Phone" className="family-household-field-phone" showEmpty>
                   {family.primaryPhone}
-                </StaffDetailField>
-                <StaffDetailField label="Responsible for payment" className="family-household-field-payer">
-                  {billingOwner && family.billingOwnerName ? (
-                    <button
-                      type="button"
-                      className="family-household-payer-link"
-                      onClick={() => openGuardianDetail(billingOwner)}
-                    >
-                      {family.billingOwnerName}
-                    </button>
-                  ) : family.billingOwnerName ? (
-                    family.billingOwnerName
-                  ) : null}
-                </StaffDetailField>
-                <StaffDetailField label="Card on file" className="family-household-field-card">
-                  {cardLabel}
-                </StaffDetailField>
-                <StaffDetailField label="Auto-charge" className="family-household-field-autocharge">
-                  {yesNo(family.autoCharge)}
-                </StaffDetailField>
-              </StaffDetailFieldGroup>
-              <StaffDetailFieldGroup className="family-household-lower">
-                <StaffDetailField label="Billing address" className="family-household-field-address">
-                  {addressLines.length ? (
-                    <div className="family-household-address-lines">
-                      {addressLines.map((line, index) => (
-                        <span key={`${index}-${line}`}>{line}</span>
-                      ))}
-                    </div>
-                  ) : null}
                 </StaffDetailField>
               </StaffDetailFieldGroup>
             </div>
@@ -1265,6 +1234,50 @@ export function StaffFamilyDetailClient({ familyId }: { familyId: string }) {
           supports={{ stripe: true }}
         />
       </StaffRecordPrimaryRow>
+
+      <div className="family-detail-layout family-detail-stack">
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
+          <div className="family-panel-heading">
+            <h2>Billing</h2>
+          </div>
+          <div className="family-household-summary">
+            <div className="family-household-dense">
+              <StaffDetailFieldGroup className="family-household-upper family-household-billing-row">
+                <StaffDetailField label="Responsible for payment" className="family-household-field-payer" showEmpty>
+                  {billingOwner && family.billingOwnerName ? (
+                    <button
+                      type="button"
+                      className="family-household-payer-link"
+                      onClick={() => openGuardianDetail(billingOwner)}
+                    >
+                      {family.billingOwnerName}
+                    </button>
+                  ) : family.billingOwnerName ? (
+                    family.billingOwnerName
+                  ) : null}
+                </StaffDetailField>
+                <StaffDetailField label="Card on file" className="family-household-field-card" showEmpty>
+                  {cardLabel}
+                </StaffDetailField>
+                <StaffDetailField label="Auto-charge" className="family-household-field-autocharge" showEmpty>
+                  {yesNo(family.autoCharge)}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
+              <StaffDetailFieldGroup className="family-household-lower">
+                <StaffDetailField label="Billing address" className="family-household-field-address" showEmpty>
+                  {addressLines.length ? (
+                    <div className="family-household-address-lines">
+                      {addressLines.map((line, index) => (
+                        <span key={`${index}-${line}`}>{line}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
+            </div>
+          </div>
+        </Panel>
+      </div>
 
       <div className="family-detail-layout family-detail-stack">
         <Panel className="family-equal-panel">

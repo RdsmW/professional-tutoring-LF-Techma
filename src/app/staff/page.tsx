@@ -476,11 +476,45 @@ export default async function StaffDashboardPage() {
         <section className="panel dashboard-panel">
           <div className="panel-heading">
             <div>
+              <span className="eyebrow">Capacity</span>
+              <h3 className="staff-section-title">This week</h3>
+            </div>
+            <Link href="/staff/sessions" className="text-button">
+              Open schedule
+            </Link>
+          </div>
+          <div className="capacity-bars">
+            {data.weekBars.map((row) => (
+              <Link
+                key={row.day}
+                href="/staff/sessions"
+                className="capacity-row"
+              >
+                <span>{row.day}</span>
+                <div className="bar-track">
+                  <span style={{ width: `${row.width}%` }} />
+                </div>
+                <small>{row.count}</small>
+              </Link>
+            ))}
+          </div>
+          {!data.weekBarsLive ? (
+            <div className="capacity-note">
+              Bars fill when availability slots exist in the database.
+            </div>
+          ) : null}
+        </section>
+
+        <section className="panel dashboard-panel">
+          <div className="panel-heading">
+            <div>
               <span className="eyebrow">Priority queue</span>
               <h3 className="staff-section-title">Family requests</h3>
             </div>
             <div className="dashboard-queue-side">
-              <span className="pill navy">Requests&nbsp;{requestTotal}</span>
+              <span className="pill navy" aria-label={`${requestTotal} requests`}>
+                {requestTotal}
+              </span>
               <Link href="/staff/tutoring-requests" className="text-button">
                 Open queue
               </Link>
@@ -507,38 +541,6 @@ export default async function StaffDashboardPage() {
           {requestTotal > requestRows.length ? (
             <div className="capacity-note">
               Showing {requestRows.length} recent of {requestTotal}.
-            </div>
-          ) : null}
-        </section>
-
-        <section className="panel dashboard-panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Capacity</span>
-              <h3 className="staff-section-title">This week</h3>
-            </div>
-            <Link href="/staff/sessions" className="text-button">
-              Open schedule
-            </Link>
-          </div>
-          <div className="capacity-bars">
-            {data.weekBars.map((row) => (
-              <Link
-                key={row.day}
-                href="/staff/sessions"
-                className="capacity-row"
-              >
-                <span>{row.day}</span>
-                <div className="bar-track">
-                  <span style={{ width: `${row.width}%` }} />
-                </div>
-                <small>{row.count}</small>
-              </Link>
-            ))}
-          </div>
-          {!data.weekBarsLive ? (
-            <div className="capacity-note">
-              Bars fill when availability slots exist in the database.
             </div>
           ) : null}
         </section>

@@ -45,12 +45,12 @@ export function StaffDirectoryCard({
       onClick={onOpen}
       onKeyDown={onKeyDown}
     >
-      <div className="staff-dir-card-top" onClick={(event) => event.stopPropagation()}>
+      <div className="staff-dir-card-top">
+        <h3 className="staff-dir-card-title">{title}</h3>
         <div className="staff-dir-card-status">{status}</div>
         <StaffRowActions label="Card actions" actions={actions} />
       </div>
       <div className="staff-dir-card-body">
-        <h3>{title}</h3>
         {subtitle ? <p>{subtitle}</p> : null}
         <DirectoryCardFields fields={fields} footer={footerField} />
       </div>

@@ -544,11 +544,10 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
         <div className="family-detail-topbar-actions">
           <Link
             href={`/staff/students/${studentId}/edit`}
-            className="staff-icon-btn staff-icon-btn-edit"
-            aria-label="Edit"
-            title="Edit"
+            className="staff-icon-btn staff-icon-btn-edit staff-icon-btn--labeled"
           >
             <IconPencil size={15} />
+            <span>Edit</span>
           </Link>
           {lifecycleButtons.map((action) => (
             <StaffIconButton
@@ -588,7 +587,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <StaffRecordPrimaryRow className="staff-record-primary-row--profile-wide">
+      <StaffRecordPrimaryRow>
         <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Profile</h2>
@@ -611,11 +610,11 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 </StaffDetailField>
               </StaffDetailFieldGroup>
               <StaffDetailFieldGroup className="family-household-upper student-profile-school-row">
-                <StaffDetailField label="Birthdate">{student.birthdate}</StaffDetailField>
-                <StaffDetailField label="Phone">{student.cellPhone}</StaffDetailField>
-                <StaffDetailField label="Grade">{formatGradeLabel(student.gradeLabel)}</StaffDetailField>
-                <StaffDetailField label="Grade year">{student.graduationYear}</StaffDetailField>
-                <StaffDetailField label="School">{student.schoolName}</StaffDetailField>
+                <StaffDetailField label="Birthdate" showEmpty>{student.birthdate}</StaffDetailField>
+                <StaffDetailField label="Phone" showEmpty>{student.cellPhone}</StaffDetailField>
+                <StaffDetailField label="Grade" showEmpty>{formatGradeLabel(student.gradeLabel)}</StaffDetailField>
+                <StaffDetailField label="Grade year" showEmpty>{student.graduationYear}</StaffDetailField>
+                <StaffDetailField label="School" showEmpty>{student.schoolName}</StaffDetailField>
               </StaffDetailFieldGroup>
               <StaffDetailFieldGroup className="family-household-lower">
                 <StaffDetailField label="Mailing address" className="family-household-field-address" showEmpty>
@@ -625,22 +624,6 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                         <span key={`${index}-${line}`}>{line}</span>
                       ))}
                     </div>
-                  ) : null}
-                </StaffDetailField>
-              </StaffDetailFieldGroup>
-            </div>
-          </div>
-        </Panel>
-        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
-          <div className="family-panel-heading">
-            <h2>Other information</h2>
-          </div>
-          <div className="family-household-summary">
-            <div className="family-household-dense">
-              <StaffDetailFieldGroup className="family-household-upper student-other-info-row">
-                <StaffDetailField label="Description" showEmpty>
-                  {student.description ? (
-                    <strong style={{ whiteSpace: "pre-wrap" }}>{student.description}</strong>
                   ) : null}
                 </StaffDetailField>
               </StaffDetailFieldGroup>
@@ -657,8 +640,8 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
           <div className="family-household-summary">
             <div className="family-household-dense student-tutoring-dense">
               <StaffDetailFieldGroup className="family-household-upper student-tutoring-primary-row">
-                <StaffDetailField label="Academic year">{student.academicYear}</StaffDetailField>
-                <StaffDetailField label="Subjects">
+                <StaffDetailField label="Academic year" showEmpty>{student.academicYear}</StaffDetailField>
+                <StaffDetailField label="Subjects" showEmpty>
                   {student.subjects.length > 0 ? (
                     <div className="field-cloud">
                       {student.subjects.map((subject) => (
@@ -669,7 +652,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 </StaffDetailField>
               </StaffDetailFieldGroup>
               <StaffDetailFieldGroup className="family-household-upper student-tutoring-schedule-row">
-                <StaffDetailField label="Preferred schedule">
+                <StaffDetailField label="Preferred schedule" showEmpty>
                   {scheduleChips.length > 0 ? (
                     <div className="field-cloud">
                       {scheduleChips.map((chip) => (
@@ -680,10 +663,10 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 </StaffDetailField>
               </StaffDetailFieldGroup>
               <StaffDetailFieldGroup className="family-household-upper student-tutoring-rates-row">
-                <StaffDetailField label="Hours/rates">
+                <StaffDetailField label="Hours/rates" showEmpty>
                   {optionLabel(ACADEMIC_RATE_PACKAGES, student.hoursRatePackage)}
                 </StaffDetailField>
-                <StaffDetailField label="Advanced subjects hours/rates">
+                <StaffDetailField label="Advanced subjects hours/rates" showEmpty>
                   {optionLabel(ACADEMIC_ADVANCED_RATE_PACKAGES, student.advancedHoursRatePackage)}
                 </StaffDetailField>
               </StaffDetailFieldGroup>
@@ -701,7 +684,7 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                 className="family-household-upper"
                 style={{ gridTemplateColumns: "minmax(0, 1fr)" }}
               >
-                <StaffDetailField label="Responsible for payment">
+                <StaffDetailField label="Responsible for payment" showEmpty>
                   {student.household?.payerName && payerHref ? (
                     <Link href={payerHref} className="family-household-payer-link">
                       {student.household.payerName}
@@ -710,13 +693,13 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                     student.household.payerName
                   ) : null}
                 </StaffDetailField>
-                <StaffDetailField label="Auto-charge (family)">
+                <StaffDetailField label="Auto-charge (family)" showEmpty>
                   {student.household ? yesNo(student.household.autoCharge) : null}
                 </StaffDetailField>
-                <StaffDetailField label="Payment plan">
+                <StaffDetailField label="Payment plan" showEmpty>
                   {optionLabel(ACADEMIC_PAYMENT_PLANS, student.paymentPlan)}
                 </StaffDetailField>
-                <StaffDetailField label="Deposit">
+                <StaffDetailField label="Deposit" showEmpty>
                   {student.depositCents == null ? null : `$${(student.depositCents / 100).toFixed(2)}`}
                 </StaffDetailField>
               </StaffDetailFieldGroup>
@@ -725,6 +708,25 @@ export function StaffStudentDetailClient({ studentId }: { studentId: string }) {
                   Assign a family to show payer and auto-charge.
                 </p>
               ) : null}
+            </div>
+          </div>
+        </Panel>
+      </div>
+
+      <div className="family-activity-band staff-equal-cards">
+        <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
+          <div className="family-panel-heading">
+            <h2>Other information</h2>
+          </div>
+          <div className="family-household-summary">
+            <div className="family-household-dense">
+              <StaffDetailFieldGroup className="family-household-upper student-other-info-row">
+                <StaffDetailField label="Description" showEmpty>
+                  {student.description ? (
+                    <strong style={{ whiteSpace: "pre-wrap" }}>{student.description}</strong>
+                  ) : null}
+                </StaffDetailField>
+              </StaffDetailFieldGroup>
             </div>
           </div>
         </Panel>

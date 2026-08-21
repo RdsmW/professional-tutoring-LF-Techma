@@ -612,11 +612,10 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
           </StaffIconButton>
           <Link
             href={`/staff/tutors/${tutorId}/edit`}
-            className="staff-icon-btn staff-icon-btn-edit"
-            aria-label="Edit"
-            title="Edit"
+            className="staff-icon-btn staff-icon-btn-edit staff-icon-btn--labeled"
           >
             <IconPencil size={15} />
+            <span>Edit</span>
           </Link>
           {lifecycleButtons.map((action) => (
             <StaffIconButton
@@ -651,21 +650,21 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <StaffRecordPrimaryRow className="staff-record-primary-row--household-wide">
+      <StaffRecordPrimaryRow className="staff-equal-cards">
         <Panel className={STAFF_RECORD_INFO_CARD_CLASS}>
           <div className="family-panel-heading">
             <h2>Profile</h2>
           </div>
           <div className="family-household-summary">
             <div className="family-household-dense tutor-profile-dense">
-              <StaffDetailFieldGroup className="family-household-upper">
-                <StaffDetailField label="Name">{tutor.displayName}</StaffDetailField>
-                <StaffDetailField label="Email">{tutor.email}</StaffDetailField>
-                <StaffDetailField label="Phone">{tutor.phone}</StaffDetailField>
+              <StaffDetailFieldGroup className="family-household-upper tutor-profile-fields">
+                <StaffDetailField label="Name" showEmpty>{tutor.displayName}</StaffDetailField>
+                <StaffDetailField label="Email" showEmpty>{tutor.email}</StaffDetailField>
+                <StaffDetailField label="Phone" showEmpty>{tutor.phone}</StaffDetailField>
                 <StaffDetailField label="Open bookings">{tutor.workloadCount}</StaffDetailField>
               </StaffDetailFieldGroup>
               <StaffDetailFieldGroup className="family-household-lower">
-                <StaffDetailField label="Mailing address" className="family-household-field-address">
+                <StaffDetailField label="Mailing address" className="family-household-field-address" showEmpty>
                   {addressLines.length ? (
                     <div className="family-household-address-lines">
                       {addressLines.map((line, index) => (
@@ -676,39 +675,6 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
                 </StaffDetailField>
               </StaffDetailFieldGroup>
             </div>
-          </div>
-        </Panel>
-        <StaffRecordIntegrationsCard stackFields />
-      </StaffRecordPrimaryRow>
-
-      <div className="tutor-capacity-subjects-band staff-equal-cards">
-        <Panel className="family-equal-panel tutor-capacity-panel">
-          <div className="family-panel-heading">
-            <h2>Capacity</h2>
-          </div>
-          <div className="tutor-capacity-body">
-            <label className="tutor-capacity-label" htmlFor="tutor-max-seats">
-              Max seats per slot
-            </label>
-            <div className="tutor-capacity-row">
-              <input
-                id="tutor-max-seats"
-                type="number"
-                min={1}
-                className="tutor-capacity-input"
-                value={maxSeatsPerSlot}
-                onChange={(e) => setMaxSeatsPerSlot(e.target.value)}
-              />
-              <button
-                type="button"
-                className="primary-button tutor-capacity-save"
-                disabled={savingSeats}
-                onClick={() => void saveSeats()}
-              >
-                {savingSeats ? "Saving…" : "Save"}
-              </button>
-            </div>
-            <p className="tutor-capacity-helper">How many students can share one time.</p>
           </div>
         </Panel>
 
@@ -759,6 +725,40 @@ export function StaffTutorDetailClient({ tutorId }: { tutorId: string }) {
             {tutor.subjects.length === 0 ? (
               <p className="tutor-subjects-empty">No subjects linked yet.</p>
             ) : null}
+          </div>
+        </Panel>
+
+        <StaffRecordIntegrationsCard stackFields />
+      </StaffRecordPrimaryRow>
+
+      <div className="family-detail-layout family-detail-stack">
+        <Panel className="family-equal-panel tutor-capacity-panel">
+          <div className="family-panel-heading">
+            <h2>Capacity</h2>
+          </div>
+          <div className="tutor-capacity-body">
+            <label className="tutor-capacity-label" htmlFor="tutor-max-seats">
+              Max seats per slot
+            </label>
+            <div className="tutor-capacity-row">
+              <input
+                id="tutor-max-seats"
+                type="number"
+                min={1}
+                className="tutor-capacity-input"
+                value={maxSeatsPerSlot}
+                onChange={(e) => setMaxSeatsPerSlot(e.target.value)}
+              />
+              <button
+                type="button"
+                className="primary-button tutor-capacity-save"
+                disabled={savingSeats}
+                onClick={() => void saveSeats()}
+              >
+                {savingSeats ? "Saving…" : "Save"}
+              </button>
+            </div>
+            <p className="tutor-capacity-helper">How many students can share one time.</p>
           </div>
         </Panel>
       </div>

@@ -14,7 +14,7 @@ type StaffDetailFieldProps = {
   showEmpty?: boolean;
 };
 
-/** Labeled detail slot — omitted when empty unless `showEmpty`. */
+/** Labeled detail slot — omitted when empty unless `showEmpty`; shown-empty blanks render "—". */
 export function StaffDetailField({ label, children, className, showEmpty }: StaffDetailFieldProps) {
   const empty = isEmptyNode(children);
   if (empty && !showEmpty) return null;
@@ -22,7 +22,7 @@ export function StaffDetailField({ label, children, className, showEmpty }: Staf
     <span className={className}>
       <small>{label}</small>
       {empty ? (
-        <strong />
+        <strong className="staff-detail-empty">—</strong>
       ) : typeof children === "string" || typeof children === "number" ? (
         <strong>{children}</strong>
       ) : (

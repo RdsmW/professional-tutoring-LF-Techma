@@ -22,9 +22,9 @@ export function AuthBrandPanel({
             alt=""
             width={114}
             height={153}
-            className="auth-brand-mark"
-            style={{ width: "auto", height: 48 }}
-            priority
+          className="auth-brand-mark"
+          style={{ width: "auto", height: 88 }}
+          priority
           />
           <span className="auth-brand-wordmark">
             rofessional
