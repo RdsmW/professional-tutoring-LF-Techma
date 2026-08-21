@@ -1,9 +1,5 @@
 import type { CSSProperties } from "react";
-
-/** Navy Soft pulse block — mirrors the real layout per the approved loading state. */
-function S({ style }: { style?: CSSProperties }) {
-  return <div className="staff-skeleton" style={{ height: 14, ...style }} />;
-}
+import { SkeletonBar as S } from "@/components/staff-skeletons";
 
 const visuallyHidden: CSSProperties = {
   position: "absolute",
