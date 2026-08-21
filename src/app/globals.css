@@ -143,7 +143,7 @@ button { color: inherit; }
 }
 .brand {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   padding: 0 10px 26px;
@@ -199,24 +199,6 @@ button { color: inherit; }
 .brand small { color: #a9b8c9; font-size: 12px; margin-top: 4px; display: block; }
 .app-shell.is-nav-collapsed .brand-copy { display: none; }
 .app-shell.is-nav-collapsed .brand-lockup { justify-content: center; }
-.nav-collapse-toggle {
-  width: 28px;
-  height: 28px;
-  border: 0;
-  background: rgba(255,255,255,.06);
-  color: #a9b8c9;
-  border-radius: var(--radius);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  font-size: 16px;
-  line-height: 1;
-  padding: 0;
-}
-.nav-collapse-toggle:hover {
-  background: rgba(255,255,255,.12);
-  color: #fff;
-}
 .role-switch { display: grid; grid-template-columns: 1fr 1fr; background: #0e1d31; padding: 4px; margin-bottom: 24px; border-radius: var(--radius-sm); }
 .role-switch button {
   border: 0; background: transparent; color: #95a8bb; border-radius: var(--radius-sm);
@@ -401,9 +383,6 @@ button { color: inherit; }
 }
 .app-shell.is-nav-collapsed .sidebar-chrome-actions .chrome-label {
   display: none;
-}
-.app-shell.is-nav-collapsed .nav-collapse-toggle {
-  width: 100%;
 }
 
 /* Clerk UserButton ΓÇö force portal chrome (appearance alone can be ignored by injected styles) */
@@ -4076,7 +4055,6 @@ p { color: var(--muted); line-height: 1.55; font-size: 12px; }
   .app-shell,
   .app-shell.is-nav-collapsed { display: block; grid-template-columns: none; }
   .app-shell.is-nav-collapsed .sidebar { width: 100%; padding: 16px; }
-  .nav-collapse-toggle { display: none; }
   .app-shell.is-nav-collapsed .brand-copy,
   .app-shell.is-nav-collapsed .person-copy,
   .app-shell.is-nav-collapsed .sidebar-chrome-actions .chrome-label,

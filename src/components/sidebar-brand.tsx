@@ -37,16 +37,6 @@ export function SidebarBrand({
           {portalLabel ? <small>{portalLabel}</small> : null}
         </span>
       </button>
-      <button
-        type="button"
-        className="nav-collapse-toggle"
-        aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
-        title={collapsed ? "Expand navigation" : "Collapse navigation"}
-        aria-expanded={!collapsed}
-        onClick={onToggleCollapsed}
-      >
-        <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
-      </button>
     </div>
   );
 }
