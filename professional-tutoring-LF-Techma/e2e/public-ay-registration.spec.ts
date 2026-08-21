@@ -57,6 +57,7 @@ test.describe("public academic year registration", () => {
         "ayTutoringConfirmation",
         JSON.stringify({
           message: "Your registration is complete.",
+          schedulingPath: "family_selected",
           paymentStatus: "paid",
           portalInvitation: { emailSent: true, emailAlreadySent: false, pending: false, failed: false, sentCount: 2 },
         }),
@@ -67,6 +68,12 @@ test.describe("public academic year registration", () => {
     await expect(page.getByText(/first scheduled payment was completed successfully/i)).toBeVisible();
     await expect(page.getByText(/Separate invitations have been sent to both parents/i)).toBeVisible();
     await expect(page.getByText(/same family portal/i)).toBeVisible();
+    await expect(page.getByText(/Your Academic Year registration, tutor, and selected time are confirmed/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /Return to Professional Tutoring/i })).toHaveAttribute(
+      "href",
+      "/register/academic-year-tutoring",
+    );
+    await expect(page.getByText(/not a confirmed seat yet/i)).toHaveCount(0);
 
     await page.evaluate(() => {
       sessionStorage.setItem(

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { academicYearPaymentStatusCopy } from "@/lib/public-intake/ay-payment-status";
 
 type ConfirmationState = {
@@ -46,7 +47,7 @@ export default function AcademicYearTutoringConfirmationPage() {
             {state.schedulingPath ? (
               <p>
                 {state.schedulingPath === "family_selected"
-                  ? "We saved your preferred tutor and time. This is not a confirmed seat yet."
+                  ? "Your Academic Year registration, tutor, and selected time are confirmed."
                   : "Professional Tutoring will choose a tutor and time for you."}
               </p>
             ) : null}
@@ -64,6 +65,11 @@ export default function AcademicYearTutoringConfirmationPage() {
         ) : (
           <p>This confirmation is only shown right after you submit. If you need your invite link, contact Professional Tutoring.</p>
         )}
+          <div className="public-ay-actions">
+            <Link className="public-ay-primary" href="/register/academic-year-tutoring">
+              Return to Professional Tutoring
+            </Link>
+          </div>
       </div>
     </main>
   );
