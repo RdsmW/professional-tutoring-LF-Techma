@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, exists, inArray, isNotNull, ne, notExists, or, sql } from "drizzle-orm";
 import { StaffHomeHeroActions } from "@/components/staff-home-create-menu";
 import {
   StaffStudentsDirectoryTable,
@@ -34,6 +34,12 @@ const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Fri
 /** Masdouk / Forward sheets do not operate Friday–Saturday. */
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
 const OPEN_BOOKING_STATUSES = ["confirmed", "held", "pending_payment", "pending_staff_review"] as const;
+
+type KpiInsight = { tone: "green" | "amber" | "red"; text: string };
+
+function plural(count: number, singular: string, pluralForm = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
 
 function greetingForHour(hour: number) {
   if (hour < 12) return "Good morning";
@@ -84,6 +90,10 @@ async function loadDashboardData() {
     tutorOpeningsLive: false,
     billingExceptions: 0,
     billingExceptionsLive: false,
+    onboardingInsight: null as KpiInsight | null,
+    sessionsInsight: null as KpiInsight | null,
+    seatsInsight: null as KpiInsight | null,
+    billingInsight: null as KpiInsight | null,
     familyRequests: [] as PreviewQueueRow[],
     familyRequestsTotal: 0,
     assignmentQueue: [] as Awaited<ReturnType<typeof listTutoringAssignmentQueue>>,
@@ -128,7 +138,7 @@ async function loadDashboardData() {
       assignmentQueue,
     ] = await Promise.all([
       db
-        .select({ id: households.id })
+        .select({ id: households.id, hasLinkedGuardian: exists(linkedGuardianExists) })
         .from(households)
         .where(
           and(
@@ -138,13 +148,17 @@ async function loadDashboardData() {
         ),
       // Sessions this week by weekly slot day (session schedule), not booking createdAt.
       db
-        .select({ id: bookings.id })
+        .select({ id: bookings.id, dayOfWeek: availabilitySlots.dayOfWeek })
         .from(bookings)
         .innerJoin(availabilitySlots, eq(bookings.slotId, availabilitySlots.id))
         .where(inArray(bookings.status, [...OPEN_BOOKING_STATUSES])),
       db.select().from(availabilitySlots).where(eq(availabilitySlots.active, true)),
       db
-        .select({ id: paymentRecords.id })
+        .select({
+          id: paymentRecords.id,
+          status: paymentRecords.status,
+          createdAt: paymentRecords.createdAt,
+        })
         .from(paymentRecords)
         .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"])),
       db
@@ -303,6 +317,55 @@ async function loadDashboardData() {
       href: `/staff/students/${row.id}`,
     }));
 
+    const awaitingGuardian = onboardingHouseholds.filter((row) => !row.hasLinkedGuardian).length;
+    const onboardingInsight: KpiInsight =
+      onboardingHouseholds.length === 0
+        ? { tone: "green", text: "All families fully set up" }
+        : awaitingGuardian > 0
+          ? { tone: "green", text: `${plural(awaitingGuardian, "family")} awaiting guardian sign-in` }
+          : { tone: "green", text: "Guardians all signed in" };
+
+    const sessionsByDay = new Map<number, number>();
+    for (const row of weekBookingRows) {
+      sessionsByDay.set(row.dayOfWeek, (sessionsByDay.get(row.dayOfWeek) ?? 0) + 1);
+    }
+    let peakDay = -1;
+    let peakCount = 0;
+    for (const [day, count] of sessionsByDay) {
+      if (count > peakCount) {
+        peakDay = day;
+        peakCount = count;
+      }
+    }
+    const sessionsInsight: KpiInsight =
+      weekBookingRows.length === 0 || peakDay < 0
+        ? { tone: "amber", text: "No sessions booked yet" }
+        : { tone: "green", text: `Peak: ${DAY_LABELS[peakDay]}` };
+
+    const tutorsWithOpenSeats = new Set(
+      slotRows
+        .filter((slot) => slot.capacitySeats - slot.heldSeats - slot.bookedSeats > 0)
+        .map((slot) => slot.tutorId),
+    ).size;
+    const seatsInsight: KpiInsight =
+      openSeats === 0
+        ? { tone: "amber", text: slotRows.length === 0 ? "No active tutor slots" : "All slots full" }
+        : { tone: "green", text: `Across ${plural(tutorsWithOpenSeats, "tutor")}` };
+
+    const failedPayments = exceptionRows.filter((row) => row.status === "failed").length;
+    const oldestExceptionAgeMs = exceptionRows.reduce(
+      (oldest, row) => Math.max(oldest, Date.now() - row.createdAt.getTime()),
+      0,
+    );
+    const billingInsight: KpiInsight =
+      exceptionRows.length === 0
+        ? { tone: "green", text: "No outstanding payments" }
+        : failedPayments > 0
+          ? { tone: "red", text: plural(failedPayments, "failed payment") }
+          : oldestExceptionAgeMs > 48 * 60 * 60 * 1000
+            ? { tone: "amber", text: "Oldest is over 48h old" }
+            : { tone: "green", text: "All under 48h old" };
+
     return {
       loadError: null,
       onboardingFamilies: onboardingHouseholds.length,
@@ -312,6 +375,10 @@ async function loadDashboardData() {
       tutorOpeningsLive: slotRows.length > 0,
       billingExceptions: exceptionRows.length,
       billingExceptionsLive: true,
+      onboardingInsight,
+      sessionsInsight,
+      seatsInsight,
+      billingInsight,
       familyRequests,
       familyRequestsTotal: exceptionRows.length,
       assignmentQueue,
@@ -380,38 +447,29 @@ export default async function StaffDashboardPage() {
       {data.loadError ? <p className="form-error">{data.loadError}</p> : null}
 
       <section className="kpi-grid" aria-label="Dashboard metrics">
-        <article className="kpi-card">
-          <div className="kpi-card-head">
-            <span>Families still setting up</span>
-          </div>
-          <div className="kpi-card-panel">
-            <strong>{data.onboardingFamilies}</strong>
-          </div>
-        </article>
-        <article className="kpi-card">
-          <div className="kpi-card-head">
-            <span>Sessions this week</span>
-          </div>
-          <div className="kpi-card-panel">
-            <strong>{data.weekSessions}</strong>
-          </div>
-        </article>
-        <article className="kpi-card">
-          <div className="kpi-card-head">
-            <span>Open tutor seats</span>
-          </div>
-          <div className="kpi-card-panel">
-            <strong>{data.tutorOpenings}</strong>
-          </div>
-        </article>
-        <article className="kpi-card">
-          <div className="kpi-card-head">
-            <span>Payments needing attention</span>
-          </div>
-          <div className="kpi-card-panel">
-            <strong>{data.billingExceptions}</strong>
-          </div>
-        </article>
+        {(
+          [
+            ["Families still setting up", data.onboardingFamilies, data.onboardingInsight],
+            ["Sessions this week", data.weekSessions, data.sessionsInsight],
+            ["Open tutor seats", data.tutorOpenings, data.seatsInsight],
+            ["Payments needing attention", data.billingExceptions, data.billingInsight],
+          ] as Array<[string, number, KpiInsight | null]>
+        ).map(([label, value, insight]) => (
+          <article key={label} className="kpi-card">
+            <div className="kpi-card-head">
+              <span>{label}</span>
+            </div>
+            <div className="kpi-card-panel">
+              <strong>{value}</strong>
+              {insight ? (
+                <span className="kpi-insight">
+                  <span className={`kpi-insight-dot ${insight.tone}`} aria-hidden />
+                  {insight.text}
+                </span>
+              ) : null}
+            </div>
+          </article>
+        ))}
       </section>
 
       <div className="dashboard-main-row staff-equal-cards">
