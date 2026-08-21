@@ -1,0 +1,204 @@
+Verification task only — do not modify code yet.
+
+
+
+We need to verify the current tutoring scheduling behavior and Staff assignment UX before continuing Phase 2.
+
+
+
+Inspect the actual current Replit code and UI.
+
+1. Parent Path A — tutor availability
+
+Verify exactly what tutors the public Academic Year scheduling step currently displays after the parent selects:
+
+ primary subject; 
+
+ preferred schedule window / slot. 
+
+
+
+Confirm whether a tutor is shown only if all of these are true:
+
+ tutor is active; 
+
+ tutor teaches the selected primary subject; 
+
+ tutor has an active availability slot matching the selected schedule window; 
+
+ that slot has remaining capacity:
+ booked_seats + held_seats < capacity_seats. 
+
+
+
+Identify the exact files/functions/API queries enforcing each condition.
+
+
+
+Verify whether a tutor with:
+
+ no matching subject; 
+
+ no availability in that window;
+
+inactive availability; 
+
+ a full slot; 
+
+
+
+can currently appear to the parent.
+
+
+
+Do not infer from the intended plan. Inspect the current implementation.
+
+2. Path A final behavior
+
+Verify what happens after a parent chooses an available tutor + slot.
+
+
+
+Target behavior:
+
+
+
+parent selection → required payment/setup → server revalidation → booking on the SAME tutoring request → exactly one seat → confirmed
+
+
+
+There must be no Staff assignment required for a valid Path A choice.
+
+
+
+Verify:
+
+
+
+ whether Path A currently enters any Staff assignment queue; 
+
+ whether Staff must currently click Assign; 
+
+ whether the final booking is created automatically; 
+
+ whether the final booking operation revalidates: 
+
+ tutor active; 
+
+ tutor teaches the request subject; 
+
+ slot belongs to that tutor; 
+
+ slot matches the selected schedule window;
+
+slot is active; 
+
+ capacity is still available. 
+
+
+
+Report any missing check explicitly.
+
+3. Path B — Staff tutor choice
+
+Verify the actual Staff assignment page for:
+
+
+
+Let Professional Tutoring choose.
+
+
+
+Confirm whether Staff currently sees, at a glance:
+
+ Student; 
+
+ Family; 
+
+ Primary subject; 
+
+ Parent's preferred windows/times; 
+
+ only tutors who teach the subject; 
+
+ only relevant available slots; 
+
+ remaining capacity for each option. 
+
+
+
+Staff should not have to manually open tutor profiles and compare availability.
+
+
+
+Document exactly what is currently displayed and what is missing.
+
+4. Current Staff navigation/modules
+
+Inspect the actual current Staff navigation/sidebar and list every current module/tab exactly as it appears in the UI.
+
+
+
+For the following current pages, explain their purpose:
+
+ Staff Home/Dashboard; 
+
+ tutoring requests, if present; 
+
+ Tutors; 
+
+ Sessions; 
+
+ Requests; 
+
+ Reports/Waitlist; 
+
+ any Scheduling-related module/page. 
+
+
+
+Then recommend the smallest and most intuitive placement for tutor assignments using the current navigation.
+
+
+
+Guiding UX:
+
+ Dashboard = surface work needing attention. 
+
+ Dedicated assignment page = perform the work. 
+
+ Reports = reporting, not daily workflow. 
+
+ Sessions = already-booked tutoring, not unassigned requests. 
+
+ Tutors = tutor management/availability, not incoming requests. 
+
+
+
+Do not create a new module unless the existing navigation genuinely has no appropriate place.
+
+5. Required output
+
+Update docs/CURRENT-IMPLEMENTATION-VERIFICATION.md with a section:
+
+# Tutor Availability and Assignment UX Verification
+
+
+
+Clearly state:
+
+Already correct 
+
+Incorrect 
+
+Not verified 
+
+Smallest changes required 
+
+
+
+Include exact file paths and current UI routes.
+
+
+
+STOP after verification. Do not fix or implement anything yet.

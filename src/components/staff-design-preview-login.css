@@ -1,0 +1,36 @@
+.login-preview-sheet.auth-shell {
+  min-height: 680px;
+  height: min(78vh, 760px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.login-preview-sheet .auth-brand,
+.login-preview-sheet .auth-form {
+  animation: none;
+}
+
+.login-preview-clerk {
+  min-height: 280px;
+  background: #d9d9d9;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 900px) {
+  .login-preview-sheet.auth-shell {
+    height: auto;
+    min-height: 0;
+  }
+
+  .login-preview-sheet .auth-brand {
+    min-height: 420px;
+  }
+}

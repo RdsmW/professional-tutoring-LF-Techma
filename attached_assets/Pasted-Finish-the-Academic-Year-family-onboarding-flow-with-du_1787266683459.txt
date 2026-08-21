@@ -1,0 +1,110 @@
+Finish the Academic Year family onboarding flow with dual-parent invitations. Do not start another broad audit.
+
+The intended flow is:
+
+Public registration → Stripe payment/setup succeeds → existing app records remain in place → Clerk invitations are sent to BOTH parents → each parent authenticates separately → both identities link to the SAME existing household → both access the same Family Portal
+
+1. Two parents, two distinct emails
+
+Parent 1 and Parent 2 must each have their own email address.
+
+Add a guardrail in the public Academic Year form and API validation:
+
+Parent 1 email is required.
+Parent 2 email is required.
+Parent 1 email and Parent 2 email must be different, case-insensitively and after trimming whitespace.
+If they are the same, block submission with a clear family-facing validation message.
+
+Do not allow the same email to represent both guardians.
+
+2. Existing family records
+
+The registration already creates the family data before portal access:
+
+one Household;
+Parent 1 Guardian;
+Parent 2 Guardian;
+Student;
+tutoring request / booking state;
+payment/setup records.
+
+Clerk invitation acceptance must not recreate any of these records.
+
+3. Send two Clerk invitations
+
+After the required Stripe payment or card setup succeeds:
+
+send one Clerk invitation to Parent 1;
+send one separate Clerk invitation to Parent 2.
+
+Each invitation must be tied to that specific existing Guardian record.
+
+Parent 1 and Parent 2 must have:
+
+separate Clerk identities;
+separate invitation state;
+separate acceptance state;
+
+while both remain linked to the same Household ID.
+
+4. Invitation authentication flow
+
+Clicking either invitation email should begin authentication directly:
+
+new Clerk user → sign up / establish credentials;
+existing Clerk user → sign in.
+
+Preserve the correct invitation token through authentication.
+
+After authentication:
+
+return to the matching /invite/[token] flow;
+verify the authenticated email matches the invited Guardian;
+link the Clerk identity to that existing Guardian;
+mark that Guardian's invitation accepted;
+keep the Household ID unchanged;
+continue to the Family Portal.
+
+Do not create another household, guardian, student, or invitation during acceptance.
+
+5. Idempotency
+
+Payment finalization/webhook retries must not:
+
+send duplicate invitations to Parent 1;
+send duplicate invitations to Parent 2;
+create duplicate guardians;
+create another household.
+
+Each guardian may have at most one active/completed invitation for this registration flow.
+
+If Parent 1 accepts first, Parent 2's pending invitation must remain valid.
+
+If Parent 2 accepts first, Parent 1's pending invitation must remain valid.
+
+Both must ultimately reach the same family portal data.
+
+6. Confirmation page
+
+After successful registration/payment setup, Confirmation should accurately state that portal invitations are being sent to both parent email addresses.
+
+Do not display full email addresses if the current UI intentionally masks them.
+
+7. Targeted verification
+
+Add/run only the necessary tests proving:
+
+identical Parent 1 / Parent 2 emails are rejected client-side and API-side;
+valid different emails are accepted;
+exactly two Clerk invitations are dispatched, one per guardian;
+each invitation links to the correct existing Guardian;
+Parent 1 acceptance preserves the original Household;
+Parent 2 acceptance preserves the same Household;
+both end up with different Clerk user IDs;
+both see the same Family Portal household;
+repeated finalization sends no duplicate invitations;
+accepting one invitation does not invalidate the other.
+
+Preserve all current Stripe, Path A/Path B, billing, and household logic.
+
+Stop after this dual-parent onboarding flow is implemented and verified. Do not start Zoho, QuickBooks, Acuity, Summer Tutoring, or Courses in this task.

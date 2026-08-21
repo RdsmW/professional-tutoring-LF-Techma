@@ -1,0 +1,240 @@
+The complete source content is now available. My previous message did not include the entire Academic Year agreement.
+
+Use only the content belonging to Academic Year Tutoring Registration Agreement from the source text I provide below. The source dump also contains many unrelated Professional Tutoring forms; ignore those completely.
+
+The Academic Year source content must be mapped into our approved flow:
+
+Welcome → Student → Parents & Billing Information → Tutoring Needs → Schedule → Plan → Agreement → Review → Payment → Confirmation
+
+Do not reproduce Gravity Forms mechanically. Preserve its actual business information and contractual content while using the cleaner app flow.
+
+Tutoring Needs / Schedule
+
+Preserve the Academic Year Tutoring Plan information:
+
+ Subject(s) 
+
+ ability to provide all subjects the student needs help with 
+
+ Preferred Schedule / Day & Time 
+
+ Tutoring Test Prep 
+
+Our new app may improve the Subject UX into a clean multi-subject experience with Other support, but do not invent additional client business rules.
+
+Scheduling should continue using the already approved app behavior rather than copying the old preference-only Gravity Forms behavior.
+
+Plan — Hours/Rates
+
+Preserve both existing pricing structures:
+
+Standard Hours/Rates
+
+ 2 hours/week — $460/month 
+
+ 4 hours/week — $910/month 
+
+ 6 hours/week — $1,360/month 
+
+ 8 hours/week — $1,810/month 
+
+ Hourly — $65/hour 
+
+Advanced Subjects
+
+The following advanced subjects are charged at the Advanced rates:
+
+ All AP/IB subjects 
+
+ Multivariable Calculus 
+
+ Linear Algebra 
+
+ Any community college or university class 
+
+Advanced Subjects Hours/Rates
+
+ 2 hours/week — $600/month 
+
+ 4 hours/week — $1,200/month 
+
+ 6 hours/week — $1,800/month 
+
+ 8 hours/week — $2,400/month 
+
+ Hourly — $85/hour 
+
+Display:
+
+ Standard-only subjects → Standard rates only 
+
+ Advanced-only subjects → Advanced rates + Advanced explanation 
+
+ mixed Standard + Advanced subjects → both rate sections + Advanced explanation 
+
+The mixed final-pricing formula is still awaiting business clarification. Do not invent it.
+
+Preserve this source explanation after the rates:
+
+Tutoring sessions are two hours each. The hourly rate is only available when there is no full-time tutoring spot open or on a short-term one- to two-week trial basis. Once a full-time spot becomes available or the trial period ends, students who continue with tutoring will be considered full-time and will be accorded the lower full-time rates listed above.
+
+Plan — Tutoring Policy
+
+Insert the complete Academic Year Tutoring Policy source text I provide below, not headings/placeholders.
+
+It includes:
+
+ Business Hours 
+
+ Tutoring Year and Rates 
+
+ Tutoring Appointments 
+
+ Holiday Schedule 
+
+ Federal/School Holidays 
+
+ Student Cancellations 
+
+ Banking a Session 
+
+ Weather Cancellations 
+
+ Instructor Information and Cancellation Policy 
+
+ Terminating Services or Decreasing Hours 
+
+Keep the required acknowledgement:
+
+Yes, I read & understood the tutoring policy information
+
+The UI can use Read more / See more or expandable sections, but the complete text must remain accessible.
+
+Do not silently rewrite contractual wording.
+
+Plan — Payment Information
+
+Preserve:
+
+Full Year
+ Sept. through June 10; full payment due 9/1/2026; 10% discount; 9.5 months.
+
+Semester
+ 9/1/2026 and/or 2/1/2027; 5% discount; Fall = 5 months; Spring = 4.5 months.
+
+Monthly
+ Due the first of each month.
+
+Preserve the source note:
+
+** To be confirmed by PT staff.
+
+Preserve the complete Payment Terms source, including:
+
+ accepted-payment-method wording; 
+
+ 3.6% credit/debit card service fee; 
+
+ payment due first of month; 
+
+ $25 late fee after the seventh; 
+
+ $35 returned-check fee; 
+
+ reasonable attorney/administrative collection fees; 
+
+ 1.5% monthly / 18% annual interest; 
+
+ mitigating-circumstances wording; 
+
+ credit-card-on-file guarantee; 
+
+ source wording concerning authorization to charge the card. 
+
+Do not reintroduce the removed public fields asking:
+
+ whether PT should automatically charge the card; 
+
+ which alternative payment method the family wants to use. 
+
+Those were intentionally removed from the new Stripe flow.
+
+Where the old contractual language conflicts with the new automatic Stripe installment behavior, preserve/flag the source language and report the exact conflict. Do not create replacement legal wording.
+
+Agreement
+
+The previous implementation also missed the complete Acknowledgements and Release source.
+
+Add the complete source section:
+
+ Professional Tutoring programs support students in tutoring/test preparation/coaching; 
+
+ mature behavior expectations; 
+
+ suspension/dismissal language; 
+
+ contracted tuition and fees remaining due; 
+
+ no-refund language; 
+
+ authorization to use student work/photos in furtherance of the PT business; 
+
+ acknowledgement that the Agreement, services and applicable fees were read and understood; 
+
+ acknowledgement that the family had an opportunity to ask questions. 
+
+Preserve:
+
+I agree to the terms outlined in this Agreement.
+
+and:
+
+ Signature Parent 
+
+ Signature Student 
+
+ Date 
+
+This belongs in Agreement, before Review and Payment.
+
+Review
+
+Review should then show the selected registration, subjects, schedule, applicable rate section(s), selected hours/rate, payment plan, amount(s), and accepted policy/agreement before Stripe payment.
+
+Payment → Confirmation
+
+Preserve the verified Stripe architecture.
+
+After successful Stripe payment/setup:
+
+Stripe → automatic return to app → Confirmation
+
+Do not automatically redirect from Confirmation into the family portal.
+
+Confirmation should accurately describe the invitation state. If an invitation URL exists but outbound email is not yet implemented, do not claim the email was sent.
+
+Continue the remaining verification already underway
+
+Continue:
+
+ invitation/email infrastructure verification; 
+
+formVersionToken test-environment correction; 
+
+ targeted billing tests; 
+
+ Full Year 9.5-month verification; 
+
+ Semester 5 + 4.5 verification; 
+
+ Monthly 9 full + June half-month verification; 
+
+ 3.6% fee verification; 
+
+ Path A / Path B regression verification. 
+
+Do not start another broad audit.
+
+Do not start Zoho, QuickBooks or Acuity within this task.
+
+After I paste the source content below, use that exact source as the reference.

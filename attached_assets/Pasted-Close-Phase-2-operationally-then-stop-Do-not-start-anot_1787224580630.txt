@@ -1,0 +1,109 @@
+Close Phase 2 operationally, then stop. Do not start another audit and do not add new Stripe functionality.
+
+
+
+First, quickly confirm that the implementation reported in:
+
+
+
+docs/VERIFICATION-PHASE2-STRIPE-AND-PATH-A.md 
+
+ the Phase 2 work report 
+
+
+
+is still the current Replit state.
+
+
+
+Do not rewrite or refactor it.
+
+
+
+Then complete only the remaining operational Stripe setup:
+
+
+
+1. Stripe webhook
+
+
+
+ Confirm the exact deployed Replit webhook URL for src/app/api/stripe/webhook/route.ts. 
+
+ Confirm which Stripe webhook events the current implementation actually handles. 
+
+ Configure or provide the exact configuration needed for Stripe test mode to deliver those events to the Replit endpoint. 
+
+ Verify signature validation using the configured webhook secret. 
+
+ Trigger at least one safe Stripe test-mode webhook flow and confirm that the corresponding existing payment_records state is reconciled correctly. 
+
+ Confirm that replaying the same webhook does not create duplicate state. 
+
+
+
+Do not expose secret values in the report.
+
+
+
+2. Scheduled installment collector
+
+
+
+ Confirm the existing collector:
+ src/lib/stripe/collect-due-ay-installments.ts
+ and its protected execution path. 
+
+ Set up the simplest appropriate Replit scheduled execution for the existing collector, or identify the exact Replit configuration required if activation must be done manually. 
+
+Do not redesign the collector. 
+
+ Confirm that only due unpaid auto-charge installments are eligible and that the same installment cannot be collected twice. 
+
+
+
+3. Final smoke verification
+
+
+
+In Stripe test mode, confirm:
+
+
+
+ Full Year does not create later automatic installments; 
+
+ Semester has exactly 2 application installments; 
+
+ Monthly has exactly 10; 
+
+ auto-charge Yes makes future due installments eligible for automatic collection; 
+
+ auto-charge No does not automatically charge future installments; 
+
+ Path A still requires no Staff assignment; 
+
+ Path B B1 remains unbooked until Staff assignment. 
+
+
+
+Fix only a concrete blocker discovered during these checks. Do not broaden the scope.
+
+
+
+Then report:
+
+
+
+ webhook URL/configuration status; 
+
+ webhook test result; 
+
+ scheduler/collector activation status; 
+
+ final smoke results; 
+
+ any operational action that still requires a human in Stripe or Replit. 
+
+
+
+STOP after this. Do not start Zoho, Acuity or QuickBooks yet.

@@ -5,12 +5,12 @@ import {
   StaffStudentsDirectoryTable,
   type StaffStudentDirectoryTableRow,
 } from "@/components/staff-students-directory-table";
+import { amountLabel } from "@/lib/billing";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { db } from "@/lib/db";
 import {
   availabilitySlots,
   bookings,
-  changeRequests,
   guardians,
   households,
   paymentRecords,
@@ -18,45 +18,22 @@ import {
   studentSubjects,
   subjects,
 } from "@/lib/db/schema";
+import { listTutoringAssignmentQueue } from "@/lib/staff/tutoring-assignment-queue";
 import { buildStudentListLabel } from "@/lib/staff/students";
+import { formatGradeLabelDisplay } from "@/lib/ui/grade";
 import { formatDirectoryCreatedAt } from "@/lib/ui/directory-sort";
 import { formatStatusLabel, statusTone } from "@/lib/ui/status";
 import { formatSubjectsPreview } from "@/lib/ui/subjects-preview";
+import {
+  formatQueueDate,
+  PRIORITY_QUEUE_RECENT_LIMIT,
+  type PreviewQueueRow,
+} from "@/lib/staff/preview-requests";
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+/** Masdouk / Forward sheets do not operate Friday–Saturday. */
 const WEEK_DAYS = [0, 1, 2, 3, 4] as const;
 const OPEN_BOOKING_STATUSES = ["confirmed", "held", "pending_payment", "pending_staff_review"] as const;
-
-/** UI-only Priority Queue preview when the DB has no open change requests (not persisted). */
-const PREVIEW_FAMILY_REQUESTS = [
-  {
-    id: "preview-req-1",
-    initials: "EC",
-    title: "Cancel session · Emerson Chen",
-    copy: "Chen Family · Cancel upcoming booking",
-    meta: "Preview",
-    tone: "rose",
-    href: "/staff/sessions",
-  },
-  {
-    id: "preview-req-2",
-    initials: "MR",
-    title: "Reschedule · Maya Ruiz",
-    copy: "Ruiz Family · Move to another day",
-    meta: "Preview",
-    tone: "blue",
-    href: "/staff/sessions",
-  },
-  {
-    id: "preview-req-3",
-    initials: "JL",
-    title: "Tutor change · Jordan Lee",
-    copy: "Lee Family · Request different tutor",
-    meta: "Preview",
-    tone: "amber",
-    href: "/staff/sessions",
-  },
-] as const;
 
 function greetingForHour(hour: number) {
   if (hour < 12) return "Good morning";
@@ -64,11 +41,8 @@ function greetingForHour(hour: number) {
   return "Good evening";
 }
 
-function initialsFromName(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "??";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+function queuePersonName(firstName?: string | null, lastName?: string | null, displayName?: string | null) {
+  return `${firstName ?? ""} ${lastName ?? ""}`.trim() || (displayName ?? "").trim();
 }
 
 function startOfWeekNy(now = new Date()) {
@@ -84,15 +58,15 @@ function startOfWeekNy(now = new Date()) {
   const day = Number(nyParts.find((p) => p.type === "day")?.value);
   const weekday = nyParts.find((p) => p.type === "weekday")?.value ?? "Sun";
   const weekdayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
-  const localMidnight = new Date(year, month - 1, day);
-  localMidnight.setDate(localMidnight.getDate() - Math.max(0, weekdayIndex));
-  return localMidnight;
+  const sundayDay = day - Math.max(0, weekdayIndex);
+  // UTC noon of that NY calendar Sunday — rolling current week, not a frozen date.
+  return new Date(Date.UTC(year, month - 1, sundayDay, 12));
 }
 
 function formatCapacityDay(weekStart: Date, dayOfWeek: number) {
-  const date = new Date(weekStart);
-  date.setDate(weekStart.getDate() + dayOfWeek);
+  const date = new Date(weekStart.getTime() + dayOfWeek * 24 * 60 * 60 * 1000);
   const monthDay = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
     month: "short",
     day: "numeric",
   }).format(date);
@@ -110,19 +84,16 @@ async function loadDashboardData() {
     tutorOpeningsLive: false,
     billingExceptions: 0,
     billingExceptionsLive: false,
-    familyRequests: [] as {
-      id: string;
-      initials: string;
-      title: string;
-      copy: string;
-      meta: string;
-      tone: string;
-      href: string;
-    }[],
+    familyRequests: [] as PreviewQueueRow[],
+    familyRequestsTotal: 0,
+    assignmentQueue: [] as Awaited<ReturnType<typeof listTutoringAssignmentQueue>>,
     recentStudents: [] as StaffStudentDirectoryTableRow[],
     weekBars: WEEK_DAYS.map((day) => ({
       day: formatCapacityDay(weekStart, day),
       width: 0,
+      booked: 0,
+      open: 0,
+      capacity: 0,
       count: "0 / 0",
     })),
     weekBarsLive: false,
@@ -152,8 +123,9 @@ async function loadDashboardData() {
       weekBookingRows,
       slotRows,
       exceptionRows,
-      openRequests,
+      paymentAttentionRows,
       recentStudentRows,
+      assignmentQueue,
     ] = await Promise.all([
       db
         .select({ id: households.id })
@@ -177,19 +149,25 @@ async function loadDashboardData() {
         .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"])),
       db
         .select({
-          id: changeRequests.id,
-          changeType: changeRequests.changeType,
-          requestedOutcome: changeRequests.requestedOutcome,
-          status: changeRequests.status,
-          studentName: students.displayName,
+          id: paymentRecords.id,
+          amountCents: paymentRecords.amountCents,
+          currency: paymentRecords.currency,
+          createdAt: paymentRecords.createdAt,
+          householdId: households.id,
           householdName: households.displayName,
+          payerFirstName: guardians.firstName,
+          payerLastName: guardians.lastName,
+          studentFirstName: students.firstName,
+          studentLastName: students.lastName,
+          studentDisplayName: students.displayName,
         })
-        .from(changeRequests)
-        .innerJoin(students, eq(changeRequests.studentId, students.id))
-        .innerJoin(households, eq(changeRequests.householdId, households.id))
-        .where(inArray(changeRequests.status, ["submitted", "under_review"]))
-        .orderBy(desc(changeRequests.createdAt))
-        .limit(8),
+        .from(paymentRecords)
+        .innerJoin(households, eq(paymentRecords.householdId, households.id))
+        .leftJoin(guardians, eq(households.billingOwnerGuardianId, guardians.id))
+        .leftJoin(students, eq(students.id, paymentRecords.relatedEntityId))
+        .where(inArray(paymentRecords.status, ["unpaid", "pending", "failed", "partial"]))
+        .orderBy(desc(paymentRecords.createdAt))
+        .limit(PRIORITY_QUEUE_RECENT_LIMIT),
       db
         .select({
           id: students.id,
@@ -207,6 +185,7 @@ async function loadDashboardData() {
         .where(ne(students.lifecycle, "archived"))
         .orderBy(desc(students.createdAt))
         .limit(8),
+      listTutoringAssignmentQueue(),
     ]);
 
     const openSeats = slotRows.reduce((sum, slot) => {
@@ -225,24 +204,67 @@ async function loadDashboardData() {
 
     const weekBars = WEEK_DAYS.map((day) => {
       const bucket = byDay.get(day) ?? { open: 0, capacity: 0 };
-      const used = Math.max(0, bucket.capacity - bucket.open);
-      const width = bucket.capacity > 0 ? Math.round((used / bucket.capacity) * 100) : 0;
+      const booked = Math.max(0, bucket.capacity - bucket.open);
+      const width = bucket.capacity > 0 ? Math.round((booked / bucket.capacity) * 100) : 0;
       return {
         day: formatCapacityDay(weekStart, day),
         width,
-        count: `${used} / ${bucket.capacity}`,
+        booked,
+        open: bucket.open,
+        capacity: bucket.capacity,
+        count: `${booked} / ${bucket.capacity}`,
       };
     });
 
-    const familyRequests = openRequests.map((row) => ({
-      id: row.id,
-      initials: initialsFromName(row.studentName || row.householdName),
-      title: `${formatStatusLabel(row.changeType)} · ${row.studentName}`,
-      copy: `${row.householdName} · ${formatStatusLabel(row.requestedOutcome)}`,
-      meta: formatStatusLabel(row.status),
-      tone: statusTone(row.status) || (row.status === "under_review" ? "blue" : "rose"),
-      href: `/staff/sessions?exceptionId=${row.id}`,
-    }));
+    const studentNameByHousehold = new Map<string, string>();
+    const householdsNeedingStudent = [
+      ...new Set(
+        paymentAttentionRows
+          .filter(
+            (row) =>
+              !queuePersonName(row.studentFirstName, row.studentLastName, row.studentDisplayName),
+          )
+          .map((row) => row.householdId),
+      ),
+    ];
+    if (householdsNeedingStudent.length > 0) {
+      const householdStudentRows = await db
+        .select({
+          householdId: students.householdId,
+          firstName: students.firstName,
+          lastName: students.lastName,
+          displayName: students.displayName,
+        })
+        .from(students)
+        .where(
+          and(inArray(students.householdId, householdsNeedingStudent), ne(students.lifecycle, "archived")),
+        )
+        .orderBy(asc(students.createdAt));
+      for (const row of householdStudentRows) {
+        if (!row.householdId || studentNameByHousehold.has(row.householdId)) continue;
+        studentNameByHousehold.set(
+          row.householdId,
+          queuePersonName(row.firstName, row.lastName, row.displayName),
+        );
+      }
+    }
+
+    const familyRequests = paymentAttentionRows.map((row) => {
+      const payerName = queuePersonName(row.payerFirstName, row.payerLastName);
+      const name = (row.householdName || "").trim() || payerName || "Family";
+      const studentName =
+        queuePersonName(row.studentFirstName, row.studentLastName, row.studentDisplayName) ||
+        studentNameByHousehold.get(row.householdId) ||
+        "";
+      return {
+        id: row.id,
+        name,
+        studentName,
+        amountLabel: amountLabel(row.amountCents, row.currency),
+        dateLabel: formatQueueDate(row.createdAt),
+        href: "/staff/billing",
+      };
+    });
 
     const studentIds = recentStudentRows.map((row) => row.id);
     const subjectsByStudent = new Map<string, Array<{ id: string; name: string }>>();
@@ -273,7 +295,7 @@ async function loadDashboardData() {
       }),
       household: row.householdName || "—",
       subjects: formatSubjectsPreview(subjectsByStudent.get(row.id)),
-      grade: row.gradeLabel || "—",
+      grade: formatGradeLabelDisplay(row.gradeLabel),
       school: row.schoolName || "—",
       statusLabel: formatStatusLabel(row.lifecycle),
       statusTone: statusTone(row.lifecycle),
@@ -291,6 +313,8 @@ async function loadDashboardData() {
       billingExceptions: exceptionRows.length,
       billingExceptionsLive: true,
       familyRequests,
+      familyRequestsTotal: exceptionRows.length,
+      assignmentQueue,
       recentStudents,
       weekBars,
       weekBarsLive: slotRows.length > 0,
@@ -319,10 +343,8 @@ export default async function StaffDashboardPage() {
     day: "numeric",
   }).format(new Date());
   const greeting = greetingForHour(nowNy.getHours());
-  const usingPreviewRequests = data.familyRequests.length === 0 && !data.loadError;
-  const priorityRequests = usingPreviewRequests
-    ? PREVIEW_FAMILY_REQUESTS.map((row) => ({ ...row }))
-    : data.familyRequests;
+  const priorityRequests = data.familyRequests;
+  const priorityRequestTotal = data.familyRequestsTotal;
 
   return (
     <>
@@ -343,86 +365,65 @@ export default async function StaffDashboardPage() {
           <span className="metric-mark navy" />
           <p>Families still setting up</p>
           <strong>{data.onboardingFamilies}</strong>
-          <small>Pending or no parent login</small>
         </article>
         <article className="metric-card">
           <span className="metric-mark blue" />
           <p>Sessions this week</p>
           <strong>{data.weekSessions}</strong>
-          <small>
-            {data.weekSessionsLive
-              ? "Scheduled or happening this week"
-              : "Live when sessions exist"}
-          </small>
         </article>
         <article className="metric-card">
           <span className="metric-mark mint" />
           <p>Open tutor seats</p>
           <strong>{data.tutorOpenings}</strong>
-          <small>
-            {data.tutorOpeningsLive ? "Seats still free on active times" : "Live when availability exists"}
-          </small>
         </article>
         <article className="metric-card">
           <span className="metric-mark gold" />
           <p>Payments needing attention</p>
           <strong>{data.billingExceptions}</strong>
-          <small>
-            {data.billingExceptionsLive
-              ? "Unpaid, pending, failed, or partial"
-              : "Live when payment rows exist"}
-          </small>
         </article>
       </section>
 
-      <div className="dashboard-main-row">
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Priority queue</span>
-              <h3>Family requests</h3>
-            </div>
-            <div className="dashboard-heading-side">
-              <div className="dashboard-kpi-strip" aria-label="Priority summary">
-                <span className="dashboard-kpi-chip">
-                  Requests
-                  <strong>{priorityRequests.length}</strong>
-                </span>
-              </div>
-              <Link href="/staff/sessions" className="text-button">
-                Open sessions
-              </Link>
-            </div>
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">Needs attention</span>
+            <h3 className="staff-section-title dashboard-queue-title">
+              <span className="dashboard-count-badge">{data.assignmentQueue.length}</span>
+              Tutor assignment
+            </h3>
           </div>
-          {usingPreviewRequests ? (
-            <p className="dashboard-preview-note">Sample preview — not live requests.</p>
-          ) : null}
+          <Link href="/staff/tutoring-requests" className="text-button">
+            Open queue
+          </Link>
+        </div>
+        {data.assignmentQueue.length === 0 ? (
+          <p className="dashboard-empty">No tutoring registrations need a tutor assignment.</p>
+        ) : (
           <div className="attention-list">
-            {priorityRequests.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="attention-row"
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                <span className={`avatar ${item.tone}`}>{item.initials}</span>
-                <span>
-                  <strong>{item.title}</strong>
-                  <small>{item.copy}</small>
+            {data.assignmentQueue.map((item) => (
+              <Link key={item.id} href={`/staff/tutoring-requests/${item.id}`} className="attention-row">
+                <span className="attention-row-name">
+                  <strong>{item.studentName}</strong>
+                  <small>{item.reason}</small>
                 </span>
-                <span className={`pill ${item.tone}`}>{item.meta}</span>
+                <span className="attention-row-student">{item.subjectName}</span>
+                <span className="attention-row-amount">
+                  {item.schedulingPath === "family_selected" ? "Preferred time — not booked" : "Choose tutor"}
+                </span>
               </Link>
             ))}
           </div>
-        </section>
+        )}
+      </section>
 
+      <div className="dashboard-main-row staff-equal-cards">
         <section className="panel">
           <div className="panel-heading">
             <div>
               <span className="eyebrow">Capacity</span>
-              <h3>This week</h3>
+              <h3 className="staff-section-title">This week</h3>
             </div>
-            <Link href="/staff/scheduling" className="text-button">
+            <Link href="/staff/sessions" className="text-button">
               Open schedule
             </Link>
           </div>
@@ -430,9 +431,8 @@ export default async function StaffDashboardPage() {
             {data.weekBars.map((row) => (
               <Link
                 key={row.day}
-                href="/staff/scheduling"
+                href="/staff/sessions"
                 className="capacity-row"
-                style={{ textDecoration: "none", color: "inherit", display: "grid" }}
               >
                 <span>{row.day}</span>
                 <div className="bar-track">
@@ -445,9 +445,45 @@ export default async function StaffDashboardPage() {
           {!data.weekBarsLive ? (
             <div className="capacity-note">
               <span className="signal-dot" />
-              Bars fill when availability slots exist in the database.
+              Totals fill when availability slots exist in the database.
             </div>
           ) : null}
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">Priority queue</span>
+              <h3 className="staff-section-title dashboard-queue-title">
+                <span className="dashboard-count-badge">{priorityRequestTotal}</span>
+                Payment issues
+              </h3>
+            </div>
+            <Link href="/staff/sessions?tab=issues" className="text-button">
+              Open sessions
+            </Link>
+          </div>
+          {priorityRequestTotal > priorityRequests.length ? (
+            <p className="dashboard-preview-note">
+              Showing {priorityRequests.length} recent of {priorityRequestTotal}.
+            </p>
+          ) : null}
+          <div className="attention-list">
+            {priorityRequests.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="attention-row"
+              >
+                <span className="attention-row-name">
+                  <strong>{item.name}</strong>
+                  <small>{item.dateLabel}</small>
+                </span>
+                <span className="attention-row-student">{item.studentName || "—"}</span>
+                <span className="attention-row-amount">{item.amountLabel}</span>
+              </Link>
+            ))}
+          </div>
         </section>
       </div>
 
@@ -455,7 +491,7 @@ export default async function StaffDashboardPage() {
         <div className="panel-heading">
           <div>
             <span className="eyebrow">Students</span>
-            <h3>Recently added</h3>
+            <h3 className="staff-section-title">Recently added</h3>
           </div>
           <Link href="/staff/students" className="text-button">
             Open students

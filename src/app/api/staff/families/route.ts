@@ -20,10 +20,12 @@ type NewFamilyBody = {
   billingLastName?: string;
   billingEmail?: string;
   billingPhone?: string;
+  billingIsBillingOwner?: boolean;
   secondFirstName?: string;
   secondLastName?: string;
   secondEmail?: string;
   secondPhone?: string;
+  secondIsBillingOwner?: boolean;
   studentDisplayName?: string;
   secondStudentDisplayName?: string;
 };
@@ -138,6 +140,15 @@ export async function POST(request: Request) {
       .returning();
 
     const billingToken = randomBytes(24).toString("hex");
+    let secondIsOwner = secondGuardianRequested && body.secondIsBillingOwner === true;
+    // First guardian defaults Yes when the flag is omitted; explicit false stays No.
+    let firstIsOwner =
+      body.billingIsBillingOwner === true ||
+      (body.billingIsBillingOwner !== false && !secondIsOwner);
+    if (firstIsOwner && secondIsOwner) {
+      secondIsOwner = false;
+    }
+
     const [billingGuardian] = await database
       .insert(guardians)
       .values({
@@ -147,16 +158,18 @@ export async function POST(request: Request) {
         lastName: billingLastName,
         phone: billingPhone,
         relationshipRole: "parent_1",
-        isBillingOwner: true,
+        isBillingOwner: firstIsOwner,
         inviteToken: billingToken,
         updatedAt: now,
       })
       .returning();
 
-    await database
-      .update(households)
-      .set({ billingOwnerGuardianId: billingGuardian.id, updatedAt: now })
-      .where(eq(households.id, household.id));
+    if (firstIsOwner) {
+      await database
+        .update(households)
+        .set({ billingOwnerGuardianId: billingGuardian.id, updatedAt: now })
+        .where(eq(households.id, household.id));
+    }
 
     let secondGuardianId: string | null = null;
     let secondInviteToken: string | null = null;
@@ -171,12 +184,18 @@ export async function POST(request: Request) {
           lastName: (body.secondLastName ?? "").trim(),
           phone: optionalText(body.secondPhone),
           relationshipRole: "parent_2",
-          isBillingOwner: false,
+          isBillingOwner: secondIsOwner,
           inviteToken: secondInviteToken,
           updatedAt: now,
         })
         .returning();
       secondGuardianId = second.id;
+      if (secondIsOwner) {
+        await database
+          .update(households)
+          .set({ billingOwnerGuardianId: second.id, updatedAt: now })
+          .where(eq(households.id, household.id));
+      }
     }
 
     const studentIds: string[] = [];

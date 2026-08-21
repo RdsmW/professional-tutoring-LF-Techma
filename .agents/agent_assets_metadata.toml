@@ -1,0 +1,72 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "FM-eFJFx-zFMvsYy6vp2X"
+uri = "file://professional-tutoring-LF-Techma/docs/VERIFICATION-STRIPE-PUBLIC-RETURN-URL.md"
+type = "text"
+title = "Verification Report — Stripe Public Return URL"
+description = "Verification results for the Academic Year public Stripe SetupIntent and PaymentIntent return URL fix."
+logical_id = "1471b3ad-fa5e-42a9-b047-96669c5e0286"
+content_hash = "sha256:aa132baee2aa4ab7956a45b7eab82fd58f0df2759aa8436f9dcd4d6cfdce9e7d"
+size = 1333
+mtime_ms = 1787230577688
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/1471b3ad-fa5e-42a9-b047-96669c5e0286/51308d09-df58-4912-b832-13d8e4e45fc7"
+storage_version_token = "1787236351465192"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "_-9HAWpZ2RoCEoaCsD5A2"
+uri = "file://professional-tutoring-LF-Techma/docs/REPORT-SAME-APP-BILLING-SCHEDULER.md"
+type = "text"
+title = "Report — Same-App Billing Scheduler"
+description = "Smallest safe Reserved VM scheduling approach for the existing Professional Tutoring app."
+logical_id = "7af93fee-e69e-4da9-9956-a69949fc4a29"
+content_hash = "sha256:21bb396535f014e64dba6483234db89a3d20f14a9cfd3c48a9990e805a40324b"
+size = 5837
+mtime_ms = 1787236515739
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/7af93fee-e69e-4da9-9956-a69949fc4a29/2bfd0edb-ebba-4c71-8f00-8b6d84b7d493"
+storage_version_token = "1787236521981098"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "eUzZxrmTnZd2TPQpj2rqO"
+uri = "file://professional-tutoring-LF-Techma/docs/WORK-REPORT-SAME-APP-BILLING-SCHEDULER.md"
+type = "text"
+title = "Work Report — Same-App Billing Scheduler"
+description = "Implementation details, Reserved VM run command, preserved boundaries, and the remaining Publishing action."
+logical_id = "5de8820d-0476-478c-92a6-ca18161865da"
+content_hash = "sha256:6d49a4cefe8c3c8fb3ce38d4bfaf584247c32522a69b588cccb7825b35fc1beb"
+size = 2256
+mtime_ms = 1787238110531
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/5de8820d-0476-478c-92a6-ca18161865da/b16609d3-031d-4866-a276-d4a5c9be641e"
+storage_version_token = "1787238146575257"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "FTpEhCV5k_KKd3hKAYEbG"
+uri = "file://professional-tutoring-LF-Techma/docs/VERIFICATION-SAME-APP-BILLING-SCHEDULER.md"
+type = "text"
+title = "Verification — Same-App Billing Scheduler"
+description = "Static, Stripe test-mode, collector, webhook, supervisor, and regression verification results."
+logical_id = "af168161-f5f0-4221-ad81-0695b92c3558"
+content_hash = "sha256:3e51d3cedc066dfdf330dac49c4355c618785c56916c567c7f51b5aa7560f945"
+size = 1776
+mtime_ms = 1787238114431
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/af168161-f5f0-4221-ad81-0695b92c3558/1bded4f0-ad86-449c-9bd9-3d48429b1e95"
+storage_version_token = "1787238147301658"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "zc3zOFvSvUlbqBfo5BkZJ"
+uri = "file://professional-tutoring-LF-Techma/docs/VERIFICATION-STUDENT-FORM-USABILITY.md"
+type = "text"
+title = "Verification — Student Form Usability"
+description = "Verification of concise labels, required student email, layout, registration regression coverage, and the Mapbox lookup diagnosis."
+logical_id = "9a3e92b6-2932-439d-8c2e-7d88fa33a6fe"
+content_hash = "sha256:137c55b5888ad5533dad779332397a5b9d44b5cfa14018894252d2822c7f48c4"
+size = 1218
+mtime_ms = 1787243791482
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:8f9597cb-9721-466f-a590-043ae028a009/9a3e92b6-2932-439d-8c2e-7d88fa33a6fe/35730d1d-c5a8-4331-b64d-26d58fa3e82b"
+storage_version_token = "1787243830141500"
+content_type = "text/markdown"

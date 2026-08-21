@@ -1,0 +1,163 @@
+Next step: verification only. Do not add new Phase 2 functionality yet.
+
+
+
+The source audit is complete, but the current implementation has not been behaviorally verified because Playwright could not start its configured web server and no controlled database-backed A/B/C scenario ran.
+
+
+
+First restore a reliable test execution path in Replit.
+
+
+
+You may make only the minimum test/configuration changes necessary to run the existing application and tests. Do not change payment, booking, pricing, scheduling, or business behavior during this task.
+
+
+
+Then verify the implementation that already exists.
+
+
+
+Run and report:
+
+
+
+1. Phase 1 regression
+
+
+
+ Path A public selection still creates the expected request before payment completion. 
+
+ Path B still creates the expected request without booking/seat. 
+
+ Existing Family and Staff flows are not broken. 
+
+
+
+2. Current Phase 2 Path A
+
+
+
+Verify with controlled test data:
+
+
+
+request → payment continuation → payment/setup state → slot revalidation → SAME request → one booking → exactly one seat
+
+
+
+Report:
+
+
+
+ request ID; 
+
+ payment record ID; 
+
+ booking ID; 
+
+ request status before/after; 
+
+ payment status before/after; 
+
+booked_seats before/after; 
+
+ total booking count for that request;
+
+whether any duplicate request was created. 
+
+
+
+3. Current Phase 2 Path B — B1
+
+
+
+Verify:
+
+
+
+request → required payment/setup → still no booking → Staff assignment → SAME request → one booking → exactly one seat
+
+
+
+Also prove that Staff assignment is blocked before the payment gate is satisfied.
+
+
+
+Report the same IDs/counts/statuses as Path A.
+
+
+
+4. Failure/retry behavior already implemented
+
+
+
+Using Stripe test mode or the safest available Stripe test mechanism, verify what currently happens when:
+
+
+
+ Path A selected slot becomes unavailable before booking; 
+
+ payment authorization fails; 
+
+ capture fails, if safely reproducible; 
+
+ the same finalize request is sent twice; 
+
+ the same payment-continuation token is reused. 
+
+
+
+Do not fix failures discovered during this task. Record them.
+
+
+
+5. Existing Stripe setup
+
+
+
+Confirm which operations can actually run with the current Replit Stripe configuration:
+
+Customer; 
+
+ PaymentIntent; 
+
+ SetupIntent; 
+
+ manual capture; 
+
+ saved card. 
+
+
+
+Do not create Products, Prices, Subscriptions, Schedules or webhooks yet.
+
+
+
+Update:
+
+
+
+docs/CURRENT-IMPLEMENTATION-VERIFICATION.md
+
+
+
+with the real runtime/database results.
+
+
+
+End with only:
+
+
+
+Verified working 
+
+Verified broken 
+
+Still unverified 
+
+Minimum next implementation work 
+
+
+
+STOP there. Do not implement recurring billing, webhooks, replay fixes or other Phase 2 changes yet.

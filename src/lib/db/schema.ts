@@ -231,6 +231,8 @@ export const courseOfferings = pgTable("course_offerings", {
   description: text("description"),
   termLabel: text("term_label"),
   scheduleSummary: text("schedule_summary"),
+  /** Free-text instructor for class People; null shows as — */
+  instructorName: text("instructor_name"),
   capacity: integer("capacity").notNull().default(20),
   enrolledCount: integer("enrolled_count").notNull().default(0),
   tuitionCents: integer("tuition_cents").notNull().default(0),
