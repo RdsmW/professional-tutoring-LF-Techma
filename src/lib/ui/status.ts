@@ -84,8 +84,12 @@ export function statusTone(status: string | null | undefined): StatusTone {
     return "quiet";
   }
 
-  /* Student lifecycle Prospect/Paused: quieter than navy so they do not compete with titles. */
-  if (["prospect", "paused"].includes(key)) {
+  /* Design system: Prospect is the informational Harbor pill; Paused stays quiet. */
+  if (key === "prospect") {
+    return "blue";
+  }
+
+  if (["paused"].includes(key)) {
     return "quiet";
   }
 

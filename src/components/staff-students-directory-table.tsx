@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { KeyboardEvent, ReactNode } from "react";
+import { initialsOf } from "@/lib/ui/initials";
 
 export type StaffStudentDirectoryTableRow = {
   id: string;
   name: string;
   household: string;
-  subjects: string;
+  /** Subject names — rendered as violet pills (up to 2, then "+N"). */
+  subjects: string[];
   grade: string;
   school: string;
   statusLabel: string;
@@ -41,11 +43,31 @@ function StudentTableCells({
   row: StaffStudentDirectoryTableRow;
   actions?: ReactNode;
 }) {
+  const visibleSubjects = row.subjects.slice(0, 2);
+  const extraSubjects = row.subjects.length - visibleSubjects.length;
   return (
     <>
-      <strong>{row.name}</strong>
+      <span className="staff-dir-name">
+        <span className="table-avatar" aria-hidden>
+          {initialsOf(row.name)}
+        </span>
+        <strong>{row.name}</strong>
+      </span>
       <span>{row.household}</span>
-      <span>{row.subjects}</span>
+      <span className="staff-dir-subjects">
+        {visibleSubjects.length === 0 ? (
+          "—"
+        ) : (
+          <>
+            {visibleSubjects.map((subject) => (
+              <span key={subject} className="subject-pill">
+                {subject}
+              </span>
+            ))}
+            {extraSubjects > 0 ? <span className="subject-pill">+{extraSubjects}</span> : null}
+          </>
+        )}
+      </span>
       <span>{row.grade}</span>
       <span>{row.school}</span>
       <span className="staff-dir-col-status">

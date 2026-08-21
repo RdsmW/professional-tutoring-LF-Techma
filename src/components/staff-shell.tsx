@@ -32,6 +32,7 @@ export function StaffShell({
       />
       <aside className="sidebar">
         <SidebarBrand collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+        <div className="nav-label">Navigation</div>
         <nav aria-label="Staff navigation">
           {STAFF_NAV.map((item) => {
             const active =
@@ -51,7 +52,7 @@ export function StaffShell({
                 aria-label={item.label}
               >
                 <span className="nav-icon">
-                  <AppIcon name={item.icon} preferPng={false} />
+                  <AppIcon name={item.icon} size={18} preferPng={false} />
                 </span>
                 <span className="nav-text">{item.label}</span>
               </Link>
@@ -62,13 +63,13 @@ export function StaffShell({
           <div className="sidebar-chrome-actions">
             <button type="button" aria-label="Search" title="Search">
               <span className="chrome-icon">
-                <AppIcon name="search" size={16} preferPng={false} />
+                <AppIcon name="search" size={18} preferPng={false} />
               </span>
               <span className="chrome-label">Search</span>
             </button>
             <button type="button" aria-label="Notifications" title="Notifications">
               <span className="chrome-icon">
-                <AppIcon name="bell" size={16} preferPng={false} />
+                <AppIcon name="bell" size={18} preferPng={false} />
               </span>
               <span className="chrome-label">Alerts</span>
             </button>

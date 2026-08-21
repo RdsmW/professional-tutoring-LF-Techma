@@ -1,0 +1,1 @@
+import{j as e}from"./index-Bev55klV.js";function a({label:s,children:t}){return e.jsxs("div",{className:"space-y-2",children:[s?e.jsx("p",{className:"text-xs font-medium uppercase tracking-wide text-muted-foreground",children:s}):null,e.jsx("div",{className:"flex flex-wrap items-center gap-3",children:t})]})}export{a as R};

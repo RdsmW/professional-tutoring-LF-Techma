@@ -1,0 +1,143 @@
+import { useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  BarChart3,
+  Bell,
+  BookOpen,
+  CalendarDays,
+  ChevronLeft,
+  CreditCard,
+  GraduationCap,
+  LayoutDashboard,
+  MoreHorizontal,
+  Search,
+  Settings2,
+  UserCheck,
+  Users,
+  Video,
+} from "lucide-react";
+
+const C = {
+  midnight: "#010345", navyLift: "#1a2068", navySoft: "#e8e9f2", gold: "#c4922e",
+  brightGold: "#d8a840", ink: "#172133", slate: "#697486", chrome: "#b8c4d1",
+  line: "#e3e6e2", canvas: "#f5f6f3", surface: "#fbfcfa", paper: "#ffffff",
+  goldSoft: "#fff6e5", harbor: "#4c78a8", harborSoft: "#edf4fb", mint: "#5a9d88",
+  mintSoft: "#eaf7f2", mintInk: "#2f6f5e", violet: "#7566a8", violetSoft: "#f2effb",
+  amber: "#d97706",
+};
+
+const navItems = [
+  ["Dashboard", LayoutDashboard], ["Families", Users], ["Guardians", UserCheck],
+  ["Students", GraduationCap], ["Tutors", BookOpen], ["Scheduling", CalendarDays],
+  ["Sessions", Video], ["Billing", CreditCard], ["Reports", BarChart3], ["Settings", Settings2],
+] as const;
+
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return <div style={{ color: C.brightGold, font: "800 12px Arial", letterSpacing: ".13em" }}>{children}</div>;
+}
+function Pill({ children, background, color, uppercase = false }: { children: React.ReactNode; background: string; color: string; uppercase?: boolean }) {
+  return <span style={{ background, color, borderRadius: 9999, padding: "5px 8px", font: `800 12px Arial`, letterSpacing: uppercase ? ".05em" : undefined }}>{children}</span>;
+}
+function Avatar({ initials, size = 33 }: { initials: string; size?: number }) {
+  return <div style={{ width: size, height: size, flex: `0 0 ${size}px`, borderRadius: 9999, background: C.navySoft, color: C.midnight, display: "grid", placeItems: "center", font: `700 ${size < 32 ? 11 : 12}px Arial` }}>{initials}</div>;
+}
+function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return <section style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 14, padding: 20, ...style }}>{children}</section>;
+}
+function KpiCard({ label, number, trendValue, trendSuffix, trendDir, trendColor }: { label: string; number: string; trendValue: string; trendSuffix: string; trendDir: "up" | "down"; trendColor: string }) {
+  const TrendIcon = trendDir === "up" ? ArrowUp : ArrowDown;
+  return <Card style={{ display: "flex", flexDirection: "column", gap: 0, minHeight: 132, padding: 10 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px 10px" }}>
+      <div style={{ color: C.ink, font: "14px Arial", lineHeight: 1.3 }}>{label}</div>
+      <button style={{ background: "none", border: 0, cursor: "pointer", color: C.slate, padding: "0 0 0 8px", display: "flex" }}><MoreHorizontal size={16} /></button>
+    </div>
+    <div style={{ flex: 1, background: "#fff", border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 14px 14px" }}>
+      <div style={{ color: C.ink, font: "700 28px Georgia", letterSpacing: "-.02em", lineHeight: 1 }}>{number}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 12 }}>
+        <TrendIcon size={14} color={trendColor} strokeWidth={2.5} />
+        <span style={{ color: trendColor, font: "700 13px Arial" }}>{trendValue}</span>
+        <span style={{ color: C.slate, font: "13px Arial" }}>{trendSuffix}</span>
+      </div>
+    </div>
+  </Card>;
+}
+function RequestRow({ initials, title, copy }: { initials: string; title: string; copy: string }) {
+  return <div style={{ display: "flex", alignItems: "center", gap: 16, minHeight: 56, borderBottom: `1px solid ${C.line}`, padding: "10px 0" }}>
+    <Avatar initials={initials} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ color: C.ink, font: "700 14px Arial" }}>{title}</div><div style={{ color: C.slate, font: "12px Arial", marginTop: 5 }}>{copy}</div></div>
+    <Pill background={C.goldSoft} color={C.amber} uppercase>Preview</Pill>
+  </div>;
+}
+function CapacityRow({ day }: { day: string }) {
+  return <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 34 }}>
+    <div style={{ width: 120, flex: "0 0 120px", color: C.ink, font: "700 12px Arial" }}>{day}</div>
+    <div style={{ flex: 1, height: 8, borderRadius: 9999, background: C.canvas }}><div style={{ width: 0, height: 8, borderRadius: 9999, background: C.mint }} /></div>
+    <div style={{ width: 24, color: C.slate, font: "12px Arial" }}>0/2</div>
+  </div>;
+}
+function StudentsTable() {
+  const rows = [
+    ["Emma Thompson", "ET", "Thompson Family", ["Math", "Science"], "9th", "Westfield High", "Prospect", "Aug 12, 2026"],
+    ["Marcus Williams", "MW", "Williams Family", ["English", "History"], "7th", "Lincoln Middle", "Active", "Aug 10, 2026"],
+    ["Sofia Martinez", "SM", "Martinez Family", ["Math"], "11th", "Central High", "Prospect", "Aug 8, 2026"],
+    ["Liam Chen", "LC", "Chen Family", ["Science", "Spanish"], "5th", "Riverside Elementary", "Active", "Aug 5, 2026"],
+  ] as const;
+  return <div style={{ overflowX: "auto", border: `1px solid ${C.line}`, borderRadius: 14, background: C.paper }}>
+    <div style={{ minWidth: 860 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1.25fr 1.25fr .55fr 1.35fr .8fr 1fr", gap: 16, alignItems: "center", minHeight: 38, padding: "10px 20px", background: C.canvas, color: C.slate, font: "800 12px Arial", letterSpacing: ".08em", textTransform: "uppercase" }}>
+        {["Name", "Household", "Subjects", "Grade", "School", "Status", "Created At"].map((x) => <div key={x}>{x}</div>)}
+      </div>
+      {rows.map(([name, initials, household, subjects, grade, school, status, created]) => <div key={name} style={{ display: "grid", gridTemplateColumns: "1.4fr 1.25fr 1.25fr .55fr 1.35fr .8fr 1fr", gap: 16, alignItems: "center", minHeight: 60, padding: "10px 20px", borderBottom: `1px solid ${C.line}`, color: C.ink, font: "14px Arial", cursor: "pointer" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700 }}><Avatar initials={initials} size={33} />{name}</div>
+        <div>{household}</div><div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>{subjects.map((subject) => <span key={subject} style={{ background: C.violetSoft, color: C.violet, borderRadius: 9999, padding: "5px 8px", font: "700 11px Arial", textTransform: "uppercase" }}>{subject}</span>)}</div>
+        <div>{grade}</div><div>{school}</div><div><Pill background={status === "Active" ? C.mintSoft : C.harborSoft} color={status === "Active" ? C.mintInk : "#38658f"}>{status}</Pill></div><div style={{ color: C.slate }}>{created}</div>
+      </div>)}
+    </div>
+  </div>;
+}
+function DashboardSkeleton() {
+  const S = ({ style }: { style?: React.CSSProperties }) => <div className="staff-skeleton" style={{ height: 14, borderRadius: 14, background: C.navySoft, ...style }} />;
+  return <><style>{`@keyframes staffPulse {0%,100%{opacity:.45}50%{opacity:1}} .staff-skeleton{animation:staffPulse 1.2s ease infinite}`}</style>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><S style={{ width: 160, height: 10 }} /><S style={{ width: 260, height: 24, marginTop: 12 }} /></div><div style={{ display: "flex", gap: 12 }}><S style={{ width: 108, height: 42 }} /><S style={{ width: 104, height: 42 }} /></div></Card>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>{[1, 2, 3, 4].map((x) => <Card key={x}><S style={{ width: "70%" }} /><S style={{ width: 35, height: 28, marginTop: 12 }} /><S style={{ width: "90%", marginTop: 8 }} /></Card>)}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1.3fr .7fr", gap: 16 }}><Card><S style={{ width: 180 }} />{[1, 2, 3].map((x) => <S key={x} style={{ height: 48, marginTop: 13 }} />)}</Card><Card><S style={{ width: 130 }} />{[1, 2, 3, 4, 5].map((x) => <S key={x} style={{ height: 25, marginTop: 10 }} />)}</Card></div>
+      <Card><S style={{ width: 150, height: 17 }} /><S style={{ height: 38, marginTop: 16 }} />{[1, 2, 3, 4].map((x) => <S key={x} style={{ height: 48, marginTop: 8 }} />)}</Card>
+    </div>
+  </>;
+}
+
+export function Dashboard({ isLoading = false }: { isLoading?: boolean }) {
+  const [active, setActive] = useState("Dashboard");
+  const [notice, setNotice] = useState("");
+  const action = (label: string) => setNotice(label);
+  return <div style={{ minHeight: "100vh", display: "flex", background: C.canvas, fontFamily: "Arial, sans-serif" }}>
+    <aside style={{ width: 248, flex: "0 0 248px", minHeight: "100vh", background: C.midnight, color: C.chrome, display: "flex", flexDirection: "column", padding: "26px 14px 18px" }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "0 10px 26px" }}><div style={{ width: 32, height: 32, display: "grid", placeItems: "center", border: `1px solid ${C.brightGold}`, color: C.brightGold, font: "700 16px Georgia" }}>PT</div><div><div style={{ color: C.paper, font: "700 12px Georgia", lineHeight: 1.15 }}>Professional Tutoring, LLC</div><div style={{ color: C.chrome, font: "12px Arial", marginTop: 8 }}><ChevronLeft size={12} style={{ verticalAlign: "middle" }} /> collapse</div></div></div>
+      <div style={{ padding: "0 10px 10px", color: C.chrome, font: "800 12px Arial", letterSpacing: ".15em" }}>NAVIGATION</div>
+      <nav style={{ display: "flex", flexDirection: "column", gap: 3 }}>{navItems.map(([label, Icon]) => <button key={label} onClick={() => setActive(label)} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, width: "100%", border: 0, borderRadius: 10, padding: "11px 12px", background: active === label ? C.navyLift : "transparent", color: active === label ? C.paper : C.chrome, font: "600 15px Arial", textAlign: "left", cursor: "pointer" }}><Icon size={18} color={active === label ? C.brightGold : C.gold} />{label}</button>)}</nav>
+      <div style={{ marginTop: "auto", borderTop: "1px solid rgba(184,196,209,.35)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 5 }}>
+        <button onClick={() => action("Search")} style={{ background: "none", border: 0, color: C.chrome, display: "flex", alignItems: "center", gap: 12, padding: "9px 12px", font: "600 14px Arial", textAlign: "left" }}><Search size={18} color={C.gold} />Search</button>
+        <button onClick={() => action("Alerts")} style={{ background: "none", border: 0, color: C.chrome, display: "flex", alignItems: "center", gap: 12, padding: "9px 12px", font: "600 14px Arial", textAlign: "left" }}><Bell size={18} color={C.gold} />Alerts</button>
+        <button onClick={() => action("Alex Johnson")} style={{ background: "none", border: 0, color: C.paper, display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", textAlign: "left" }}><Avatar initials="AJ" size={32} /><span><span style={{ display: "block", font: "600 14px Arial" }}>Alex Johnson</span><span style={{ display: "block", color: C.chrome, font: "12px Arial", marginTop: 3 }}>Staff</span></span></button>
+      </div>
+    </aside>
+    <main style={{ width: "100%", maxWidth: 1200, margin: "0 auto", padding: "30px 34px 44px", overflow: "hidden" }}>
+      {isLoading ? <DashboardSkeleton /> : <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20, padding: "14px 18px" }}><div><Eyebrow>TUESDAY, AUGUST 18</Eyebrow><h1 style={{ color: C.ink, font: "700 22px Georgia", letterSpacing: "-.02em", margin: "7px 0 0" }}>Good morning, Alex.</h1></div><div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}><button onClick={() => action("New family")} style={{ background: C.midnight, color: C.paper, border: 0, borderRadius: 14, padding: "12px 20px", font: "800 14px Arial", cursor: "pointer" }}>New family</button><button onClick={() => action("New tutor")} style={{ background: "transparent", color: C.ink, border: `1.5px solid ${C.midnight}`, borderRadius: 14, padding: "10px 20px", font: "700 14px Arial", cursor: "pointer" }}>New tutor</button></div></Card>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 16 }}>
+          <KpiCard label="Families still setting up"     number="4"  trendValue="2"   trendSuffix="more than last week"  trendDir="up"   trendColor={C.amber} />
+          <KpiCard label="Sessions this week"            number="12" trendValue="15%" trendSuffix="vs last week"         trendDir="up"   trendColor={C.mint} />
+          <KpiCard label="Open tutor seats"              number="7"  trendValue="3"   trendSuffix="fewer than last week" trendDir="down" trendColor="#b85a72" />
+          <KpiCard label="Payments needing attention"    number="3"  trendValue="1"   trendSuffix="added today"          trendDir="up"   trendColor={C.amber} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1.3fr .7fr", gap: 16 }}><Card><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}><div><Eyebrow>PRIORITY QUEUE</Eyebrow><h2 style={{ margin: "6px 0 0", color: C.ink, font: "700 18px Georgia" }}>Family requests</h2></div><div style={{ display: "flex", gap: 12, alignItems: "center" }}><Pill background={C.navySoft} color={C.midnight}>Requests&nbsp; 3</Pill><button onClick={() => action("Open sessions")} style={{ border: 0, background: "none", color: C.harbor, font: "800 12px Arial", cursor: "pointer" }}>Open sessions</button></div></div><div style={{ background: C.goldSoft, borderRadius: 14, padding: 12, color: C.ink, font: "12px Arial", margin: "16px 0 4px" }}>Sample preview — not live requests.</div><RequestRow initials="EC" title="Cancel session · Emerson Chen" copy="Chen Family · Cancel upcoming booking" /><RequestRow initials="MR" title="Reschedule · Maya Ruiz" copy="Ruiz Family · Move to another day" /><RequestRow initials="JL" title="Tutor change · Jordan Lee" copy="Lee Family · Request different tutor" /></Card>
+          <Card><div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 10 }}><div><Eyebrow>CAPACITY</Eyebrow><h2 style={{ margin: "6px 0 0", color: C.ink, font: "700 18px Georgia" }}>This week</h2></div><button onClick={() => action("Open schedule")} style={{ border: 0, background: "none", color: C.harbor, font: "800 12px Arial", cursor: "pointer" }}>Open schedule</button></div><div style={{ marginTop: 16 }}>{["Sunday · Aug 16", "Monday · Aug 17", "Tuesday · Aug 18", "Wednesday · Aug 19", "Thursday · Aug 20"].map((day) => <CapacityRow day={day} key={day} />)}</div><div style={{ background: C.goldSoft, borderRadius: 14, padding: 12, color: C.ink, font: "12px Arial", marginTop: 12 }}>Bars fill when availability slots exist in the database.</div></Card></div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginTop: 4 }}><div><Eyebrow>STUDENTS</Eyebrow><h2 style={{ margin: "6px 0 0", color: C.ink, font: "700 22px Georgia" }}>Recently added</h2></div><button onClick={() => action("Open students")} style={{ border: 0, background: "none", color: C.harbor, font: "800 12px Arial", cursor: "pointer", marginBottom: 2 }}>Open students</button></div>
+        <StudentsTable />
+      </div>}
+      <span aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>{notice}</span>
+    </main>
+    <style>{`@media(max-width:900px){aside{width:72px!important;flex-basis:72px!important;padding-inline:8px!important}aside>div:first-child{padding-inline:4px!important}aside>div:first-child>div:nth-child(2){display:none}aside nav button{font-size:0;justify-content:center}aside nav button svg{margin:0}aside nav button span{display:none}aside nav+div button{font-size:0;justify-content:center}main{padding:20px!important}.staff-skeleton+*{} } @media(max-width:680px){main>div>div:nth-child(2),main>div>div:nth-child(3){grid-template-columns:1fr!important}.staff-skeleton{max-width:100%} }`}</style>
+  </div>;
+}

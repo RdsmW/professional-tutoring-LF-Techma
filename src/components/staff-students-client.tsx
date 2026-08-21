@@ -398,7 +398,7 @@ export function StaffStudentsClient() {
               id: row.id,
               name: row.listLabel || row.displayName,
               household: row.householdDisplayName,
-              subjects: formatSubjectsPreview(row.subjects),
+              subjects: (row.subjects ?? []).map((subject) => subject.name),
               grade: formatGradeLabelDisplay(row.gradeLabel),
               school: row.schoolName ?? "—",
               statusLabel: formatStatusLabel(row.lifecycle),
