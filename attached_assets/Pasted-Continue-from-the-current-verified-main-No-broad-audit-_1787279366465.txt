@@ -1,0 +1,98 @@
+Continue from the current verified main. No broad audit. Keep responses concise: changes, blockers, verification only.
+
+1. Payment UX corrections
+
+Review the current Academic Year Payment step and fix these UX issues without changing the existing Stripe architecture.
+
+Stripe Link
+
+If supported by the current Stripe Payment Element configuration, expose Stripe's optional “Save my information for faster checkout” / Link choice.
+
+This option must remain the user's choice.
+
+Do not confuse Stripe Link with the payment method that Professional Tutoring must securely retain in Stripe for future scheduled charges.
+
+For a payment plan requiring future automatic charges, the payment method must still be available for those off-session charges according to the existing approved billing flow.
+
+Payment CTA
+
+Do not use:
+
+Save card and confirm registration
+
+Use customer-facing wording appropriate to the actual action, preferably:
+
+Complete registration
+
+The UI may explain separately that the payment method will be securely kept by Stripe when required by the selected payment plan.
+
+Payment status
+
+Verify why the UI shows Pending.
+
+Expected:
+
+successful immediate PaymentIntent → that payment must reflect its successful/paid state;
+successful SetupIntent with future installments → future installments may correctly remain pending until their due dates.
+
+Fix the displayed status only if it is inconsistent with the actual Stripe/payment-record state.
+
+Do not mark future unpaid installments as paid merely because card setup succeeded.
+
+2. Focused wording / UX polish
+
+Make only obvious customer-facing improvements to the existing Academic Year flow:
+
+clearer labels and helper text;
+consistent buttons and spacing;
+clearer Review, Payment and Confirmation screens;
+Confirmation must state that both parents receive separate portal invitations and access the same family portal.
+
+Do not alter pricing, policies, scheduling rules, Stripe billing logic, or dual-parent onboarding.
+
+If wording would change a business/legal rule, stop and ask instead of guessing.
+
+3. Zoho CRM — continue now
+
+Continue the Academic Year Zoho integration using the already confirmed CRM structure and exact API names.
+
+Target:
+
+Household → Account
+Parent 1 → Contact
+Parent 2 → Contact
+Student / Academic Year registration → Deal
+
+Preserve the confirmed mappings and picklist values already established in the project.
+
+Before writing records, resolve only remaining field ambiguities from the existing project/configuration. Do not start another broad Zoho audit and do not invent API names or picklist values.
+
+Make synchronization idempotent and store the resulting Zoho IDs/URLs locally.
+
+4. Acuity — continue without guessing
+
+Continue the Acuity work in parallel, but do not implement an invented mapping.
+
+Current invariant:
+
+confirmed Path A booking → Acuity appointment;
+unassigned Path B request → no Acuity appointment;
+Staff assignment of Path B → confirmed booking → Acuity appointment.
+
+Use the existing Acuity account/configuration to identify the exact active Appointment Type and Calendar/location mapping required for Academic Year tutoring.
+
+We already know Acuity Calendars appear to represent locations/channels rather than tutors, so do not map Tutor → Calendar unless current Acuity data proves otherwise.
+
+If exact Appointment Type / Calendar mapping is still missing, report only the specific missing configuration needed from me instead of guessing.
+
+Verification
+
+Run targeted tests plus TypeScript/build for what you change.
+
+Report only:
+
+Payment UX
+Zoho
+Acuity
+Blockers
+Verification
