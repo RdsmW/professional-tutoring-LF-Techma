@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { createTutoringRequest } from "@/lib/booking/create-tutoring-request";
 import { findOpenPreferredSlot, resolveCatalogSubjectRow } from "@/lib/booking/open-slots-for-subject-window";
 import { requireDb } from "@/lib/db";
-import { guardians, households, students, tutors } from "@/lib/db/schema";
+import { guardians, households, students, tutoringRequests, tutors } from "@/lib/db/schema";
 import {
   ACADEMIC_SUBJECTS,
   isValidOptionId,
@@ -689,6 +689,10 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
       },
       tx,
     );
+    await tx
+      .update(tutoringRequests)
+      .set({ zohoSyncStatus: "pending", updatedAt: now })
+      .where(eq(tutoringRequests.id, request.id));
 
     return {
       householdId,
@@ -710,7 +714,6 @@ export async function submitAyTutoringRegistration(raw: AyTutoringRegistrationIn
         advancedHoursRatePackage,
         autoCharge,
       });
-
   return {
     ...result,
     payment,

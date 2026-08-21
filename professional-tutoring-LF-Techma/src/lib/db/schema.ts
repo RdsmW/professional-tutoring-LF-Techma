@@ -383,6 +383,12 @@ export const tutoringRequests = pgTable("tutoring_requests", {
   scheduleWindowId: varchar("schedule_window_id", { length: 64 }),
   paymentPlanId: varchar("payment_plan_id", { length: 64 }),
   payload: jsonb("payload"),
+  /** Academic Year CRM delivery state; null for request types that do not sync to Zoho. */
+  zohoSyncStatus: varchar("zoho_sync_status", { length: 16 }),
+  zohoSyncLastAttemptAt: timestamp("zoho_sync_last_attempt_at", { withTimezone: true }),
+  zohoSyncCompletedAt: timestamp("zoho_sync_completed_at", { withTimezone: true }),
+  /** A generic operational message only; never persist provider responses or credentials. */
+  zohoSyncLastError: text("zoho_sync_last_error"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -622,6 +628,28 @@ export const tutorNotes = pgTable("tutor_notes", {
   updatedAt: timestamp("updated_at", { withTimezone: true }),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   deletedByStaffId: uuid("deleted_by_staff_id").references(() => staffProfiles.id),
+});
+
+/**
+ * Provider credentials are encrypted before storage with a workspace secret.
+ * Only long-lived refresh tokens belong here; access tokens and auth codes are
+ * intentionally never persisted.
+ */
+export const integrationCredentials = pgTable("integration_credentials", {
+  provider: text("provider").primaryKey(),
+  encryptedRefreshToken: text("encrypted_refresh_token").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One-time, hashed authorization state for the public Zoho callback. */
+export const zohoOAuthStates = pgTable("zoho_oauth_states", {
+  stateHash: text("state_hash").primaryKey(),
+  staffProfileId: uuid("staff_profile_id")
+    .notNull()
+    .references(() => staffProfiles.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 /** Stable public journey identity. Content belongs to immutable version rows. */

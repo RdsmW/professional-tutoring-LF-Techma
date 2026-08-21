@@ -11,3 +11,5 @@
 - [Stripe SetupIntent verification](stripe-setup-intent-verification.md) — direct test-mode confirmation must retain the browser flow’s redirect return URL or Stripe rejects it before finalization.
 - [Guardian identity aliases](guardian-identity-aliases.md) — preflight both email and phone; a reused contact phone can masquerade as an alias collision.
 - [Clerk invitation redirect delivery](clerk-invitation-redirect-delivery.md) — Clerk accepting an invitation does not prove its email CTA reaches the app’s invite route.
+- [Zoho OAuth callback security](zoho-oauth-callback-security.md) — provider callbacks need atomic server-side state consumption and explicit staff entitlement.
+- [Zoho CRM write authorization](zoho-crm-write-authorization.md) — green read checks do not prove the stored grant can create or update CRM records.

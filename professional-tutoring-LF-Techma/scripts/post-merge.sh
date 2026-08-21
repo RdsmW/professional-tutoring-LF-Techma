@@ -21,6 +21,10 @@ if [[ -n "${DATABASE_URL:-}" ]]; then
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0026_academic_year_parent2_required.sql
   echo "Applying guardian Clerk identity uniqueness migration…"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0027_guardian_clerk_identity_unique.sql
+  echo "Applying encrypted integration credential storage migration…"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0028_integration_credentials.sql
+  echo "Applying Academic Year Zoho sync-status migration…"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0029_academic_year_zoho_sync_status.sql
   echo "Publishing a renderable Academic Year public-form compatibility version…"
   npx tsx scripts/upgrade-academic-year-public-form.mts
 else

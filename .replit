@@ -60,4 +60,8 @@ build = ["bash", "-c", "cd professional-tutoring-LF-Techma && npm run build"]
 [userenv]
 
 [userenv.development]
+
+[userenv.shared]
 CLERK_INVITATION_REDIRECT_ORIGIN = "https://8f9597cb-9721-466f-a590-043ae028a009-00-ki0g2wrjk82f.picard.replit.dev"
+ZOHO_ACCOUNTS_DOMAIN = "accounts.zoho.com"
+ZOHO_API_DOMAIN = "www.zohoapis.com"

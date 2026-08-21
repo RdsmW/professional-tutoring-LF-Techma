@@ -9,6 +9,7 @@ import { requireDb } from "@/lib/db";
 import { availabilitySlots, bookings, households, paymentRecords, tutoringRequests } from "@/lib/db/schema";
 import { sendAcademicYearPortalInvitations, type PortalInvitationDelivery } from "@/lib/family/clerk-portal-invitations";
 import { findAyPublicPaymentContinuation } from "@/lib/public-intake/ay-tutoring-payment";
+import { syncAcademicYearAfterFinalization } from "@/lib/zoho/academic-year";
 import {
   getStripe,
   getStripePublishableKey,
@@ -258,7 +259,8 @@ async function withPortalInvitation<T extends object>(
       portalInvitation = { ...portalInvitation, failed: true };
     }
   }
-  return { ...result, portalInvitation };
+  const zohoSyncStatus = await syncAcademicYearAfterFinalization(context.request.id);
+  return { ...result, portalInvitation, zohoSyncStatus };
 }
 
 export async function prepareAyPublicPayment(token: string) {

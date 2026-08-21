@@ -12,6 +12,9 @@ const isPublicRoute = createRouteMatcher([
   "/api/public/ay-tutoring-payment(.*)",
   "/api/public/address-autocomplete(.*)",
   "/api/stripe/webhook(.*)",
+  // Zoho redirects here after the staff-only authorization route has set a
+  // short-lived, HttpOnly, one-time state cookie.
+  "/api/integrations/zoho/callback(.*)",
   // The same-app scheduler authenticates this endpoint with BILLING_JOB_SECRET.
   "/api/internal/billing/collect-due(.*)",
 ]);

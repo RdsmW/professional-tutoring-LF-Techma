@@ -1,0 +1,66 @@
+Authorize the Zoho write scopes and continue the Academic Year integration. No broad audit. Keep responses concise: action, blocker, result only.
+
+The current OAuth authorization is read-only. Reauthorize with these least-privilege scopes:
+
+ZohoCRM.modules.accounts.READ,ZohoCRM.modules.accounts.CREATE,ZohoCRM.modules.accounts.UPDATE,ZohoCRM.modules.contacts.READ,ZohoCRM.modules.contacts.CREATE,ZohoCRM.modules.contacts.UPDATE,ZohoCRM.modules.deals.READ,ZohoCRM.modules.deals.CREATE,ZohoCRM.modules.deals.UPDATE,ZohoCRM.settings.fields.READ
+
+Use access_type=offline and prompt=consent.
+
+Generate the new authorization URL and STOP so I can approve Zoho manually.
+
+After successful reauthorization:
+
+securely replace the existing authorization with the new refresh authorization;
+rerun the four read checks;
+do not perform CRM writes until those checks pass.
+Confirmed write mapping
+
+Account
+
+Account_Name = Student Last Name - Payer email
+Account_Type = Family
+use confirmed billing/address fields from metadata.
+
+Parent 1 / Parent 2 Contacts
+
+Account_Name → same Family Account
+First_Name
+Last_Name
+Email
+Phone
+Relationship_Status = Parent 1 / Parent 2
+Person_Responsible_For_Payment
+Contact_Source = confirmed Zoho picklist
+Status = Student
+
+Deal
+
+Deal_Name = Student Name - Payer email
+Account_Name → Family Account
+Contact_Name → appropriate parent
+Form_Filled_For = Tutoring: Academic Year
+Deal_Source = confirmed Zoho picklist
+use confirmed Academic Year fields for Student, Subject, rates, schedule, payment plan, billing, and signatures.
+
+Use live Zoho field metadata to confirm the exact API name behind the displayed Billing Email field before writing it.
+
+Leave Amount, Expected_Revenue, Total, Total_Due2, Total_Fees, and any other still-ambiguous financial fields unmapped.
+
+Never populate legacy card, auto-charge, alternative-payment, or raw card fields.
+
+After OAuth is green, continue with idempotent:
+
+Account → Parent 1 Contact → Parent 2 Contact → Deal
+
+Store Zoho IDs/URLs locally and prevent duplicates on retry.
+
+Report only:
+
+OAuth
+Read verification
+Account
+Parent 1
+Parent 2
+Deal
+Idempotency
+Blocker
