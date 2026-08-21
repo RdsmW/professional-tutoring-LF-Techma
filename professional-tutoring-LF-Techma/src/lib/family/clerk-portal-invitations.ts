@@ -26,6 +26,11 @@ export type PortalInvitationDelivery = {
   failed: boolean;
   sentCount: number;
   alreadySentCount: number;
+  eligibleCount: number;
+  pendingCount: number;
+  failedCount: number;
+  deliveryComplete: boolean;
+  recipientConfigurationValid: boolean;
 };
 
 function isReservation(value: string | null) {
@@ -36,13 +41,14 @@ function isStaleReservation(reservedAt: Date | null) {
   return !reservedAt || reservedAt.getTime() < Date.now() - 5 * 60 * 1000;
 }
 
-function invitationRedirectUrl(origin: string, token: string) {
+export function invitationRedirectUrl(origin: string, token: string) {
   const base = new URL(origin);
   if (base.protocol !== "https:" && base.protocol !== "http:") {
     throw new Error("Invitation redirect origin must use HTTP or HTTPS.");
   }
+  const invite = new URL(`/invite/${token}`, base);
   const signIn = new URL("/sign-in", base);
-  signIn.searchParams.set("redirect_url", `/invite/${token}`);
+  signIn.searchParams.set("redirect_url", invite.toString());
   return signIn.toString();
 }
 
@@ -61,6 +67,7 @@ export async function sendAcademicYearPortalInvitations(input: {
     .select({
       id: guardians.id,
       email: guardians.email,
+      relationshipRole: guardians.relationshipRole,
       inviteToken: guardians.inviteToken,
       clerkUserId: guardians.clerkUserId,
       inviteAcceptedAt: guardians.inviteAcceptedAt,
@@ -81,6 +88,44 @@ export async function sendAcademicYearPortalInvitations(input: {
   let pending = 0;
   let failed = 0;
   let client = input.clerk;
+  const eligibleCount = recipients.filter(
+    (guardian) => !guardian.clerkUserId && !guardian.inviteAcceptedAt && Boolean(guardian.inviteToken),
+  ).length;
+  const parent1 = recipients.filter((guardian) => guardian.relationshipRole === "parent_1");
+  const parent2 = recipients.filter((guardian) => guardian.relationshipRole === "parent_2");
+  const isLinkedOrDispatchable = (guardian: (typeof recipients)[number]) =>
+    Boolean(guardian.clerkUserId && guardian.inviteAcceptedAt) ||
+    Boolean(guardian.inviteToken && guardian.email.trim());
+  const recipientConfigurationValid =
+    parent1.length === 1 &&
+    parent2.length === 1 &&
+    parent1[0]!.email.trim().toLowerCase() !== parent2[0]!.email.trim().toLowerCase() &&
+    isLinkedOrDispatchable(parent1[0]!) &&
+    isLinkedOrDispatchable(parent2[0]!);
+
+  // Public Academic Year intake always provisions both parents before payment.
+  // Fail closed here so a malformed or partial household can never send a
+  // single-parent portal invitation from a successful payment finalization.
+  if (!recipientConfigurationValid) {
+    console.warn("[academic-year-invitation] incomplete parent invitation recipients", {
+      householdId: input.householdId,
+      parent1Count: parent1.length,
+      parent2Count: parent2.length,
+    });
+    return {
+      emailSent: false,
+      emailAlreadySent: false,
+      pending: false,
+      failed: true,
+      sentCount: 0,
+      alreadySentCount: 0,
+      eligibleCount,
+      pendingCount: 0,
+      failedCount: 1,
+      deliveryComplete: false,
+      recipientConfigurationValid,
+    };
+  }
 
   for (const guardian of recipients) {
     if (guardian.clerkUserId || guardian.inviteAcceptedAt || !guardian.inviteToken) continue;
@@ -157,10 +202,11 @@ export async function sendAcademicYearPortalInvitations(input: {
       continue;
     }
 
+    let invitation: { id: string };
     try {
       const invitationClient = client ?? await clerkClient();
       client = invitationClient;
-      const invitation = await invitationClient.invitations.createInvitation({
+      invitation = await invitationClient.invitations.createInvitation({
         emailAddress: claimed.email,
         notify: true,
         // Begin with Clerk authentication, then return to the guardian-specific
@@ -172,6 +218,19 @@ export async function sendAcademicYearPortalInvitations(input: {
           portalHouseholdId: input.householdId,
         },
       });
+    } catch (error) {
+      // The request may have timed out after Clerk created the invitation.
+      // Preserve the reservation and let stale recovery search Clerk metadata
+      // before any later attempt can send another email.
+      console.warn("[academic-year-invitation] Clerk invitation send is ambiguous", {
+        guardianId: claimed.id,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+      pending += 1;
+      continue;
+    }
+
+    try {
       await database
         .update(guardians)
         .set({
@@ -183,21 +242,14 @@ export async function sendAcademicYearPortalInvitations(input: {
         .where(and(eq(guardians.id, claimed.id), eq(guardians.clerkInvitationId, reservation)));
       sent += 1;
     } catch (error) {
-      // Clearing only this reservation allows a later finalization or webhook
-      // retry to attempt delivery without treating an unsent email as delivered.
-      await database
-        .update(guardians)
-        .set({
-          clerkInvitationId: null,
-          clerkInvitationReservedAt: null,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(guardians.id, claimed.id), eq(guardians.clerkInvitationId, reservation)));
-      console.warn("[academic-year-invitation] Clerk invitation send failed", {
+      // Clerk already accepted this send. Keep the reservation so stale-send
+      // recovery can discover the matching Clerk invitation instead of sending
+      // a second email if this persistence attempt failed ambiguously.
+      console.warn("[academic-year-invitation] Clerk invitation persistence failed", {
         guardianId: claimed.id,
         error: error instanceof Error ? error.message : "unknown",
       });
-      failed += 1;
+      pending += 1;
     }
   }
 
@@ -208,6 +260,11 @@ export async function sendAcademicYearPortalInvitations(input: {
     failed: failed > 0,
     sentCount: sent,
     alreadySentCount: alreadySent,
+    eligibleCount,
+    pendingCount: pending,
+    failedCount: failed,
+    deliveryComplete: pending === 0 && failed === 0 && sent + alreadySent === eligibleCount,
+    recipientConfigurationValid,
   };
 }
 

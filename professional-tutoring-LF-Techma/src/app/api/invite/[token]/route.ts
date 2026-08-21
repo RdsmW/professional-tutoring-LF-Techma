@@ -5,10 +5,11 @@ import { requireDb } from "@/lib/db";
 import { guardians, households } from "@/lib/db/schema";
 import { safeCurrentUser } from "@/lib/auth/clerk";
 import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
-
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
-}
+import {
+  acceptExistingGuardianInvitation,
+  normalizeGuardianEmail,
+  PortalInvitationLinkError,
+} from "@/lib/family/portal-invitation-linking";
 
 export async function GET(
   _request: Request,
@@ -18,8 +19,14 @@ export async function GET(
     const { token } = await contextParams.params;
     const database = requireDb();
     const [guardian] = await database.select().from(guardians).where(eq(guardians.inviteToken, token)).limit(1);
-    if (!guardian || guardian.inviteAcceptedAt) {
-      return NextResponse.json({ ok: false, error: "Invite not found or already used." }, { status: 404 });
+    if (!guardian) {
+      return NextResponse.json({ ok: false, error: "Invite not found." }, { status: 404 });
+    }
+    if (guardian.inviteAcceptedAt) {
+      const session = await auth();
+      if (!session.userId || session.userId !== guardian.clerkUserId) {
+        return NextResponse.json({ ok: false, error: "Invite not found." }, { status: 404 });
+      }
     }
     const householdId = guardian.householdId;
     if (!householdId) {
@@ -38,6 +45,7 @@ export async function GET(
         email: guardian.email,
         householdName: household?.displayName ?? "Family",
         alreadyLinked: Boolean(guardian.clerkUserId),
+        accepted: Boolean(guardian.inviteAcceptedAt),
       },
     });
   } catch (error) {
@@ -57,24 +65,11 @@ export async function POST(
     }
 
     const { token } = await contextParams.params;
-    const database = requireDb();
-    const [guardian] = await database.select().from(guardians).where(eq(guardians.inviteToken, token)).limit(1);
-    if (!guardian || guardian.inviteAcceptedAt) {
-      return NextResponse.json({ ok: false, error: "Invite not found or already used." }, { status: 404 });
-    }
-
-    if (guardian.clerkUserId && guardian.clerkUserId !== session.userId) {
-      return NextResponse.json(
-        { ok: false, error: "This invite is linked to a different account." },
-        { status: 409 },
-      );
-    }
-
     const user = await safeCurrentUser();
     const email =
       user?.primaryEmailAddress?.emailAddress ??
       user?.emailAddresses?.[0]?.emailAddress;
-    if (!email || normalizeEmail(email) !== normalizeEmail(guardian.email)) {
+    if (!email) {
       return NextResponse.json(
         { ok: false, error: "Sign in with the email address that received this invitation." },
         { status: 403 },
@@ -89,21 +84,18 @@ export async function POST(
       return NextResponse.json({ ok: false, error: staffBlock }, { status: 400 });
     }
 
-    await database
-      .update(guardians)
-      .set({
-        clerkUserId: session.userId,
-        email,
-        firstName: user?.firstName || guardian.firstName,
-        lastName: user?.lastName || guardian.lastName,
-        inviteAcceptedAt: new Date(),
-        inviteToken: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(guardians.id, guardian.id));
-
-    return NextResponse.json({ ok: true, householdId: guardian.householdId });
+    const accepted = await acceptExistingGuardianInvitation({
+      token,
+      clerkUserId: session.userId,
+      email: normalizeGuardianEmail(email),
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+    });
+    return NextResponse.json({ ok: true, ...accepted });
   } catch (error) {
+    if (error instanceof PortalInvitationLinkError) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: error.status });
+    }
     console.warn("[invite] POST soft-fail", error);
     return NextResponse.json({ ok: false, error: "Unable to accept invite." }, { status: 500 });
   }

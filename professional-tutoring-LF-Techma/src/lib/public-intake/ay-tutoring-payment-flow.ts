@@ -241,6 +241,11 @@ async function withPortalInvitation<T extends object>(
     failed: false,
       sentCount: 0,
       alreadySentCount: 0,
+      eligibleCount: 0,
+      pendingCount: 0,
+      failedCount: 0,
+      deliveryComplete: false,
+      recipientConfigurationValid: false,
   };
   if (context.notes.autoCharge === "yes") {
     try {

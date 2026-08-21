@@ -1,8 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { resolveAppRoleSafe, safeCurrentUser } from "@/lib/auth/clerk";
 import { requireDb } from "@/lib/db";
 import { guardians, households, staffProfiles } from "@/lib/db/schema";
+import { normalizeGuardianEmail } from "@/lib/family/portal-invitation-linking";
 import { assertNotStaffAsGuardian } from "@/lib/staff/staff-guardian-guard";
 
 export type AppRole = "staff" | "family";
@@ -44,55 +45,81 @@ export async function ensureFamilyGuardian() {
   const firstName = clerkFirst || "Parent";
   const lastName = clerkLast || "Guardian";
 
-  const [existing] = await database
-    .select()
-    .from(guardians)
-    .where(eq(guardians.clerkUserId, clerkUserId))
-    .limit(1);
+  return database.transaction(async (tx) => {
+    // Match the invitation acceptance lock. Bootstrap must wait for a
+    // concurrent acceptance before deciding this Clerk identity is new.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${clerkUserId}))`);
 
-  if (existing) {
-    const updates: Partial<typeof guardians.$inferInsert> = {};
-    if (clerkFirst && clerkFirst !== existing.firstName) updates.firstName = clerkFirst;
-    if (clerkLast && clerkLast !== existing.lastName) updates.lastName = clerkLast;
-    if (email && email !== existing.email) updates.email = email;
-    if (Object.keys(updates).length === 0) return existing;
+    const [existing] = await tx
+      .select()
+      .from(guardians)
+      .where(eq(guardians.clerkUserId, clerkUserId))
+      .limit(1);
 
-    const [updated] = await database
-      .update(guardians)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(guardians.id, existing.id))
+    if (existing) {
+      const updates: Partial<typeof guardians.$inferInsert> = {};
+      if (clerkFirst && clerkFirst !== existing.firstName) updates.firstName = clerkFirst;
+      if (clerkLast && clerkLast !== existing.lastName) updates.lastName = clerkLast;
+      if (email && email !== existing.email) updates.email = email;
+      if (Object.keys(updates).length === 0) return existing;
+
+      const [updated] = await tx
+        .update(guardians)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(guardians.id, existing.id))
+        .returning();
+      return updated ?? existing;
+    }
+
+    // An invite page is responsible for linking an existing guardian after
+    // verifying its bearer token and the signed-in email. Never race it by
+    // creating a generic household for the same invited address.
+    const [pendingInvite] = await tx
+      .select({ id: guardians.id })
+      .from(guardians)
+      .where(
+        and(
+          sql`lower(${guardians.email}) = ${normalizeGuardianEmail(email)}`,
+          isNotNull(guardians.inviteToken),
+          isNull(guardians.inviteAcceptedAt),
+          isNull(guardians.clerkUserId),
+        ),
+      )
+      .limit(1);
+    if (pendingInvite) {
+      console.info("[ensureFamilyGuardian] waiting for guardian invitation acceptance", { clerkUserId });
+      return null;
+    }
+
+    const [household] = await tx
+      .insert(households)
+      .values({
+        displayName: `${lastName} Family`,
+        status: "pending",
+        timezone: "America/New_York",
+      })
       .returning();
-    return updated ?? existing;
-  }
 
-  const [household] = await database
-    .insert(households)
-    .values({
-      displayName: `${lastName} Family`,
-      status: "pending",
-      timezone: "America/New_York",
-    })
-    .returning();
+    const [guardian] = await tx
+      .insert(guardians)
+      .values({
+        householdId: household.id,
+        clerkUserId,
+        email,
+        firstName,
+        lastName,
+        relationshipRole: "parent_1",
+        isBillingOwner: true,
+      })
+      .returning();
 
-  const [guardian] = await database
-    .insert(guardians)
-    .values({
-      householdId: household.id,
-      clerkUserId,
-      email,
-      firstName,
-      lastName,
-      relationshipRole: "parent_1",
-      isBillingOwner: true,
-    })
-    .returning();
+    await tx
+      .update(households)
+      .set({ billingOwnerGuardianId: guardian.id, updatedAt: new Date() })
+      .where(eq(households.id, household.id));
 
-  await database
-    .update(households)
-    .set({ billingOwnerGuardianId: guardian.id, updatedAt: new Date() })
-    .where(eq(households.id, household.id));
-
-  return guardian;
+    return guardian;
+  });
 }
 
 export async function ensureStaffProfile() {

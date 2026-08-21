@@ -3,16 +3,21 @@
 import { SignIn } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { AuthShell } from "@/components/auth-shell";
+import {
+  invitationAuthReturnTarget,
+  invitationAuthUrls,
+  invitationReturnPath,
+} from "@/lib/auth/invitation-return-path";
 import { authClerkAppearance } from "@/lib/ui/clerk-appearance";
-
-function invitationReturnPath(value: string | null) {
-  return value?.startsWith("/invite/") ? value : "/post-login";
-}
 
 export default function SignInPage() {
   const searchParams = useSearchParams();
-  const redirectUrl = invitationReturnPath(searchParams.get("redirect_url"));
-  const signUpUrl = `/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`;
+  const returnPath = invitationReturnPath(searchParams.get("redirect_url"));
+  const redirectUrl = invitationAuthReturnTarget(
+    returnPath,
+    typeof window === "undefined" ? undefined : window.location.origin,
+  );
+  const { signUpUrl } = invitationAuthUrls(redirectUrl);
 
   return (
     <AuthShell formLabel="Sign in">
@@ -21,6 +26,7 @@ export default function SignInPage() {
         path="/sign-in"
         signUpUrl={signUpUrl}
         forceRedirectUrl={redirectUrl}
+        fallbackRedirectUrl={redirectUrl}
         appearance={authClerkAppearance()}
       />
     </AuthShell>
